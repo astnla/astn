@@ -9,12 +9,6 @@
     <style>
         /* General Styles */
 
-
-html, body {
-    outline: 5px solid red;
-}
-
-
         body {
             margin: 0;
             font-family: 'Fira Code', monospace;
@@ -85,18 +79,6 @@ html, body {
             grid-template-columns: repeat(5, 1fr);
             gap: 10px;
             padding: 0 20px 20px 20px;
-        }
-
-        @media (max-width: 768px) {
-            .video-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .video-grid-rank {
-                grid-template-columns: repeat(2, 1fr);
-                justify-content: center;
-                align-items: center;
-            }
         }
 
         .video-item {
@@ -223,6 +205,37 @@ html, body {
             background: rgb(46, 46, 46);
             border-radius: 6px;
             border: 0px solid rgba(0, 0, 0, 0.95);
+        }
+
+        @media (max-width: 768px) {
+            .video-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .video-grid-rank {
+                grid-template-columns: repeat(2, 1fr);
+                justify-content: center;
+                align-items: center;
+            }
+
+            .theater-video {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) scale(0.3); /* Start smaller */
+                width: 95%; /* Adjusted to make the iframe smaller */
+                aspect-ratio: 16 / 9;
+                border: none; /* Removed the border */
+                transition: transform 0.7s ease-in-out; /* Smoother scale animation */
+            }
+
+            .video-title {
+                font-size: 0.6rem;
+                font-weight: 300;
+                margin-bottom: 8px;
+                color: #fff;
+                text-transform: uppercase;
+        }
         }
 
     </style>
