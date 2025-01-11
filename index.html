@@ -264,6 +264,36 @@
         }
 
         @media (max-width: 768px) {
+
+            body {
+            margin: 0;
+            height: 100vh;
+            padding-top: env(safe-area-inset-top, 20px); /* Dynamic safe area for the top */
+            padding-bottom: env(safe-area-inset-bottom, 0); /* Handles devices with bottom navigation */
+            font-family: 'Work Sans', sans-serif;
+            background-color: #000;
+            color: #fff;
+
+        }
+
+        header {
+            position: fixed;
+            top: env(safe-area-inset-top, 20px); /* Dynamic or fallback for older devices */
+            left: 0;
+            width: 100%;
+            padding: 1rem 1.3rem;
+            background: none;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            font-family: 'Fira Code', monospace;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+            
             #logo {
             max-width: 90px; /* Adjust size */
             opacity: 1;
