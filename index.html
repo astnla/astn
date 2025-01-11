@@ -13,13 +13,15 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Days+One&display=swap');
 
-        body {
+        html, body {
             margin: 0;
-            height: 100vh;
-            font-family: 'Inter', sans-serif;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000; /* Change to match your desired background color */
             color: #fff;
-            background: #000;
-            overflow-x: hidden;
+            font-family: 'Work Sans', sans-serif;
+            box-sizing: border-box;
         }
 
                 /* Fullscreen loading screen */
@@ -265,34 +267,24 @@
 
         @media (max-width: 768px) {
 
-            body {
-            margin: 0;
-            height: 100vh;
-            padding-top: env(safe-area-inset-top, 20px); /* Dynamic safe area for the top */
-            padding-bottom: env(safe-area-inset-bottom, 0); /* Handles devices with bottom navigation */
-            font-family: 'Work Sans', sans-serif;
-            background-color: #000;
-            color: #fff;
+            html, body {
+                background-color: #000; /* Ensure the background extends to safe areas */
+                padding-top: env(safe-area-inset-top, 0); /* Account for the notch */
+                padding-bottom: env(safe-area-inset-bottom, 0); /* Account for bottom safe area */
+            }
 
-        }
-
-        header {
-            position: fixed;
-            top: env(safe-area-inset-top, 20px); /* Dynamic or fallback for older devices */
-            left: 0;
-            width: 100%;
-            padding: 1rem 1.3rem;
-            background: none;
-            z-index: 10;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        header h1 {
-            font-family: 'Fira Code', monospace;
-            font-size: 1.5rem;
-            margin: 0;
-        }
+            header {
+                position: fixed;
+                top: env(safe-area-inset-top, 0); /* Ensure header starts below the notch */
+                left: 0;
+                width: 100%;
+                z-index: 10;
+                padding: 1rem 1.3rem;
+                background: none;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
             
             #logo {
             max-width: 90px; /* Adjust size */
