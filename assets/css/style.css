@@ -81,13 +81,13 @@
   display: none; /* Hide on desktop by default */
   position: fixed;
   right: 20px;
-  top: 25px;
+  top: 20px;
   z-index: 101;
   cursor: pointer;
 }
 
 .menu-toggle img {
-  width: 25px;
+  width: 20px;
   filter: invert(1);  /*White hamburger icon*/
 }
 
@@ -101,6 +101,7 @@
   }
 
   .nav-menu {
+    font-family: 'Fira Code', monospace;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -183,7 +184,7 @@
   }
 
   .close-icon img {
-    width: 25px;
+    width: 20px;
     filter: invert(1);  /* filter: invert(1);  White close icon */
   }
 
@@ -220,4 +221,29 @@
 
 .footer .social-links li a:hover img {
   transform: scale(1.2);
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 7px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(32, 32, 32);
+  border-radius: 6px;
+  cursor: grab; /* Change cursor to grab on hover */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb:active {
+  cursor: grabbing; /* Change cursor to grabbing on click */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(46, 46, 46);
+  border-radius: 6px;
+  border: 0px solid rgba(0, 0, 0, 0.95);
 }
