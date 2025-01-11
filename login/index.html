@@ -207,13 +207,13 @@
     <script>
         /**
          * Get the redirect URL from the query parameter
-         * Defaults to 'index.html' if no parameter is provided
+         * Defaults to '/' if no parameter is provided
          */
         function getRedirectUrl() {
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('redirect') || '/'; // Default to 'index.html'
+            return urlParams.get('redirect') || '/'; // Default to '/'
         }
-    
+
         /**
          * Check the entered password and handle redirection
          */
@@ -224,23 +224,18 @@
             const container = document.getElementById('container');
             const correctPassword = '9k!y6Qa8GPofqK?n'; // Update with your password
             const redirectUrl = getRedirectUrl(); // Get the page to redirect to
-    
+
             // Reset animation to ensure it plays every time
             errorMessage.style.animation = 'none';
             errorMessage.offsetHeight; // Trigger reflow to reset animation
-    
+
             if (passwordInput === correctPassword) {
                 errorMessage.style.visibility = 'hidden';
                 container.style.animation = 'fadeOutContainer 1s ease forwards';
-    
+
                 // Save a success flag in localStorage
                 localStorage.setItem('isAuthenticated', 'true');
-    
-                // Add a delay to allow container to fade out before redirection
-                setTimeout(() => {
-                    document.body.style.animation = 'fadeToBlack 1s ease forwards';
-                }, 1000);
-    
+
                 // Redirect to the original page or default page
                 setTimeout(() => {
                     window.location.href = redirectUrl;
@@ -258,14 +253,14 @@
                 errorMessage.style.animation = 'shake 0.5s, fadeOutError 3s 1.5s forwards';
             }
         }
-    
+
         /**
          * Show or hide the arrow button based on password input
          */
         function toggleArrowButton() {
             const passwordInput = document.getElementById('password-input').value;
             const arrowButton = document.getElementById('arrow-button');
-    
+
             if (passwordInput.length > 0) {
                 arrowButton.classList.add('visible'); // Add visible class for fade-in effect
             } else {
@@ -277,7 +272,7 @@
                 }, 300); // Remove visible after fade-out
             }
         }
-    
+
         // Add event listener for Enter key
         document.getElementById('password-input').addEventListener('keypress', function (event) {
             if (event.key === 'Enter') {
