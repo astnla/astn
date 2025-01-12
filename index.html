@@ -290,15 +290,15 @@
         @media (max-width: 768px) {
 
             .hero {
-            background: 
-                linear-gradient(to bottom, 
-                    rgba(0, 0, 0, .8) 0%,      /* Fully black at the top */
-                    rgba(0, 0, 0, 0.5) 25%,  /* Fades to semi-transparent */
-                    rgba(0, 0, 0, 0.1) 50%,  /* Light fade in the middle */
-                    rgba(0, 0, 0, 0.5) 80%,  /* Darkens again at the bottom */
-                    rgba(0, 0, 0, 1) 100%    /* Fully black at the bottom */
+            background: linear-gradient(to bottom, 
+                rgba(0, 0, 0, 0.8) 0%, 
+                rgba(0, 0, 0, 0.5) 25%, 
+                rgba(0, 0, 0, 0.1) 50%, 
+                rgba(0, 0, 0, 0.5) 80%, 
+                rgba(0, 0, 0, 1) 100%
                 ),
-            url('/assets/images/home/astn.jpg') center/cover no-repeat;
+                url('/assets/images/home/astn.jpg') center/cover no-repeat,
+                #000; /* Solid black fallback */
 
             }
             
