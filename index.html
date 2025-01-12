@@ -323,6 +323,59 @@
             }
         }
 
+            /* iPad-specific styles (between 769px and 1366px) */
+            @media (min-width: 769px) and (max-width: 1366px) {
+
+            #logo {
+            max-width: 150px; /* Adjust size */
+            opacity: 1;
+            transition: opacity 0.8s ease-out;
+            }
+
+            .hero img {
+                width: 150px;
+                height: 150px;
+            }
+
+            .hero h1 {
+                font-size: 15rem;
+            }
+
+            header {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        }
+
+        .subtitle {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.2em;
+            color: #ddd;
+            opacity: 0;
+            margin-top: 1px;
+            animation: fadeInSubtitle 0.5s ease-in-out forwards;
+            animation-delay: 5s; /* Starts after the astn animation */
+            }
+
+        @keyframes fadeInSubtitle {
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes glow {
+            0% {
+                text-shadow: 0 0 0px rgba(255, 255, 255, 0);
+            }
+            50% {
+                text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.6);
+            }
+            100% {
+                text-shadow: 0 0 0px rgba(255, 255, 255, 0);
+            }
+        }
+
+
 
 
     </style>
