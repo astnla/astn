@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="/assets/css/header.css">
     <link rel="stylesheet" href="/assets/css/footer.css">
     <link rel="stylesheet" href="/assets/css/scrollbar.css">
-    
+
     <style>
         html, body {
             margin: 0;
@@ -30,6 +30,16 @@
 
 
     </style>
+
+    <script>
+        // Check if the user is authenticated
+        if (localStorage.getItem('isAuthenticated') !== 'true') {
+            // Redirect to the password page with the original page as a query parameter
+            const currentPage = window.location.pathname; // e.g., "/about/"
+            window.location.href = `/login/?redirect=${encodeURIComponent(currentPage)}`;
+        }
+    </script>
+
 </head>
 <body>
         
