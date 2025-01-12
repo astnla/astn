@@ -14,7 +14,6 @@
     <link rel="icon" type="image/png" sizes="16x16" href="assets/images/graph/favicon-16x16.png">
     <link rel="manifest" href="assets/images/graph/site.webmanifest">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Home</title>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/about.css">
@@ -25,44 +24,26 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Days+One&display=swap');
 
-        body {
+        /* General styling */
+        html, body {
             margin: 0;
+            padding: 0;
             font-family: 'Inter', sans-serif;
             color: #fff;
-            background: #000;
-            overflow-x: hidden;
+            background: #000; /* Black background */
+            min-height: 100vh; /* Ensure it covers the viewport */
+            width: 100%;
+            overflow-x: hidden; /* Prevent horizontal scrolling */
         }
 
-                /* Fullscreen loading screen */
-        #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #000; /* Black background */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            opacity: 1;
-            transition: transform 1.5s cubic-bezier(0.68, 0, 0.27, 1.55), visibility 1.5s ease-out;
-            transform: translateY(0);
-            }
+        body {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
 
-        /* Logo styles */
-        #logo {
-            max-width: 150px; /* Adjust size */
-            opacity: 1;
-            transition: opacity 0.8s ease-out;
-            }
-
-        /* Hidden state after slide-up */
-            #loading-screen.hidden {
-            transform: translateY(-100%);
-            visibility: hidden;
-            }
-
+        /* Header */
         header {
             width: 100%;
             padding: 10px 20px;
@@ -76,6 +57,7 @@
             z-index: 1000;
         }
 
+        /* Hero section */
         .hero {
             height: 100vh;
             display: flex;
@@ -121,49 +103,9 @@
             height: 1em; /* Reduce height slightly to minimize spacing */
         }
 
-        .hero h1 span {
-            display: inline-block;
-            opacity: 0;
-            transform: translateY(100%); /* Start from below the mask */
-            animation: fadeUp 0.8s ease-in-out forwards;
-        }
-
-        .hero h1 span:nth-child(1) {
-            animation-delay: 2.8s;
-        }
-
-        .hero h1 span:nth-child(2) {
-            animation-delay: 3.0s;
-        }
-
-        .hero h1 span:nth-child(3) {
-            animation-delay: 3.2s;
-        }
-
-        .hero h1 span:nth-child(4) {
-            animation-delay: 3.4s;
-        }
-
-        .subtitle {
-            margin-top: -10px; /* Adjust negative margin to bring subtitle closer */
-            font-family: 'Inter', sans-serif;
-            font-size: 1.5em;
-            color: #fff;
-        }
-
-        @keyframes fadeUp {
-        0% {
-            opacity: 0;
-            transform: translateY(100%);
-        }
-        100% {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        }
-
+        /* Blog section */
         main {
-            padding: 80px 20px ;
+            padding: 80px 20px;
         }
 
         .blog-intro {
@@ -231,84 +173,18 @@
             text-align: justify;
         }
 
-        .blog-ending {
-            max-width: 900px;
-            margin: 25px auto;
-            padding-top: 100px;
-            text-align: center;
-        }
-
-        .blog-ending h3 {
-            font-family: 'Days One', sans-serif;
-            font-size: 10em;
-            margin-bottom: 20px;
-        }
-
-        .blog-ending p {
-            font-family: 'Inter', sans-serif;
-            font-size: 1.2rem;
-            line-height: 1.6;
-            color: #ddd;
-            padding-top: 10px;
-        }
-
-        .p1 {
-            font-family: 'Inter', sans-serif;
-            font-size: 1.2rem;
-            line-height: 1.6;
-            color: #ddd;
-            padding-bottom: 50px;
-        }
-
-        .blog-ending a {
-            font-family: 'Inter', sans-serif;
-            font-size: 1.2rem;
-            line-height: 1.6;
-            border-bottom: 1px solid #fff;
-            color: #ddd;
-            text-decoration: none;
-            transition: color 0.3s, border-bottom-color 0.3s;
-        }
-
-        .blog-ending a:hover {
-            color: #ffa600;
-            border-bottom-color: #ffa600;
-        }
-
-        .nav-bar {
-            width:100%;
-            height:100px;
-            border-bottom: 1px solid rgba(255,255,255,.25);
-        }
-
+        /* iPhone-specific styles */
         @media (max-width: 768px) {
-
             .hero {
-            background: 
-                linear-gradient(to bottom, 
-                    rgba(0, 0, 0, .8) 0%,      /* Fully black at the top */
-                    rgba(0, 0, 0, 0.5) 25%,  /* Fades to semi-transparent */
-                    rgba(0, 0, 0, 0.1) 50%,  /* Light fade in the middle */
-                    rgba(0, 0, 0, 0.5) 80%,  /* Darkens again at the bottom */
-                    rgba(0, 0, 0, 1) 100%    /* Fully black at the bottom */
-                ),
-            url('/assets/images/home/astn.jpg') center/cover no-repeat;
-
-            }
-            
-            #logo {
-            max-width: 90px; /* Adjust size */
-            opacity: 1;
-            transition: opacity 0.8s ease-out;
-            }
-
-            .hero img {
-                width: 150px;
-                height: 150px;
-            }
-
-            .hero h1 {
-                font-size: 5rem;
+                background: linear-gradient(
+                    to bottom, 
+                    rgba(0, 0, 0, .8) 0%, 
+                    rgba(0, 0, 0, 0.5) 25%, 
+                    rgba(0, 0, 0, 0.1) 50%, 
+                    rgba(0, 0, 0, 0.5) 80%, 
+                    rgba(0, 0, 0, 1) 100%
+                ), 
+                url('/assets/images/home/astn.jpg') center/cover no-repeat;
             }
 
             .blog-section {
@@ -322,111 +198,20 @@
             .blog-entry p {
                 font-size: 1em;
             }
-
-            header {
-                flex-direction: row;
-                justify-content: space-between;
-            }
-
-            .blog-intro h1 {
-                font-size: 5em;
-            }
-
-            .blog-ending h3 {
-                font-size: 4em;
-            }
         }
-
-        /* iPad-specific styles (between 769px and 1366px) */
-        @media (min-width: 769px) and (max-width: 1366px) {
-
-            .hero {
-            background: 
-                linear-gradient(to bottom, 
-                    rgba(0, 0, 0, .8) 0%,      /* Fully black at the top */
-                    rgba(0, 0, 0, 0.5) 25%,  /* Fades to semi-transparent */
-                    rgba(0, 0, 0, 0.1) 50%,  /* Light fade in the middle */
-                    rgba(0, 0, 0, 0.5) 80%,  /* Darkens again at the bottom */
-                    rgba(0, 0, 0, 1) 101%    /* Fully black at the bottom */
-                ),
-            url('/assets/images/home/astn.jpg') center/cover no-repeat;
-
-            }
-            
-            #logo {
-            max-width: 150px; /* Adjust size */
-            opacity: 1;
-            transition: opacity 0.8s ease-out;
-            }
-
-            .hero img {
-                width: 150px;
-                height: 150px;
-            }
-
-            .hero h1 {
-                font-size: 15rem;
-            }
-
-            header {
-                flex-direction: row;
-                justify-content: space-between;
-            }
-
-
-        }
-
-        
-
-        .subtitle {
-            font-family: 'Inter', sans-serif;
-            font-size: 1.2em;
-            color: #ddd;
-            opacity: 0;
-            margin-top: 1px;
-            animation: fadeInSubtitle 0.5s ease-in-out forwards;
-            animation-delay: 5s; /* Starts after the astn animation */
-        }
-
-        @keyframes fadeInSubtitle {
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes glow {
-            0% {
-                text-shadow: 0 0 0px rgba(255, 255, 255, 0);
-            }
-            50% {
-                text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.6);
-            }
-            100% {
-                text-shadow: 0 0 0px rgba(255, 255, 255, 0);
-            }
-        }
-
-       /* .hero h1.glow-effect {
-            animation: glow 4s ease-in-out forwards; animation-delay: 4s;
-        } BROKEN DUE TO HERO H1 OVERFLOW HIDDEN */
-
-
     </style>
 
-
-
-
-<script>
-    // Check if the user is authenticated
-    if (localStorage.getItem('isAuthenticated') !== 'true') {
-        // Redirect to the password page with the original page as a query parameter
-        const currentPage = window.location.pathname; // e.g., "/about/"
-        window.location.href = `/login/?redirect=${encodeURIComponent(currentPage)}`;
-    }
-</script>
-
-
+    <script>
+        // Ensure the page respects safe-area insets dynamically on page load
+        document.addEventListener("DOMContentLoaded", () => {
+            document.body.style.paddingTop = `env(safe-area-inset-top)`;
+            document.body.style.paddingBottom = `env(safe-area-inset-bottom)`;
+            document.body.style.paddingLeft = `env(safe-area-inset-left)`;
+            document.body.style.paddingRight = `env(safe-area-inset-right)`;
+        });
+    </script>
 </head>
+
 <body>
     
       <!-- Loading Screen -->
