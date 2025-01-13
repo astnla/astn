@@ -145,14 +145,31 @@
                 column-gap: 10px;
                 margin: 20px auto;
                 max-width: 92%;
+                animation: fadeUp 1s ease-out;
+                will-change: opacity, transform; /* Optimize the animation */
             }
 
             .gallery img {
                 width: 100%;
                 height: auto;
                 break-inside: avoid;
-                opacity: 0;
                 cursor: pointer;
+            }
+
+            .gallery-wrapper {
+                animation: fadeUp 1s ease-out;
+                will-change: opacity, transform;
+            }
+
+            @keyframes fadeUp {
+                0% {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                100% {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
             }
 
             .modal img {
@@ -171,6 +188,8 @@
             column-gap: 10px;
             margin: 20px auto;
             max-width: 96%;
+            animation: fadeUp 1s ease-out;
+            will-change: opacity, transform; /* Optimize the animation */
         }
 
         .gallery img {
@@ -178,9 +197,24 @@
             height: auto;
             break-inside: avoid;
             margin-bottom: 7px;
-            opacity: 0;
             transition: opacity 0.5s ease-in-out, transform 0.3s ease-in-out;
             cursor: pointer;
+        }
+
+        .gallery-wrapper {
+            animation: fadeUp 1s ease-out;
+            will-change: opacity, transform;
+        }
+
+        @keyframes fadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .modal img {
