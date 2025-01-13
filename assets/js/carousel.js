@@ -12,13 +12,6 @@ function initializeCarousel(carouselSelector, imagesClass, modalSelector) {
     let currentIndex = 0;
     const totalImages = carouselContainer.querySelectorAll(`.${imagesClass} img`).length;
 
-    // Check if the device is a touch device
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-    // Touch variables
-    let startX = 0;
-    let endX = 0;
-
     // Update carousel position
     function updateCarousel() {
         const offset = -currentIndex * 100;
@@ -81,65 +74,6 @@ function initializeCarousel(carouselSelector, imagesClass, modalSelector) {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal();
     });
-
-    // Add swipe functionality only for touch devices
-    if (isTouchDevice) {
-        // Touch start event for carousel
-        carouselImages.addEventListener('touchstart', (e) => {
-            startX = e.touches[0].clientX;
-        });
-
-        // Touch end event for carousel
-        carouselImages.addEventListener('touchend', (e) => {
-            endX = e.changedTouches[0].clientX;
-            handleSwipe();
-        });
-
-        // Handle swipe for carousel
-        function handleSwipe() {
-            const swipeThreshold = 50; // Minimum swipe distance
-            const swipeDistance = endX - startX;
-
-            if (swipeDistance > swipeThreshold) {
-                // Swipe right
-                currentIndex = (currentIndex === 0) ? totalImages - 1 : currentIndex - 1;
-                updateCarousel();
-            } else if (swipeDistance < -swipeThreshold) {
-                // Swipe left
-                currentIndex = (currentIndex === totalImages - 1) ? 0 : currentIndex + 1;
-                updateCarousel();
-            }
-        }
-
-        // Touch start event for modal
-        modal.addEventListener('touchstart', (e) => {
-            startX = e.touches[0].clientX;
-        });
-
-        // Touch end event for modal
-        modal.addEventListener('touchend', (e) => {
-            endX = e.changedTouches[0].clientX;
-            handleModalSwipe();
-        });
-
-        // Handle swipe for modal
-        function handleModalSwipe() {
-            const swipeThreshold = 50;
-            const swipeDistance = endX - startX;
-
-            if (swipeDistance > swipeThreshold) {
-                // Swipe right in modal
-                currentIndex = (currentIndex === 0) ? totalImages - 1 : currentIndex - 1;
-                modalImage.src = carouselContainer.querySelectorAll(`.${imagesClass} img`)[currentIndex].dataset.full;
-                updateCarousel(); // Sync the carousel
-            } else if (swipeDistance < -swipeThreshold) {
-                // Swipe left in modal
-                currentIndex = (currentIndex === totalImages - 1) ? 0 : currentIndex + 1;
-                modalImage.src = carouselContainer.querySelectorAll(`.${imagesClass} img`)[currentIndex].dataset.full;
-                updateCarousel(); // Sync the carousel
-            }
-        }
-    }
 
     // Initialize carousel position
     updateCarousel();
