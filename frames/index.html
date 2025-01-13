@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frames</title>
+
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="Frames">
+    <meta property="og:description" content="Capture Happiness.">
+    <meta property="og:image" content="https://astnla.com/assets/images/graph/frames.png">
+    <meta property="og:url" content="https://astnla.com/frames/">
+    <meta property="og:type" content="website">
+
+    <!-- Favicon Image -->
+    <link rel="icon" type="image/svg+xml" href="/assets/images/astn.svg">
+
+    <!-- CSS Style Referencing -->
+    <link rel="stylesheet" href="/assets/css/header.css">
+    <link rel="stylesheet" href="/assets/css/scrollbar.css">
+
+    <!-- Fira Code Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Fira Code', monospace;
+            margin: 0;
+            background-color: rgb(0, 0, 0);
+            color: rgb(255, 255, 255);
+            display: flex;
+            justify-content: center;
+        }
+
+        html {
+            overflow-y: scroll;
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1rem 1.3rem;
+            background: none;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .gallery {
+            padding-top: 50px;
+            column-count: 3;
+            column-gap: 10px;
+            margin: 20px auto;
+            max-width: 60%;
+        }
+
+        .gallery img {
+            width: 100%;
+            height: auto;
+            break-inside: avoid;
+            margin-bottom: 7px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out, transform 0.3s ease-in-out;
+            cursor: pointer;
+        }
+
+        .gallery img:hover {
+            transform: scale(1.02);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease, backdrop-filter 0.5s ease;
+            flex-direction: column;
+        }
+
+        .modal img {
+            max-width: 90%;
+            max-height: 90%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal img.active {
+            opacity: 1;
+        }
+
+        .modal .close {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-family: 'Fira Code', monospace;
+            font-size: 1rem;
+            font-weight: 300;
+            color: #ffffff;
+            cursor: pointer;
+            text-transform: uppercase;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        @media (max-width: 768px) {
+            .gallery {
+                padding-top: 50px;
+                column-count: 2;
+                column-gap: 10px;
+                margin: 20px auto;
+                max-width: 92%;
+            }
+
+            .gallery img {
+                width: 100%;
+                height: auto;
+                break-inside: avoid;
+                opacity: 0;
+                cursor: pointer;
+            }
+
+            .modal img {
+                max-width: 90%;
+                max-height: 80%;
+                opacity: 0;
+                transition: opacity 0.5s ease;
+            }
+        }
+
+        /* iPad-specific styles (between 769px and 1366px) */
+        @media (min-width: 769px) and (max-width: 1366px) {
+            .gallery {
+            padding-top: 50px;
+            column-count: 3;
+            column-gap: 10px;
+            margin: 20px auto;
+            max-width: 96%;
+        }
+
+        .gallery img {
+            width: 100%;
+            height: auto;
+            break-inside: avoid;
+            margin-bottom: 7px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out, transform 0.3s ease-in-out;
+            cursor: pointer;
+        }
+
+        .modal img {
+            max-width: 90%;
+            max-height: 90%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        }
+
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Lazy Loading Images
+            const lazyLoadImages = document.querySelectorAll("img[data-src]");
+
+            const lazyLoad = (image) => {
+                const src = image.getAttribute("data-src");
+                if (!src) return;
+
+                // Set the src attribute and fade in the image
+                image.src = src;
+                image.onload = () => {
+                    image.removeAttribute("data-src");
+                    image.style.opacity = "1";
+                };
+            };
+
+            const observerOptions = {
+                root: null,
+                rootMargin: "0px",
+                threshold: 0.1,
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        lazyLoad(entry.target);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            lazyLoadImages.forEach((image) => observer.observe(image));
+
+            // Modal Functionality
+            const modal = document.createElement("div");
+            modal.classList.add("modal");
+
+            const modalImage = document.createElement("img");
+            modal.appendChild(modalImage);
+
+            const closeButton = document.createElement("button");
+            closeButton.textContent = "BACK";
+            closeButton.classList.add("close");
+            closeButton.addEventListener("click", () => {
+                modal.classList.remove("active");
+                modalImage.classList.remove("active");
+                setTimeout(() => {
+                    modal.style.display = "none";
+                }, 500);
+            });
+            modal.appendChild(closeButton);
+
+            modal.addEventListener("click", (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove("active");
+                    modalImage.classList.remove("active");
+                    setTimeout(() => {
+                        modal.style.display = "none";
+                    }, 500);
+                }
+            });
+
+            document.body.appendChild(modal);
+
+            document.querySelectorAll(".gallery img").forEach((img) => {
+                img.addEventListener("click", () => {
+                    modalImage.src = img.src;
+                    modal.style.display = "flex";
+                    setTimeout(() => {
+                        modal.classList.add("active");
+                        modalImage.classList.add("active");
+                    }, 0);
+                });
+            });
+        });
+    </script>
+
+    <script>
+        // Check if the user is authenticated
+        if (localStorage.getItem('isAuthenticated') !== 'true') {
+            // Redirect to the password page with the original page as a query parameter
+            const currentPage = window.location.pathname; // e.g., "/about/"
+            window.location.href = `/login/?redirect=${encodeURIComponent(currentPage)}`;
+        }
+    </script>
+
+</head>
+<body>
+    <header>
+        <h1>FRAMES</h1>
+    </header>
+
+    <!-- Navigation Bar -->
+    <header class="nav-header">
+
+        <!-- Hamburger icon (desktop-hidden, mobile-shown) -->
+        <div class="menu-toggle">
+            <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="hamburger-icon">
+                <rect y="4" width="24" height="1.5" rx="0.75" fill="#FFFFFF"/>
+                <rect y="11" width="24" height="1.5" rx="0.75" fill="#FFFFFF"/>
+                <rect y="18" width="24" height="1.5" rx="0.75" fill="#FFFFFF"/>
+            </svg>
+        </div>
+
+        <nav>
+            <div class="nav-menu">
+                <ul>
+                    <li>
+                        <a href="/">
+                            <img src="/assets/images/house 2.svg" alt="Home Icon">
+                            <span class="menu-text">HOME</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/frames/">
+                            <img src="/assets/images/image.svg" alt="Photos Icon">
+                            <span class="menu-text">FRAMES</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/theater/">
+                            <img src="/assets/images/video.svg" alt="Videos Icon">
+                            <span class="menu-text">THEATER</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/about/">
+                            <img src="/assets/images/user 2.svg" alt="About Icon">
+                            <span class="menu-text">ABOUT</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Close icon within .nav-menu -->
+                <div class="close-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="close-icon-svg">
+                        <line x1="3" y1="3" x2="21" y2="21" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="21" y1="3" x2="3" y2="21" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="gallery">
+            <img data-src="img/decades.webp" alt="Image 1">
+            <img data-src="img/grow.webp" alt="Image 1">
+            <img data-src="img/spooky.webp" alt="Image 1">
+            <img data-src="img/paint.webp" alt="Image 1">
+            <img data-src="img/frame.webp" alt="Image 1">
+            <img data-src="img/habit2.webp" alt="Image 1">
+            <img data-src="img/speakers.webp" alt="Image 1">
+            <img data-src="img/portrait.webp" alt="Image 1">
+            <img data-src="img/maraca2.webp" alt="Image 1">
+            <img data-src="img/snowcones.webp" alt="Image 1">
+            <img data-src="img/georgia2.webp" alt="Image 1">
+            <img data-src="img/career.webp" alt="Image 1">
+            <img data-src="img/cat.webp" alt="Image 1">
+            <img data-src="img/vball2.webp" alt="Image 1">
+            <img data-src="img/lola.webp" alt="Image 1">
+            <img data-src="img/eagle.webp" alt="Image 1">
+            <img data-src="img/helpers.webp" alt="Image 1">
+            <img data-src="img/trunk2.webp" alt="Image 1">
+            <img data-src="img/georgia3.webp" alt="Image 1">
+            <img data-src="img/georgia.webp" alt="Image 1">
+            <img data-src="img/chain.webp" alt="Image 1">
+            <img data-src="img/habit.webp" alt="Image 1">
+            <img data-src="img/habit3.webp" alt="Image 1">
+            <img data-src="img/sub.webp" alt="Image 1">
+            <img data-src="img/instruments.webp" alt="Image 1">
+            <img data-src="img/picnic.webp" alt="Image 1">
+            <img data-src="img/wedding.webp" alt="Image 1">
+            <img data-src="img/statement.webp" alt="Image 1">
+            <img data-src="img/eagle2.webp" alt="Image 1">
+            <img data-src="img/friends.webp" alt="Image 1">
+            <img data-src="img/game.webp" alt="Image 1">
+            <img data-src="img/pancakes2.webp" alt="Image 1">
+            <img data-src="img/vball5.webp" alt="Image 1">
+            <img data-src="img/decades4.webp" alt="Image 1">
+            <img data-src="img/boys.webp" alt="Image 1">
+            <img data-src="img/centralpark.webp" alt="Image 1">
+            <img data-src="img/lead.webp" alt="Image 1">
+            <img data-src="img/maraca.webp" alt="Image 1">
+            <img data-src="img/nyc.webp" alt="Image 1">
+            <img data-src="img/nyc2.webp" alt="Image 1">
+            <img data-src="img/nyc3.webp" alt="Image 1">
+            <img data-src="img/pancakes.webp" alt="Image 1">
+            <img data-src="img/police.webp" alt="Image 1">
+            <img data-src="img/rocks.webp" alt="Image 1">
+            <img data-src="img/saw.webp" alt="Image 1">
+            <img data-src="img/safety.webp" alt="Image 1">
+            <img data-src="img/saw2.webp" alt="Image 1">
+            <img data-src="img/snowcones.webp" alt="Image 1">
+            <img data-src="img/friends2.webp" alt="Image 1">
+            <img data-src="img/crowd.webp" alt="Image 1">
+            <img data-src="img/medal.webp" alt="Image 1">
+            <img data-src="img/bubbles.webp" alt="Image 1">
+            <img data-src="img/trunk.webp" alt="Image 1">
+            <img data-src="img/flag3.webp" alt="Image 1">
+            <img data-src="img/certificates.webp" alt="Image 1">
+            <img data-src="img/bubbles2.webp" alt="Image 1">
+            <img data-src="img/decades3.webp" alt="Image 1">
+            <img data-src="img/speaker.webp" alt="Image 1">
+            <img data-src="img/trot.webp" alt="Image 1">
+            <img data-src="img/flags.webp" alt="Image 1">
+            <img data-src="img/teach.webp" alt="Image 1">
+            <img data-src="img/trunk3.webp" alt="Image 1">
+            <img data-src="img/bubbles3.webp" alt="Image 1">
+            <img data-src="img/bubbles4.webp" alt="Image 1">
+            <img data-src="img/portrait2.webp" alt="Image 1">
+            <img data-src="img/vets.webp" alt="Image 1">
+            <img data-src="img/vball.webp" alt="Image 1">
+            <img data-src="img/drive.webp" alt="Image 1">
+            <img data-src="img/vball3.webp" alt="Image 1">
+            <img data-src="img/vball4.webp" alt="Image 1">
+            <img data-src="img/flag.webp" alt="Image 1">
+            <img data-src="img/vball6.webp" alt="Image 1">
+            <img data-src="img/vball7.webp" alt="Image 1">
+            <img data-src="img/decades2.webp" alt="Image 1">
+            <img data-src="img/trot2.webp" alt="Image 1">
+            <img data-src="img/portrait3.webp" alt="Image 1">
+        </div>
+    </main>
+
+        <script src="/assets/js/header.js"></script>
+</body>
+</html>
