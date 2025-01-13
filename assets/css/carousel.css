@@ -79,7 +79,7 @@
     width: 100%;
     height: 100%;
     z-index: 1000;
-    background-color: rgba(0, 0, 0, 0.9); /* Dimming background */
+    background-color: rgba(0, 0, 0, 0.95); /* Dimming background */
     justify-content: center;
     align-items: center;
     opacity: 0; /* Start fully transparent */
@@ -155,36 +155,40 @@
     padding: 0;
 }
 
-/* =========================
-   MOBILE (max-width: 768px)
-   ========================= */
-   @media (max-width: 768px) {
+/*=========================
+MOBILE (max-width: 768px)
+========================= */
+@media (max-width: 768px) {
 
-/* Carousel Styles */
-.carousel {
-    position: relative;
-    width: 100%;
-    max-width: 92%;
-    margin: auto;
-    overflow: hidden;
-    cursor: pointer;
-    aspect-ratio: 3 / 5; /* Ensures the container maintains a 4:3 ratio */
-    display: flex; /* Enables flex layout */
-    align-items: center; /* Centers images vertically */
-    justify-content: center; /* Centers images horizontally */
-    background: #000; /* Optional fallback color */
-}
+    /* Carousel Styles */
+    .carousel {
+        position: relative;
+        width: 100%;
+        max-width: 92%;
+        margin: auto;
+        overflow: hidden;
+        cursor: pointer;
+        aspect-ratio: 3 / 5; /* Ensures the container maintains a 4:3 ratio */
+        display: flex; /* Enables flex layout */
+        align-items: center; /* Centers images vertically */
+        justify-content: center; /* Centers images horizontally */
+        background: #000; /* Optional fallback color */
+    }
 
-/* Modal image styling remains unchanged */
-.modal img {
-    max-width: 90%;
-    max-height: 90%;
-    z-index: 5;
-    transform: scale(1);}
+    .modal {
+        background-color: rgba(0, 0, 0, 0.97); /* Dimming background */
+    }
 
-/* Optional: Add hover effect for image */
-.modal img:hover {
-    transform: scale(1);
-}
+    /* Modal image styling remains unchanged */
+    .modal img {
+        max-width: 90%;
+        max-height: 90%;
+        z-index: 5;
+        transform: scale(1);}
+
+    /* Optional: Add hover effect for image */
+    .modal img:hover {
+        transform: scale(1);
+    }
     
-  }
+}
