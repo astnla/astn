@@ -328,87 +328,172 @@
         "img/portrait3.webp"
         ];
 
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+    // ✅ Extract the dominant color from an image
+    function getDominantColor(imageSrc, callback) {
+        const img = new Image();
+        img.crossOrigin = "Anonymous"; // Prevent CORS issues
+        img.src = imageSrc;
+        img.onload = function () {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = 10; // Small canvas for efficiency
+            canvas.height = 10;
+            ctx.drawImage(img, 0, 0, 10, 10);
+            const imageData = ctx.getImageData(0, 0, 10, 10).data;
+
+            let r = 0, g = 0, b = 0, count = 0;
+            for (let i = 0; i < imageData.length; i += 4) {
+                r += imageData[i];      // Red
+                g += imageData[i + 1];  // Green
+                b += imageData[i + 2];  // Blue
+                count++;
             }
+
+            r = Math.floor(r / count);
+            g = Math.floor(g / count);
+            b = Math.floor(b / count);
+
+            callback({ r, g, b });
+        };
+    }
+
+    // ✅ Categorize images based on their dominant color
+    function categorizeColor({ r, g, b }) {
+        if (r > g && r > b) return "red";
+        if (g > r && g > b) return "green";
+        if (b > r && b > g) return "blue";
+        if (r > 200 && g > 200 && b > 200) return "white";
+        if (r < 50 && g < 50 && b < 50) return "dark";
+        return "other";
+    }
+
+    // ✅ Shuffle array (Fisher-Yates Shuffle)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    // ✅ Load images, categorize by color, and distribute evenly
+    function loadImages() {
+        const gallery = document.getElementById("gallery");
+        if (!gallery) {
+            console.error("Gallery element not found!");
+            return;
         }
 
-        function loadImages() {
-            const gallery = document.getElementById("gallery");
-            if (!gallery) {
-                console.error("Gallery element not found!");
-                return;
-            }
+        gallery.innerHTML = ""; // Clear existing images
 
-            gallery.innerHTML = ""; // Clear existing images
-            shuffleArray(images); // Randomize images
+        let colorGroups = { red: [], green: [], blue: [], white: [], dark: [], other: [] };
+        let loadedImages = 0;
 
-            images.forEach(src => {
-                const img = document.createElement("img");
-                img.src = src;
-                img.alt = "Gallery Image";
-                img.loading = "lazy"; // Lazy loading for performance
-                img.classList.add("gallery-img");
-                img.addEventListener("click", () => openModal(src));
-                gallery.appendChild(img);
+        images.forEach(src => {
+            getDominantColor(src, (color) => {
+                const category = categorizeColor(color);
+                colorGroups[category].push(src);
+                loadedImages++;
+
+                if (loadedImages === images.length) {
+                    distributeImagesEvenly(colorGroups);
+                }
+            });
+        });
+    }
+
+    // ✅ Evenly distribute images from different color groups
+    function distributeImagesEvenly(colorGroups) {
+        const gallery = document.getElementById("gallery");
+        gallery.innerHTML = "";
+
+        let sortedImages = [];
+        let maxGroupSize = Math.max(...Object.values(colorGroups).map(arr => arr.length));
+
+        for (let i = 0; i < maxGroupSize; i++) {
+            Object.keys(colorGroups).forEach(color => {
+                if (colorGroups[color][i]) {
+                    sortedImages.push(colorGroups[color][i]);
+                }
             });
         }
 
-        function openModal(src) {
-            const modal = document.getElementById("image-modal");
-            const modalImg = document.getElementById("modal-img");
+        shuffleArray(sortedImages); // Final shuffle
 
-            if (!modal || !modalImg) {
-                console.error("Modal elements not found!");
-                return;
-            }
-
-            modal.style.display = "flex"; // Show modal
-            setTimeout(() => {
-                modal.classList.add("active");
-                modalImg.classList.add("active");
-            }, 50); // Delay to allow transition effect
-            
-            modalImg.src = src; // Set the image source
-        }
-
-        function closeModal() {
-            const modal = document.getElementById("image-modal");
-            const modalImg = document.getElementById("modal-img");
-
-            if (modal) {
-                modal.classList.remove("active");
-                modalImg.classList.remove("active");
-                setTimeout(() => {
-                    modal.style.display = "none";
-                    modalImg.src = ""; // Clear the image after hiding
-                }, 300); // Matches CSS transition time
-            }
-        }
-
-        // Close modal when clicking outside the image
-        document.addEventListener("click", function (event) {
-            const modal = document.getElementById("image-modal");
-            if (modal && modal.classList.contains("active")) {
-                if (event.target === modal) {
-                    closeModal();
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.removeAttribute("data-src");
+                    observer.unobserve(img);
                 }
-            }
-        });
+            });
+        }, { rootMargin: "100px" });
 
-        // ✅ Add event listener for "BACK" button
-        document.addEventListener("click", function (event) {
-            if (event.target.classList.contains("close")) {
-                closeModal();
-            }
-        });
+        sortedImages.forEach(src => {
+            const imgWrapper = document.createElement("div");
+            imgWrapper.classList.add("image-wrapper");
 
-        // Load images on page load
-        loadImages();
+            const img = document.createElement("img");
+            img.dataset.src = src; // Lazy loading setup
+            img.alt = "Gallery Image";
+            img.loading = "lazy"; // Lazy load hint
+            img.classList.add("gallery-img");
+            img.addEventListener("click", () => openModal(src));
+
+            imgWrapper.appendChild(img);
+            gallery.appendChild(imgWrapper);
+            observer.observe(img); // Lazy load observer
+        });
+    }
+
+    // ✅ Open Modal for Selected Image
+    function openModal(src) {
+        const modal = document.getElementById("image-modal");
+        const modalImg = document.getElementById("modal-img");
+
+        if (!modal || !modalImg) {
+            console.error("Modal elements not found!");
+            return;
+        }
+
+        modalImg.src = src;
+        modal.style.display = "flex";
+        setTimeout(() => {
+            modal.classList.add("active");
+            modalImg.classList.add("active");
+        }, 50);
+    }
+
+    // ✅ Close Modal Function
+    function closeModal() {
+        const modal = document.getElementById("image-modal");
+        const modalImg = document.getElementById("modal-img");
+
+        if (modal) {
+            modal.classList.remove("active");
+            modalImg.classList.remove("active");
+            setTimeout(() => {
+                modal.style.display = "none";
+                modalImg.src = ""; // Clear the image after hiding
+            }, 300);
+        }
+    }
+
+    // ✅ Close Modal When Clicking Outside the Image
+    document.addEventListener("click", function (event) {
+        const modal = document.getElementById("image-modal");
+        if (modal && modal.classList.contains("active") && event.target === modal) {
+            closeModal();
+        }
     });
-</script>
+
+    // ✅ Ensure "BACK" Button Works
+    document.querySelector(".modal .close").addEventListener("click", closeModal);
+
+    // ✅ Load images on page load
+    loadImages();
+});
 
     
         <script src="/assets/js/header.js"></script>
