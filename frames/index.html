@@ -213,109 +213,6 @@
     </style>
 
     <script>
-    // List all image paths here
-    const images = [
-        "img/soccer_t.webp", "img/grow.webp", "img/softball_e.webp", "img/spooky.webp",
-        "img/soccer_r.webp", "img/paint.webp", "img/softball_a.webp", "img/parade_a.webp",
-        "img/softball_i.webp", "img/soccer_i.webp", "img/frame.webp", "img/softball_k.webp",
-        "img/habit2.webp", "img/soccer_j.webp", "img/speakers.webp", "img/softball_f.webp",
-        "img/portrait.webp", "img/maraca2.webp", "img/soccer_e.webp", "img/basketball_e.webp",
-        "img/softball_h.webp", "img/training.webp", "img/soccer_s.webp", "img/georgia2.webp",
-        "img/career.webp", "img/softball_d.webp", "img/cat.webp", "img/vball2.webp",
-        "img/soccer_p.webp", "img/lola.webp", "img/basketball_c.webp", "img/eagle.webp",
-        "img/helpers.webp", "img/trunk2.webp", "img/georgia3.webp", "img/soccer_a.webp",
-        "img/softball_b.webp", "img/georgia.webp", "img/chain.webp", "img/habit.webp",
-        "img/soccer_g.webp", "img/soccer2.webp", "img/habit3.webp", "img/softball_g.webp",
-        "img/soccer1.webp", "img/sub.webp", "img/basketball_b.webp", "img/instruments.webp",
-        "img/picnic.webp", "img/soccer_b.webp", "img/wedding.webp", "img/statement.webp",
-        "img/softball_j.webp", "img/eagle2.webp", "img/friends.webp", "img/game.webp",
-        "img/pancakes2.webp", "img/vball5.webp", "img/decades4.webp", "img/basketball_f.webp",
-        "img/soccer_o.webp", "img/boys.webp", "img/centralpark.webp", "img/lead.webp",
-        "img/maraca.webp", "img/nyc.webp", "img/soccer_q.webp", "img/nyc2.webp",
-        "img/nyc3.webp", "img/pancakes.webp", "img/police.webp", "img/softball_c.webp",
-        "img/soccer_n.webp", "img/rocks.webp", "img/saw.webp", "img/safety.webp",
-        "img/saw2.webp", "img/soccer_d.webp", "img/snowcones.webp", "img/friends2.webp",
-        "img/decades.webp", "img/crowd.webp", "img/basketball_d.webp", "img/soccer_h.webp",
-        "img/medal.webp", "img/bubbles.webp", "img/trunk.webp", "img/flag3.webp",
-        "img/certificates.webp", "img/bubbles2.webp", "img/decades3.webp", "img/speaker.webp",
-        "img/soccer_m.webp", "img/trot.webp", "img/parade_b.webp", "img/flags.webp",
-        "img/teach.webp", "img/trunk3.webp", "img/soccer_f.webp", "img/bubbles3.webp",
-        "img/bubbles4.webp", "img/portrait2.webp", "img/vets.webp", "img/vball.webp",
-        "img/soccer_c.webp", "img/drive.webp", "img/vball3.webp", "img/vball4.webp",
-        "img/flag.webp", "img/soccer_k.webp", "img/vball6.webp", "img/vball7.webp",
-        "img/decades2.webp", "img/trot2.webp", "img/basketball_a.webp", "img/soccer_l.webp",
-        "img/portrait3.webp"
-    ];
-
-    function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-    }
-
-    function loadImages() {
-        const gallery = document.getElementById("gallery");
-        gallery.innerHTML = ""; // Clear existing images
-
-        shuffleArray(images); // Randomize images
-
-        images.forEach(src => {
-            const img = document.createElement("img");
-            img.src = src;
-            img.alt = "Gallery Image";
-            img.loading = "lazy"; // Lazy loading for performance
-            img.classList.add("gallery-img");
-            gallery.appendChild(img);
-        });
-
-        attachModalEvents(); // Reattach modal click events after adding images
-    }
-
-    function attachModalEvents() {
-        const modal = document.createElement("div");
-        modal.classList.add("modal");
-        modal.innerHTML = `<img id="modalImg" src=""><button class="close">BACK</button>`;
-        document.body.appendChild(modal);
-
-        const modalImg = modal.querySelector("#modalImg");
-        const closeModal = modal.querySelector(".close");
-
-        document.querySelectorAll(".gallery-img").forEach(img => {
-            img.addEventListener("click", () => {
-                modalImg.src = img.src;
-                modal.classList.add("active");
-                modal.style.display = "flex";
-                setTimeout(() => modalImg.classList.add("active"), 0);
-            });
-        });
-
-        closeModal.addEventListener("click", () => {
-            modal.classList.remove("active");
-            modalImg.classList.remove("active");
-            setTimeout(() => {
-                modal.style.display = "none";
-            }, 500);
-        });
-
-        modal.addEventListener("click", (e) => {
-            if (e.target === modal) {
-                modal.classList.remove("active");
-                modalImg.classList.remove("active");
-                setTimeout(() => {
-                    modal.style.display = "none";
-                }, 500);
-            }
-        });
-    }
-
-    // Run on page load
-    loadImages();
-</script>
-
-
-
-    <script>
         // Check if the user is authenticated
         if (localStorage.getItem('isAuthenticated') !== 'true') {
             // Redirect to the password page with the original page as a query parameter
@@ -388,8 +285,105 @@
                 <!-- Images will be dynamically inserted here -->
             </div>
         </div>
+
+        <div id="image-modal" class="modal" style="display: none;">
+            <img id="modal-img" src="" alt="Modal Image">
+            <button class="close" onclick="closeModal()">BACK</button>
+        </div>
+
     </main>
 
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const images = [
+        "img/soccer_t.webp", "img/grow.webp", "img/softball_e.webp", "img/spooky.webp",
+        "img/soccer_r.webp", "img/paint.webp", "img/softball_a.webp", "img/parade_a.webp",
+        "img/softball_i.webp", "img/soccer_i.webp", "img/frame.webp", "img/softball_k.webp",
+        "img/habit2.webp", "img/soccer_j.webp", "img/speakers.webp", "img/softball_f.webp",
+        "img/portrait.webp", "img/maraca2.webp", "img/soccer_e.webp", "img/basketball_e.webp",
+        "img/softball_h.webp", "img/training.webp", "img/soccer_s.webp", "img/georgia2.webp",
+        "img/career.webp", "img/softball_d.webp", "img/cat.webp", "img/vball2.webp",
+        "img/soccer_p.webp", "img/lola.webp", "img/basketball_c.webp", "img/eagle.webp",
+        "img/helpers.webp", "img/trunk2.webp", "img/georgia3.webp", "img/soccer_a.webp",
+        "img/softball_b.webp", "img/georgia.webp", "img/chain.webp", "img/habit.webp",
+        "img/soccer_g.webp", "img/soccer2.webp", "img/habit3.webp", "img/softball_g.webp",
+        "img/soccer1.webp", "img/sub.webp", "img/basketball_b.webp", "img/instruments.webp",
+        "img/picnic.webp", "img/soccer_b.webp", "img/wedding.webp", "img/statement.webp",
+        "img/softball_j.webp", "img/eagle2.webp", "img/friends.webp", "img/game.webp",
+        "img/pancakes2.webp", "img/vball5.webp", "img/decades4.webp", "img/basketball_f.webp",
+        "img/soccer_o.webp", "img/boys.webp", "img/centralpark.webp", "img/lead.webp",
+        "img/maraca.webp", "img/nyc.webp", "img/soccer_q.webp", "img/nyc2.webp",
+        "img/nyc3.webp", "img/pancakes.webp", "img/police.webp", "img/softball_c.webp",
+        "img/soccer_n.webp", "img/rocks.webp", "img/saw.webp", "img/safety.webp",
+        "img/saw2.webp", "img/soccer_d.webp", "img/snowcones.webp", "img/friends2.webp",
+        "img/decades.webp", "img/crowd.webp", "img/basketball_d.webp", "img/soccer_h.webp",
+        "img/medal.webp", "img/bubbles.webp", "img/trunk.webp", "img/flag3.webp",
+        "img/certificates.webp", "img/bubbles2.webp", "img/decades3.webp", "img/speaker.webp",
+        "img/soccer_m.webp", "img/trot.webp", "img/parade_b.webp", "img/flags.webp",
+        "img/teach.webp", "img/trunk3.webp", "img/soccer_f.webp", "img/bubbles3.webp",
+        "img/bubbles4.webp", "img/portrait2.webp", "img/vets.webp", "img/vball.webp",
+        "img/soccer_c.webp", "img/drive.webp", "img/vball3.webp", "img/vball4.webp",
+        "img/flag.webp", "img/soccer_k.webp", "img/vball6.webp", "img/vball7.webp",
+        "img/decades2.webp", "img/trot2.webp", "img/basketball_a.webp", "img/soccer_l.webp",
+        "img/portrait3.webp"
+        ];
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function loadImages() {
+            const gallery = document.getElementById("gallery");
+            if (!gallery) {
+                console.error("Gallery element not found!");
+                return;
+            }
+            
+            gallery.innerHTML = ""; // Clear existing images
+            shuffleArray(images); // Randomize images
+
+            images.forEach(src => {
+                const img = document.createElement("img");
+                img.src = src;
+                img.alt = "Gallery Image";
+                img.loading = "lazy"; // Lazy loading for performance
+                img.classList.add("gallery-img");
+                img.addEventListener("click", () => openModal(src));
+                gallery.appendChild(img);
+            });
+        }
+
+        function openModal(src) {
+            const modal = document.getElementById("image-modal");
+            const modalImg = document.getElementById("modal-img");
+
+            if (!modal || !modalImg) {
+                console.error("Modal elements not found!");
+                return;
+            }
+
+            modalImg.src = src;
+            modal.classList.add("active");
+            modal.style.display = "flex";
+        }
+
+        function closeModal() {
+            const modal = document.getElementById("image-modal");
+            if (modal) {
+                modal.classList.remove("active");
+                setTimeout(() => { modal.style.display = "none"; }, 500);
+            }
+        }
+
+        // Load images on page load
+        loadImages();
+    });
+</script>
+
+    
         <script src="/assets/js/header.js"></script>
 </body>
 </html>
