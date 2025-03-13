@@ -211,51 +211,141 @@
         }
 
     </style>
+
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            // Modal Functionality
-            const modal = document.createElement("div");
-            modal.classList.add("modal");
+    // List all image paths here
+    const images = [
+        "img/soccer_t.webp", "img/grow.webp", "img/softball_e.webp", "img/spooky.webp",
+        "img/soccer_r.webp", "img/paint.webp", "img/softball_a.webp", "img/parade_a.webp",
+        "img/softball_i.webp", "img/soccer_i.webp", "img/frame.webp", "img/softball_k.webp",
+        "img/habit2.webp", "img/soccer_j.webp", "img/speakers.webp", "img/softball_f.webp",
+        "img/portrait.webp", "img/maraca2.webp", "img/soccer_e.webp", "img/basketball_e.webp",
+        "img/softball_h.webp", "img/training.webp", "img/soccer_s.webp", "img/georgia2.webp",
+        "img/career.webp", "img/softball_d.webp", "img/cat.webp", "img/vball2.webp",
+        "img/soccer_p.webp", "img/lola.webp", "img/basketball_c.webp", "img/eagle.webp",
+        "img/helpers.webp", "img/trunk2.webp", "img/georgia3.webp", "img/soccer_a.webp",
+        "img/softball_b.webp", "img/georgia.webp", "img/chain.webp", "img/habit.webp",
+        "img/soccer_g.webp", "img/soccer2.webp", "img/habit3.webp", "img/softball_g.webp",
+        "img/soccer1.webp", "img/sub.webp", "img/basketball_b.webp", "img/instruments.webp",
+        "img/picnic.webp", "img/soccer_b.webp", "img/wedding.webp", "img/statement.webp",
+        "img/softball_j.webp", "img/eagle2.webp", "img/friends.webp", "img/game.webp",
+        "img/pancakes2.webp", "img/vball5.webp", "img/decades4.webp", "img/basketball_f.webp",
+        "img/soccer_o.webp", "img/boys.webp", "img/centralpark.webp", "img/lead.webp",
+        "img/maraca.webp", "img/nyc.webp", "img/soccer_q.webp", "img/nyc2.webp",
+        "img/nyc3.webp", "img/pancakes.webp", "img/police.webp", "img/softball_c.webp",
+        "img/soccer_n.webp", "img/rocks.webp", "img/saw.webp", "img/safety.webp",
+        "img/saw2.webp", "img/soccer_d.webp", "img/snowcones.webp", "img/friends2.webp",
+        "img/decades.webp", "img/crowd.webp", "img/basketball_d.webp", "img/soccer_h.webp",
+        "img/medal.webp", "img/bubbles.webp", "img/trunk.webp", "img/flag3.webp",
+        "img/certificates.webp", "img/bubbles2.webp", "img/decades3.webp", "img/speaker.webp",
+        "img/soccer_m.webp", "img/trot.webp", "img/parade_b.webp", "img/flags.webp",
+        "img/teach.webp", "img/trunk3.webp", "img/soccer_f.webp", "img/bubbles3.webp",
+        "img/bubbles4.webp", "img/portrait2.webp", "img/vets.webp", "img/vball.webp",
+        "img/soccer_c.webp", "img/drive.webp", "img/vball3.webp", "img/vball4.webp",
+        "img/flag.webp", "img/soccer_k.webp", "img/vball6.webp", "img/vball7.webp",
+        "img/decades2.webp", "img/trot2.webp", "img/basketball_a.webp", "img/soccer_l.webp",
+        "img/portrait3.webp"
+    ];
 
-            const modalImage = document.createElement("img");
-            modal.appendChild(modalImage);
+    // Function to shuffle an array (Fisher-Yates Shuffle)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
 
-            const closeButton = document.createElement("button");
-            closeButton.textContent = "BACK";
-            closeButton.classList.add("close");
-            closeButton.addEventListener("click", () => {
-                modal.classList.remove("active");
-                modalImage.classList.remove("active");
-                setTimeout(() => {
-                    modal.style.display = "none";
-                }, 500);
-            });
-            modal.appendChild(closeButton);
+    // Extract the dominant color from an image
+    function getDominantColor(imageSrc, callback) {
+        const img = new Image();
+        img.crossOrigin = "Anonymous"; // Prevent CORS issues
+        img.src = imageSrc;
+        img.onload = function() {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0, 10, 10); // Downscale for efficiency
+            const imageData = ctx.getImageData(0, 0, 10, 10).data;
 
-            modal.addEventListener("click", (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove("active");
-                    modalImage.classList.remove("active");
-                    setTimeout(() => {
-                        modal.style.display = "none";
-                    }, 500);
+            let r = 0, g = 0, b = 0, count = 0;
+            for (let i = 0; i < imageData.length; i += 4) {
+                r += imageData[i];      // Red
+                g += imageData[i + 1];  // Green
+                b += imageData[i + 2];  // Blue
+                count++;
+            }
+
+            r = Math.floor(r / count);
+            g = Math.floor(g / count);
+            b = Math.floor(b / count);
+
+            callback({ r, g, b });
+        };
+    }
+
+    // Categorize images based on their dominant color
+    function categorizeColor({ r, g, b }) {
+        if (r > g && r > b) return "red";
+        if (g > r && g > b) return "green";
+        if (b > r && b > g) return "blue";
+        if (r > 200 && g > 200 && b > 200) return "white";
+        if (r < 50 && g < 50 && b < 50) return "dark";
+        return "other";
+    }
+
+    // Load images, categorize them, and shuffle
+    function loadImages() {
+        const gallery = document.getElementById("gallery");
+        gallery.innerHTML = ""; // Clear existing images
+
+        let colorGroups = { red: [], green: [], blue: [], white: [], dark: [], other: [] };
+        let loadedImages = 0;
+
+        images.forEach(src => {
+            getDominantColor(src, (color) => {
+                const category = categorizeColor(color);
+                colorGroups[category].push(src);
+                loadedImages++;
+
+                if (loadedImages === images.length) {
+                    distributeImagesEvenly(colorGroups);
                 }
             });
-
-            document.body.appendChild(modal);
-
-            document.querySelectorAll(".gallery img").forEach((img) => {
-                img.addEventListener("click", () => {
-                    modalImage.src = img.src;
-                    modal.style.display = "flex";
-                    setTimeout(() => {
-                        modal.classList.add("active");
-                        modalImage.classList.add("active");
-                    }, 0);
-                });
-            });
         });
-    </script>
+    }
+
+    // Evenly distribute images from different color groups
+    function distributeImagesEvenly(colorGroups) {
+        const gallery = document.getElementById("gallery");
+        gallery.innerHTML = "";
+
+        let sortedImages = [];
+        let maxGroupSize = Math.max(...Object.values(colorGroups).map(arr => arr.length));
+
+        for (let i = 0; i < maxGroupSize; i++) {
+            Object.keys(colorGroups).forEach(color => {
+                if (colorGroups[color][i]) {
+                    sortedImages.push(colorGroups[color][i]);
+                }
+            });
+        }
+
+        shuffleArray(sortedImages); // Final shuffle
+
+        sortedImages.forEach(src => {
+            const img = document.createElement("img");
+            img.src = src;
+            img.alt = "Gallery Image";
+            img.loading = "lazy"; // Lazy loading for performance
+            gallery.appendChild(img);
+        });
+    }
+
+    // Run on page load
+    loadImages();
+</script>
+
 
     <script>
         // Check if the user is authenticated
@@ -326,7 +416,8 @@
 
     <main>
         <div class="gallery-wrapper">
-            <div class="gallery">
+            <div class="gallery" id="gallery">
+                <!-- Images will be dynamically inserted here -->
                 <img src="img/soccer t.webp" alt="Image 1">
                 <img src="img/grow.webp" alt="Image 1">
                 <img src="img/softball e.webp" alt="Image 1">
