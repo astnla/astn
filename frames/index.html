@@ -69,13 +69,16 @@
         .gallery img {
             width: 100%;
             height: auto;
-            break-inside: avoid;
-            margin-bottom: 7px;
-            opacity: 1; /* Ensure images are visible */
-            transition: transform 0.3s ease-in-out; /* Keep transform effect for hover */
-            cursor: pointer;
-            transform: translateZ(0); /* Force GPU acceleration */
-            will-change: transform; /* Optimize scaling effect */
+            min-height: 150px; /* Keeps space allocated before loading */
+            background-color: #222; /* Dark placeholder */
+            opacity: 0;
+            filter: blur(10px);
+            transition: filter 0.6s ease-out, opacity 0.3s ease-in;
+        }
+        
+        .gallery img.loaded {
+            filter: blur(0);
+            opacity: 1;
         }
 
         .gallery img:hover {
