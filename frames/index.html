@@ -276,39 +276,25 @@
             const gallery = document.getElementById("gallery");
             if (!gallery) return;
 
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting && !entry.target.classList.contains("loaded")) {
-                        const img = entry.target;
-                        img.src = img.dataset.src;
-                        img.onload = () => {
-                            img.parentElement.classList.add("loaded");
-                            img.classList.add("loaded"); // ✅ Ensures image stays visible
-                        };
-                        img.removeAttribute("data-src");
-
-                        // ✅ Stop observing after first load (prevents "black flash" on scroll)
-                        observer.unobserve(img);
-                    }
-                });
-            }, { rootMargin: "200px" });
-
             images.forEach(src => {
                 const item = document.createElement("div");
                 item.classList.add("gallery-item");
 
                 const img = document.createElement("img");
-                img.dataset.src = src;
+                img.src = src;  // ✅ Loads all images immediately
                 img.alt = "Gallery Image";
-                img.loading = "lazy";
+                img.loading = "eager"; // ✅ Forces immediate loading
                 img.classList.add("lazy");
 
                 // ✅ Click event to open modal
                 img.addEventListener("click", () => openModal(src));
 
+                img.onload = () => {
+                    item.classList.add("loaded"); // ✅ Ensures smooth fade-in
+                };
+
                 item.appendChild(img);
                 gallery.appendChild(item);
-                observer.observe(img);
             });
         }
 
@@ -357,6 +343,7 @@
         loadMasonry();
     });
 </script>
+
 
 
 <script src="/assets/js/header.js"></script>
