@@ -346,42 +346,39 @@
             console.error("Gallery element not found!");
             return;
         }
-
-        gallery.innerHTML = ""; // Clear any existing content
-        shuffleArray(images); // Randomize image order
-
-        // Set up an observer for lazy loading
+    
+        gallery.innerHTML = ""; // Clear existing content
+        shuffleArray(images); // Shuffle images before adding
+    
+        // Lazy load observer
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const img = entry.target;
-                    img.src = img.dataset.src; // Load actual image
-                    img.removeAttribute("data-src"); // Remove placeholder
-                    observer.unobserve(img); // Stop observing after it's loaded
+                    img.src = img.dataset.src; // Assign actual image
+                    img.onload = () => img.classList.add("loaded"); // Add fade-in effect
+                    observer.unobserve(img); // Stop observing once loaded
                 }
             });
-        }, { rootMargin: "200px" }); // Load slightly before entering view
-
+        }, { rootMargin: "200px" });
+    
         images.forEach((src) => {
             const imgWrapper = document.createElement("div");
             imgWrapper.classList.add("image-wrapper");
-
+    
             const img = document.createElement("img");
-            img.dataset.src = src; // Use data-src for lazy loading
+            img.dataset.src = src; // Lazy load placeholder
             img.alt = "Gallery Image";
             img.classList.add("gallery-img");
-            img.style.opacity = "0"; // Start hidden for fade-in effect
+            img.style.opacity = "0"; // Start invisible for fade-in effect
             img.addEventListener("click", () => openModal(src));
-
-            img.onload = () => {
-                img.style.opacity = "1"; // Fade in after loading
-            };
-
+    
             imgWrapper.appendChild(img);
             gallery.appendChild(imgWrapper);
             observer.observe(img); // Observe for lazy loading
         });
     }
+
 
     // ✅ Open the modal with the selected image
     function openModal(src) {
