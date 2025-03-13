@@ -70,20 +70,20 @@
             width: 100%;
             height: auto;
             min-height: 150px; /* Keeps space allocated before loading */
-            background-color: #222; /* Dark placeholder */
+            background-color: #222; /* Dark placeholder to avoid layout shifts */
             opacity: 0;
             filter: blur(10px);
-            transition: filter 0.6s ease-out, opacity 0.3s ease-in;
+            transition: filter 0.6s ease-out, opacity 0.5s ease-in;
         }
         
         .gallery img.loaded {
             filter: blur(0);
             opacity: 1;
         }
-
+        
         .gallery img:hover {
-            transform: scale(1.02); /* Slight zoom */
-            transform-origin: center; /* Ensure scaling is uniform */
+            transform: scale(1.02); /* Smooth zoom effect */
+            transition: transform 0.3s ease-in-out;
         }
 
         .gallery-wrapper {
@@ -296,9 +296,9 @@
 
     </main>
 
-    <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const images = [
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const images = [
         "img/soccer t.webp", "img/grow.webp", "img/softball e.webp", "img/spooky.webp",
         "img/soccer r.webp", "img/paint.webp", "img/softball a.webp", "img/parade a.webp",
         "img/softball i.webp", "img/soccer i.webp", "img/frame.webp", "img/softball k.webp",
@@ -329,7 +329,7 @@
         "img/flag.webp", "img/soccer k.webp", "img/vball6.webp", "img/vball7.webp",
         "img/decades2.webp", "img/trot2.webp", "img/basketball a.webp", "img/soccer l.webp",
         "img/portrait3.webp"
-        ];
+    ];
 
     // ✅ Shuffle images for random display
     function shuffleArray(array) {
@@ -346,39 +346,42 @@
             console.error("Gallery element not found!");
             return;
         }
-    
-        gallery.innerHTML = ""; // Clear existing content
-        shuffleArray(images); // Shuffle images before adding
-    
-        // Lazy load observer
-        const observer = new IntersectionObserver((entries) => {
+
+        gallery.innerHTML = ""; // Clear existing images
+        shuffleArray(images); // Randomize images
+
+        const observer = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const img = entry.target;
-                    img.src = img.dataset.src; // Assign actual image
-                    img.onload = () => img.classList.add("loaded"); // Add fade-in effect
-                    observer.unobserve(img); // Stop observing once loaded
+                    img.src = img.dataset.src; // Load actual image
+                    img.onload = () => img.classList.add("loaded"); // Remove blur after loading
+                    img.removeAttribute("data-src");
+                    observer.unobserve(img); // Stop observing (keeps images loaded)
                 }
             });
-        }, { rootMargin: "200px" });
-    
+        }, { rootMargin: "300px" }); // Load before visible
+
         images.forEach((src) => {
             const imgWrapper = document.createElement("div");
             imgWrapper.classList.add("image-wrapper");
-    
+
             const img = document.createElement("img");
-            img.dataset.src = src; // Lazy load placeholder
+            img.dataset.src = src; // Use data-src for lazy loading
             img.alt = "Gallery Image";
             img.classList.add("gallery-img");
-            img.style.opacity = "0"; // Start invisible for fade-in effect
+            img.style.opacity = "0"; // Start hidden for fade-in effect
             img.addEventListener("click", () => openModal(src));
-    
+
+            img.onload = () => {
+                img.style.opacity = "1"; // Fade in after loading
+            };
+
             imgWrapper.appendChild(img);
             gallery.appendChild(imgWrapper);
             observer.observe(img); // Observe for lazy loading
         });
     }
-
 
     // ✅ Open the modal with the selected image
     function openModal(src) {
@@ -421,13 +424,17 @@
         }
     });
 
-    // ✅ Ensure "BACK" button closes the modal
-    document.querySelector(".modal .close").addEventListener("click", closeModal);
+    // ✅ Ensure "BACK" button closes the modal (only if it exists)
+    const backButton = document.querySelector(".modal .close");
+    if (backButton) {
+        backButton.addEventListener("click", closeModal);
+    }
 
     // ✅ Load images on page load
     loadImages();
 });
 </script>
+
 
     
         <script src="/assets/js/header.js"></script>
