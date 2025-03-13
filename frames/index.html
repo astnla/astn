@@ -341,7 +341,7 @@
                 console.error("Gallery element not found!");
                 return;
             }
-            
+
             gallery.innerHTML = ""; // Clear existing images
             shuffleArray(images); // Randomize images
 
@@ -365,18 +365,38 @@
                 return;
             }
 
-            modalImg.src = src;
-            modal.classList.add("active");
-            modal.style.display = "flex";
+            modal.style.display = "flex"; // Show modal
+            setTimeout(() => {
+                modal.classList.add("active");
+                modalImg.classList.add("active");
+            }, 50); // Delay to allow transition effect
+            
+            modalImg.src = src; // Set the image source
         }
 
         function closeModal() {
             const modal = document.getElementById("image-modal");
+            const modalImg = document.getElementById("modal-img");
+
             if (modal) {
                 modal.classList.remove("active");
-                setTimeout(() => { modal.style.display = "none"; }, 500);
+                modalImg.classList.remove("active");
+                setTimeout(() => {
+                    modal.style.display = "none";
+                    modalImg.src = ""; // Clear the image after hiding
+                }, 300); // Matches CSS transition time
             }
         }
+
+        // Close modal when clicking outside the image
+        document.addEventListener("click", function (event) {
+            const modal = document.getElementById("image-modal");
+            const modalImg = document.getElementById("modal-img");
+
+            if (modal.classList.contains("active") && event.target === modal) {
+                closeModal();
+            }
+        });
 
         // Load images on page load
         loadImages();
