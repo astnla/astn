@@ -247,7 +247,6 @@
         "img/portrait3.webp"
     ];
 
-    // Function to shuffle an array (Fisher-Yates Shuffle)
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -255,96 +254,65 @@
         }
     }
 
-    // Extract the dominant color from an image
-    function getDominantColor(imageSrc, callback) {
-        const img = new Image();
-        img.crossOrigin = "Anonymous"; // Prevent CORS issues
-        img.src = imageSrc;
-        img.onload = function() {
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0, 10, 10); // Downscale for efficiency
-            const imageData = ctx.getImageData(0, 0, 10, 10).data;
-
-            let r = 0, g = 0, b = 0, count = 0;
-            for (let i = 0; i < imageData.length; i += 4) {
-                r += imageData[i];      // Red
-                g += imageData[i + 1];  // Green
-                b += imageData[i + 2];  // Blue
-                count++;
-            }
-
-            r = Math.floor(r / count);
-            g = Math.floor(g / count);
-            b = Math.floor(b / count);
-
-            callback({ r, g, b });
-        };
-    }
-
-    // Categorize images based on their dominant color
-    function categorizeColor({ r, g, b }) {
-        if (r > g && r > b) return "red";
-        if (g > r && g > b) return "green";
-        if (b > r && b > g) return "blue";
-        if (r > 200 && g > 200 && b > 200) return "white";
-        if (r < 50 && g < 50 && b < 50) return "dark";
-        return "other";
-    }
-
-    // Load images, categorize them, and shuffle
     function loadImages() {
         const gallery = document.getElementById("gallery");
         gallery.innerHTML = ""; // Clear existing images
 
-        let colorGroups = { red: [], green: [], blue: [], white: [], dark: [], other: [] };
-        let loadedImages = 0;
+        shuffleArray(images); // Randomize images
 
         images.forEach(src => {
-            getDominantColor(src, (color) => {
-                const category = categorizeColor(color);
-                colorGroups[category].push(src);
-                loadedImages++;
-
-                if (loadedImages === images.length) {
-                    distributeImagesEvenly(colorGroups);
-                }
-            });
-        });
-    }
-
-    // Evenly distribute images from different color groups
-    function distributeImagesEvenly(colorGroups) {
-        const gallery = document.getElementById("gallery");
-        gallery.innerHTML = "";
-
-        let sortedImages = [];
-        let maxGroupSize = Math.max(...Object.values(colorGroups).map(arr => arr.length));
-
-        for (let i = 0; i < maxGroupSize; i++) {
-            Object.keys(colorGroups).forEach(color => {
-                if (colorGroups[color][i]) {
-                    sortedImages.push(colorGroups[color][i]);
-                }
-            });
-        }
-
-        shuffleArray(sortedImages); // Final shuffle
-
-        sortedImages.forEach(src => {
             const img = document.createElement("img");
             img.src = src;
             img.alt = "Gallery Image";
             img.loading = "lazy"; // Lazy loading for performance
+            img.classList.add("gallery-img");
             gallery.appendChild(img);
+        });
+
+        attachModalEvents(); // Reattach modal click events after adding images
+    }
+
+    function attachModalEvents() {
+        const modal = document.createElement("div");
+        modal.classList.add("modal");
+        modal.innerHTML = `<img id="modalImg" src=""><button class="close">BACK</button>`;
+        document.body.appendChild(modal);
+
+        const modalImg = modal.querySelector("#modalImg");
+        const closeModal = modal.querySelector(".close");
+
+        document.querySelectorAll(".gallery-img").forEach(img => {
+            img.addEventListener("click", () => {
+                modalImg.src = img.src;
+                modal.classList.add("active");
+                modal.style.display = "flex";
+                setTimeout(() => modalImg.classList.add("active"), 0);
+            });
+        });
+
+        closeModal.addEventListener("click", () => {
+            modal.classList.remove("active");
+            modalImg.classList.remove("active");
+            setTimeout(() => {
+                modal.style.display = "none";
+            }, 500);
+        });
+
+        modal.addEventListener("click", (e) => {
+            if (e.target === modal) {
+                modal.classList.remove("active");
+                modalImg.classList.remove("active");
+                setTimeout(() => {
+                    modal.style.display = "none";
+                }, 500);
+            }
         });
     }
 
     // Run on page load
     loadImages();
 </script>
+
 
 
     <script>
@@ -418,123 +386,6 @@
         <div class="gallery-wrapper">
             <div class="gallery" id="gallery">
                 <!-- Images will be dynamically inserted here -->
-                <img src="img/soccer t.webp" alt="Image 1">
-                <img src="img/grow.webp" alt="Image 1">
-                <img src="img/softball e.webp" alt="Image 1">
-                <img src="img/spooky.webp" alt="Image 1">
-                <img src="img/soccer r.webp" alt="Image 1">
-                <img src="img/paint.webp" alt="Image 1">
-                <img src="img/softball a.webp" alt="Image 1">
-                <img src="img/parade a.webp" alt="Image 1">
-                <img src="img/softball i.webp" alt="Image 1">
-                <img src="img/soccer i.webp" alt="Image 1">
-                <img src="img/frame.webp" alt="Image 1">
-                <img src="img/softball k.webp" alt="Image 1">
-                <img src="img/habit2.webp" alt="Image 1">
-                <img src="img/soccer j.webp" alt="Image 1">
-                <img src="img/speakers.webp" alt="Image 1">
-                <img src="img/softball f.webp" alt="Image 1">
-                <img src="img/portrait.webp" alt="Image 1">
-                <img src="img/maraca2.webp" alt="Image 1">
-                <img src="img/soccer e.webp" alt="Image 1">
-                <img src="img/basketball e.webp" alt="Image 1">
-                <img src="img/softball h.webp" alt="Image 1">
-                <img src="img/training.webp" alt="Image 1">
-                <img src="img/soccer s.webp" alt="Image 1">
-                <img src="img/georgia2.webp" alt="Image 1">
-                <img src="img/career.webp" alt="Image 1">
-                <img src="img/softball d.webp" alt="Image 1">
-                <img src="img/cat.webp" alt="Image 1">
-                <img src="img/vball2.webp" alt="Image 1">
-                <img src="img/soccer p.webp" alt="Image 1">
-                <img src="img/lola.webp" alt="Image 1">
-                <img src="img/basketball c.webp" alt="Image 1">
-                <img src="img/eagle.webp" alt="Image 1">
-                <img src="img/helpers.webp" alt="Image 1">
-                <img src="img/trunk2.webp" alt="Image 1">
-                <img src="img/georgia3.webp" alt="Image 1">
-                <img src="img/soccer a.webp" alt="Image 1">
-                <img src="img/softball b.webp" alt="Image 1">
-                <img src="img/georgia.webp" alt="Image 1">
-                <img src="img/chain.webp" alt="Image 1">
-                <img src="img/habit.webp" alt="Image 1">
-                <img src="img/soccer g.webp" alt="Image 1">
-                <img src="img/soccer2.webp" alt="Image 1">
-                <img src="img/habit3.webp" alt="Image 1">
-                <img src="img/softball g.webp" alt="Image 1">
-                <img src="img/soccer1.webp" alt="Image 1">
-                <img src="img/sub.webp" alt="Image 1">
-                <img src="img/basketball b.webp" alt="Image 1">
-                <img src="img/instruments.webp" alt="Image 1">
-                <img src="img/picnic.webp" alt="Image 1">
-                <img src="img/soccer b.webp" alt="Image 1">
-                <img src="img/wedding.webp" alt="Image 1">
-                <img src="img/statement.webp" alt="Image 1">
-                <img src="img/softball j.webp" alt="Image 1">
-                <img src="img/eagle2.webp" alt="Image 1">
-                <img src="img/friends.webp" alt="Image 1">
-                <img src="img/game.webp" alt="Image 1">
-                <img src="img/pancakes2.webp" alt="Image 1">
-                <img src="img/vball5.webp" alt="Image 1">
-                <img src="img/decades4.webp" alt="Image 1">
-                <img src="img/basketball f.webp" alt="Image 1">
-                <img src="img/soccer o.webp" alt="Image 1">
-                <img src="img/boys.webp" alt="Image 1">
-                <img src="img/centralpark.webp" alt="Image 1">
-                <img src="img/lead.webp" alt="Image 1">
-                <img src="img/maraca.webp" alt="Image 1">
-                <img src="img/nyc.webp" alt="Image 1">
-                <img src="img/soccer q.webp" alt="Image 1">
-                <img src="img/nyc2.webp" alt="Image 1">
-                <img src="img/nyc3.webp" alt="Image 1">
-                <img src="img/pancakes.webp" alt="Image 1">
-                <img src="img/police.webp" alt="Image 1">
-                <img src="img/softball c.webp" alt="Image 1">
-                <img src="img/soccer n.webp" alt="Image 1">
-                <img src="img/rocks.webp" alt="Image 1">
-                <img src="img/saw.webp" alt="Image 1">
-                <img src="img/safety.webp" alt="Image 1">
-                <img src="img/saw2.webp" alt="Image 1">
-                <img src="img/soccer d.webp" alt="Image 1">
-                <img src="img/snowcones.webp" alt="Image 1">
-                <img src="img/friends2.webp" alt="Image 1">
-                <img src="img/decades.webp" alt="Image 1">
-                <img src="img/crowd.webp" alt="Image 1">
-                <img src="img/basketball d.webp" alt="Image 1">
-                <img src="img/soccer h.webp" alt="Image 1">
-                <img src="img/medal.webp" alt="Image 1">
-                <img src="img/bubbles.webp" alt="Image 1">
-                <img src="img/trunk.webp" alt="Image 1">
-                <img src="img/flag3.webp" alt="Image 1">
-                <img src="img/certificates.webp" alt="Image 1">
-                <img src="img/bubbles2.webp" alt="Image 1">
-                <img src="img/decades3.webp" alt="Image 1">
-                <img src="img/speaker.webp" alt="Image 1">
-                <img src="img/soccer m.webp" alt="Image 1">
-                <img src="img/trot.webp" alt="Image 1">
-                <img src="img/parade b.webp" alt="Image 1">
-                <img src="img/flags.webp" alt="Image 1">
-                <img src="img/teach.webp" alt="Image 1">
-                <img src="img/trunk3.webp" alt="Image 1">
-                <img src="img/soccer f.webp" alt="Image 1">
-                <img src="img/bubbles3.webp" alt="Image 1">
-                <img src="img/bubbles4.webp" alt="Image 1">
-                <img src="img/portrait2.webp" alt="Image 1">
-                <img src="img/vets.webp" alt="Image 1">
-                <img src="img/vball.webp" alt="Image 1">
-                <img src="img/soccer c.webp" alt="Image 1">
-                <img src="img/drive.webp" alt="Image 1">
-                <img src="img/vball3.webp" alt="Image 1">
-                <img src="img/vball4.webp" alt="Image 1">
-                <img src="img/flag.webp" alt="Image 1">
-                <img src="img/soccer k.webp" alt="Image 1">
-                <img src="img/vball6.webp" alt="Image 1">
-                <img src="img/vball7.webp" alt="Image 1">
-                <img src="img/decades2.webp" alt="Image 1">
-                <img src="img/trot2.webp" alt="Image 1">
-                <img src="img/basketball a.webp" alt="Image 1">
-                <img src="img/soccer l.webp" alt="Image 1">
-                <img src="img/portrait3.webp" alt="Image 1">
             </div>
         </div>
     </main>
