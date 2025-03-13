@@ -67,10 +67,12 @@
 
 
         .gallery img {
-            width: 100%;
-            height: auto;
-            min-height: 150px; /* Keeps space allocated before loading */
+            width: 100%; /* Ensures images take full column width */
+            height: auto; /* Maintains aspect ratio */
+            min-height: 150px; /* Reserves space before loading */
             background-color: #222; /* Dark placeholder */
+            object-fit: cover; /* Prevents stretching while filling the grid */
+            display: block; /* Prevents inline spacing issues */
             opacity: 0;
             filter: blur(10px);
             transition: filter 0.6s ease-out, opacity 0.3s ease-in;
