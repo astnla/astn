@@ -63,22 +63,30 @@
             margin: 20px auto;
         }
 
-        .gallery-item {
-    display: flex; /* ✅ Prevents unwanted gaps */
+.gallery-item {
+    display: flex;
     overflow: hidden;
     background-color: #222;
-    line-height: 0; /* ✅ Prevents gray line issue */
-    margin-bottom: 10px; /* ✅ Keeps proper spacing */
+    line-height: 0;
+    margin-bottom: 10px;
     transition: opacity 0.5s ease-in-out, transform 0.3s ease-in-out;
-    opacity: 0; /* ✅ Keeps items invisible until loaded */
+    opacity: 0;
+
+    /* ✅ Safari fix */
+    will-change: transform, opacity; 
+    backface-visibility: hidden;
+    transform: translateZ(0);
 }
 
 .gallery-item img {
     width: 100%;
     height: auto;
     display: block;
-    opacity: 0; /* ✅ Start hidden for fade-in */
+    opacity: 0;
     transition: opacity 0.5s ease-in-out;
+
+    /* ✅ Safari fix */
+    transform-origin: center center;
 }
 
 .gallery-item.loaded {
