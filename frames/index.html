@@ -296,144 +296,145 @@
 
     </main>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const images = [
-        "img/soccer t.webp", "img/grow.webp", "img/softball e.webp", "img/spooky.webp",
-        "img/soccer r.webp", "img/paint.webp", "img/softball a.webp", "img/parade a.webp",
-        "img/softball i.webp", "img/soccer i.webp", "img/frame.webp", "img/softball k.webp",
-        "img/habit2.webp", "img/soccer j.webp", "img/speakers.webp", "img/softball f.webp",
-        "img/portrait.webp", "img/maraca2.webp", "img/soccer e.webp", "img/basketball e.webp",
-        "img/softball h.webp", "img/training.webp", "img/soccer s.webp", "img/georgia2.webp",
-        "img/career.webp", "img/softball d.webp", "img/cat.webp", "img/vball2.webp",
-        "img/soccer p.webp", "img/lola.webp", "img/basketball c.webp", "img/eagle.webp",
-        "img/helpers.webp", "img/trunk2.webp", "img/georgia3.webp", "img/soccer a.webp",
-        "img/softball b.webp", "img/georgia.webp", "img/chain.webp", "img/habit.webp",
-        "img/soccer g.webp", "img/soccer2.webp", "img/habit3.webp", "img/softball g.webp",
-        "img/soccer1.webp", "img/sub.webp", "img/basketball b.webp", "img/instruments.webp",
-        "img/picnic.webp", "img/soccer b.webp", "img/wedding.webp", "img/statement.webp",
-        "img/softball j.webp", "img/eagle2.webp", "img/friends.webp", "img/game.webp",
-        "img/pancakes2.webp", "img/vball5.webp", "img/decades4.webp", "img/basketball f.webp",
-        "img/soccer o.webp", "img/boys.webp", "img/centralpark.webp", "img/lead.webp",
-        "img/maraca.webp", "img/nyc.webp", "img/soccer q.webp", "img/nyc2.webp",
-        "img/nyc3.webp", "img/pancakes.webp", "img/police.webp", "img/softball c.webp",
-        "img/soccer n.webp", "img/rocks.webp", "img/saw.webp", "img/safety.webp",
-        "img/saw2.webp", "img/soccer d.webp", "img/snowcones.webp", "img/friends2.webp",
-        "img/decades.webp", "img/crowd.webp", "img/basketball d.webp", "img/soccer h.webp",
-        "img/medal.webp", "img/bubbles.webp", "img/trunk.webp", "img/flag3.webp",
-        "img/certificates.webp", "img/bubbles2.webp", "img/decades3.webp", "img/speaker.webp",
-        "img/soccer m.webp", "img/trot.webp", "img/parade b.webp", "img/flags.webp",
-        "img/teach.webp", "img/trunk3.webp", "img/soccer f.webp", "img/bubbles3.webp",
-        "img/bubbles4.webp", "img/portrait2.webp", "img/vets.webp", "img/vball.webp",
-        "img/soccer c.webp", "img/drive.webp", "img/vball3.webp", "img/vball4.webp",
-        "img/flag.webp", "img/soccer k.webp", "img/vball6.webp", "img/vball7.webp",
-        "img/decades2.webp", "img/trot2.webp", "img/basketball a.webp", "img/soccer l.webp",
-        "img/portrait3.webp"
-    ];
-
-    // ✅ Shuffle images for random display
-    function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-    }
-
-    // ✅ Load images into the gallery (with lazy loading)
-    function loadImages() {
-        const gallery = document.getElementById("gallery");
-        if (!gallery) {
-            console.error("Gallery element not found!");
-            return;
-        }
-
-        gallery.innerHTML = ""; // Clear existing images
-        shuffleArray(images); // Randomize images
-
-        const observer = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    img.src = img.dataset.src; // Load actual image
-                    img.onload = () => img.classList.add("loaded"); // Remove blur after loading
-                    img.removeAttribute("data-src");
-                    observer.unobserve(img); // Stop observing (keeps images loaded)
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const images = [
+                "img/soccer t.webp", "img/grow.webp", "img/softball e.webp", "img/spooky.webp",
+                "img/soccer r.webp", "img/paint.webp", "img/softball a.webp", "img/parade a.webp",
+                "img/softball i.webp", "img/soccer i.webp", "img/frame.webp", "img/softball k.webp",
+                "img/habit2.webp", "img/soccer j.webp", "img/speakers.webp", "img/softball f.webp",
+                "img/portrait.webp", "img/maraca2.webp", "img/soccer e.webp", "img/basketball e.webp",
+                "img/softball h.webp", "img/training.webp", "img/soccer s.webp", "img/georgia2.webp",
+                "img/career.webp", "img/softball d.webp", "img/cat.webp", "img/vball2.webp",
+                "img/soccer p.webp", "img/lola.webp", "img/basketball c.webp", "img/eagle.webp",
+                "img/helpers.webp", "img/trunk2.webp", "img/georgia3.webp", "img/soccer a.webp",
+                "img/softball b.webp", "img/georgia.webp", "img/chain.webp", "img/habit.webp",
+                "img/soccer g.webp", "img/soccer2.webp", "img/habit3.webp", "img/softball g.webp",
+                "img/soccer1.webp", "img/sub.webp", "img/basketball b.webp", "img/instruments.webp",
+                "img/picnic.webp", "img/soccer b.webp", "img/wedding.webp", "img/statement.webp",
+                "img/softball j.webp", "img/eagle2.webp", "img/friends.webp", "img/game.webp",
+                "img/pancakes2.webp", "img/vball5.webp", "img/decades4.webp", "img/basketball f.webp",
+                "img/soccer o.webp", "img/boys.webp", "img/centralpark.webp", "img/lead.webp",
+                "img/maraca.webp", "img/nyc.webp", "img/soccer q.webp", "img/nyc2.webp",
+                "img/nyc3.webp", "img/pancakes.webp", "img/police.webp", "img/softball c.webp",
+                "img/soccer n.webp", "img/rocks.webp", "img/saw.webp", "img/safety.webp",
+                "img/saw2.webp", "img/soccer d.webp", "img/snowcones.webp", "img/friends2.webp",
+                "img/decades.webp", "img/crowd.webp", "img/basketball d.webp", "img/soccer h.webp",
+                "img/medal.webp", "img/bubbles.webp", "img/trunk.webp", "img/flag3.webp",
+                "img/certificates.webp", "img/bubbles2.webp", "img/decades3.webp", "img/speaker.webp",
+                "img/soccer m.webp", "img/trot.webp", "img/parade b.webp", "img/flags.webp",
+                "img/teach.webp", "img/trunk3.webp", "img/soccer f.webp", "img/bubbles3.webp",
+                "img/bubbles4.webp", "img/portrait2.webp", "img/vets.webp", "img/vball.webp",
+                "img/soccer c.webp", "img/drive.webp", "img/vball3.webp", "img/vball4.webp",
+                "img/flag.webp", "img/soccer k.webp", "img/vball6.webp", "img/vball7.webp",
+                "img/decades2.webp", "img/trot2.webp", "img/basketball a.webp", "img/soccer l.webp",
+                "img/portrait3.webp"
+            ];
+        
+            // ✅ Shuffle images to avoid clustering
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+        
+            // ✅ Load images into the gallery (with lazy loading)
+            function loadImages() {
+                const gallery = document.getElementById("gallery");
+                if (!gallery) {
+                    console.error("Gallery element not found!");
+                    return;
+                }
+        
+                gallery.innerHTML = ""; // Clear existing images
+                shuffleArray(images); // Randomize images
+        
+                // Set up IntersectionObserver for lazy loading
+                const observer = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            img.src = img.dataset.src; // Load actual image
+                            img.onload = () => img.classList.add("loaded"); // Remove blur after loading
+                            img.removeAttribute("data-src");
+                            observer.unobserve(img); // Stop observing (keeps images loaded)
+                        }
+                    });
+                }, { rootMargin: "300px" }); // Load slightly before entering view
+        
+                images.forEach((src) => {
+                    const imgWrapper = document.createElement("div");
+                    imgWrapper.classList.add("image-wrapper");
+        
+                    const img = document.createElement("img");
+                    img.dataset.src = src; // Use data-src for lazy loading
+                    img.alt = "Gallery Image";
+                    img.classList.add("gallery-img");
+                    img.style.opacity = "0"; // Start hidden for fade-in effect
+                    img.addEventListener("click", () => openModal(src));
+        
+                    img.onload = () => {
+                        img.style.opacity = "1"; // Fade in after loading
+                    };
+        
+                    imgWrapper.appendChild(img);
+                    gallery.appendChild(imgWrapper);
+                    observer.observe(img); // Observe for lazy loading
+                });
+            }
+        
+            // ✅ Open the modal with the selected image
+            function openModal(src) {
+                const modal = document.getElementById("image-modal");
+                const modalImg = document.getElementById("modal-img");
+        
+                if (!modal || !modalImg) {
+                    console.error("Modal elements not found!");
+                    return;
+                }
+        
+                modalImg.src = src; // Set the modal image source
+                modal.style.display = "flex"; // Show modal
+                setTimeout(() => {
+                    modal.classList.add("active");
+                    modalImg.classList.add("active");
+                }, 50); // Small delay for smooth transition
+            }
+        
+            // ✅ Close the modal
+            function closeModal() {
+                const modal = document.getElementById("image-modal");
+                const modalImg = document.getElementById("modal-img");
+        
+                if (modal) {
+                    modal.classList.remove("active");
+                    modalImg.classList.remove("active");
+                    setTimeout(() => {
+                        modal.style.display = "none";
+                        modalImg.src = ""; // Clear the image after hiding
+                    }, 300); // Matches CSS transition time
+                }
+            }
+        
+            // ✅ Close modal when clicking outside the image
+            document.addEventListener("click", function (event) {
+                const modal = document.getElementById("image-modal");
+                if (modal && modal.classList.contains("active") && event.target === modal) {
+                    closeModal();
                 }
             });
-        }, { rootMargin: "300px" }); // Load before visible
-
-        images.forEach((src) => {
-            const imgWrapper = document.createElement("div");
-            imgWrapper.classList.add("image-wrapper");
-
-            const img = document.createElement("img");
-            img.dataset.src = src; // Use data-src for lazy loading
-            img.alt = "Gallery Image";
-            img.classList.add("gallery-img");
-            img.style.opacity = "0"; // Start hidden for fade-in effect
-            img.addEventListener("click", () => openModal(src));
-
-            img.onload = () => {
-                img.style.opacity = "1"; // Fade in after loading
-            };
-
-            imgWrapper.appendChild(img);
-            gallery.appendChild(imgWrapper);
-            observer.observe(img); // Observe for lazy loading
+        
+            // ✅ Ensure "BACK" button closes the modal (only if it exists)
+            const backButton = document.querySelector(".modal .close");
+            if (backButton) {
+                backButton.addEventListener("click", closeModal);
+            }
+        
+            // ✅ Load images on page load
+            loadImages();
         });
-    }
-
-    // ✅ Open the modal with the selected image
-    function openModal(src) {
-        const modal = document.getElementById("image-modal");
-        const modalImg = document.getElementById("modal-img");
-
-        if (!modal || !modalImg) {
-            console.error("Modal elements not found!");
-            return;
-        }
-
-        modalImg.src = src; // Set the modal image source
-        modal.style.display = "flex"; // Show modal
-        setTimeout(() => {
-            modal.classList.add("active");
-            modalImg.classList.add("active");
-        }, 50); // Small delay for smooth transition
-    }
-
-    // ✅ Close the modal
-    function closeModal() {
-        const modal = document.getElementById("image-modal");
-        const modalImg = document.getElementById("modal-img");
-
-        if (modal) {
-            modal.classList.remove("active");
-            modalImg.classList.remove("active");
-            setTimeout(() => {
-                modal.style.display = "none";
-                modalImg.src = ""; // Clear the image after hiding
-            }, 300); // Matches CSS transition time
-        }
-    }
-
-    // ✅ Close modal when clicking outside the image
-    document.addEventListener("click", function (event) {
-        const modal = document.getElementById("image-modal");
-        if (modal && modal.classList.contains("active") && event.target === modal) {
-            closeModal();
-        }
-    });
-
-    // ✅ Ensure "BACK" button closes the modal (only if it exists)
-    const backButton = document.querySelector(".modal .close");
-    if (backButton) {
-        backButton.addEventListener("click", closeModal);
-    }
-
-    // ✅ Load images on page load
-    loadImages();
-});
-</script>
+    </script>
 
 
     
