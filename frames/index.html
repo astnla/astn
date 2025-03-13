@@ -217,7 +217,7 @@
         if (localStorage.getItem('isAuthenticated') !== 'true') {
             // Redirect to the password page with the original page as a query parameter
             const currentPage = window.location.pathname; // e.g., "/about/"
-            window.location.href = /login/?redirect=${encodeURIComponent(currentPage)};
+            window.location.href = `/login/?redirect=${encodeURIComponent(currentPage)}`;
         }
     </script>
 
