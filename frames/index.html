@@ -70,21 +70,20 @@
             width: 100%;
             height: auto;
             min-height: 150px; /* Keeps space allocated before loading */
-            background-color: #222; /* Dark placeholder to avoid layout shifts */
-            /*
+            background-color: #222; /* Dark placeholder */
             opacity: 0;
-            filter: blur(10px); */
-            transition: filter 0.6s ease-out, opacity 0.5s ease-in;
+            filter: blur(10px);
+            transition: filter 0.6s ease-out, opacity 0.3s ease-in;
         }
         
         .gallery img.loaded {
             filter: blur(0);
             opacity: 1;
         }
-        
+
         .gallery img:hover {
-            transform: scale(1.02); /* Smooth zoom effect */
-            transition: transform 0.3s ease-in-out;
+            transform: scale(1.02); /* Slight zoom */
+            transform-origin: center; /* Ensure scaling is uniform */
         }
 
         .gallery-wrapper {
@@ -340,7 +339,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // ✅ Load images into the gallery (with lazy loading)
+    // ✅ Load images into the gallery (Fix for blurry images & blocky scrolling)
     function loadImages() {
         const gallery = document.getElementById("gallery");
         if (!gallery) {
@@ -351,19 +350,18 @@ document.addEventListener("DOMContentLoaded", function () {
         gallery.innerHTML = ""; // Clear existing images
         shuffleArray(images); // Randomize images
 
+        // Set up an observer for lazy loading
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const img = entry.target;
                     img.src = img.dataset.src; // Load actual image
-                    img.onload = () => {
-                        img.classList.add("loaded"); // Remove blur after loading
-                    };
+                    img.onload = () => img.classList.add("loaded"); // Remove blur after loading
                     img.removeAttribute("data-src");
                     observer.unobserve(img); // Stop observing (keeps images loaded)
                 }
             });
-        }, { rootMargin: "200px" }); // Load slightly before entering view
+        }, { rootMargin: "300px" }); // Load before visible
 
         images.forEach((src) => {
             const imgWrapper = document.createElement("div");
@@ -373,12 +371,16 @@ document.addEventListener("DOMContentLoaded", function () {
             img.dataset.src = src; // Use data-src for lazy loading
             img.alt = "Gallery Image";
             img.classList.add("gallery-img");
-            img.style.opacity = "0"; // Start hidden for fade-in effect
-            img.loading = "lazy"; // Browser native lazy loading
+            img.loading = "lazy"; // Native lazy loading
             img.addEventListener("click", () => openModal(src));
+
+            // Ensure space is reserved to prevent black blocky scrolling
+            img.style.minHeight = "150px";
+            img.style.backgroundColor = "#222"; // Dark placeholder
 
             img.onload = () => {
                 img.style.opacity = "1"; // Fade in after loading
+                img.style.filter = "none"; // Ensure image is sharp
             };
 
             imgWrapper.appendChild(img);
@@ -428,7 +430,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // ✅ Ensure "BACK" button closes the modal
+    // ✅ Ensure "BACK" button closes the modal (only if it exists)
     const backButton = document.querySelector(".modal .close");
     if (backButton) {
         backButton.addEventListener("click", closeModal);
@@ -438,8 +440,7 @@ document.addEventListener("DOMContentLoaded", function () {
     loadImages();
 });
 
-    </script>
-
+</script>
 
     
         <script src="/assets/js/header.js"></script>
