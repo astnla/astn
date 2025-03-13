@@ -217,7 +217,7 @@
         if (localStorage.getItem('isAuthenticated') !== 'true') {
             // Redirect to the password page with the original page as a query parameter
             const currentPage = window.location.pathname; // e.g., "/about/"
-            window.location.href = `/login/?redirect=${encodeURIComponent(currentPage)}`;
+            window.location.href = /login/?redirect=${encodeURIComponent(currentPage)};
         }
     </script>
 
@@ -328,88 +328,87 @@
         "img/portrait3.webp"
         ];
 
-    // ✅ Shuffle images to display randomly
-    function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-    }
-
-    // ✅ Load images into the gallery dynamically
-    function loadImages() {
-        const gallery = document.getElementById("gallery");
-        if (!gallery) {
-            console.error("Gallery element not found!");
-            return;
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
         }
 
-        gallery.innerHTML = ""; // Clear existing images
-        shuffleArray(images); // Randomize images
+        function loadImages() {
+            const gallery = document.getElementById("gallery");
+            if (!gallery) {
+                console.error("Gallery element not found!");
+                return;
+            }
 
-        images.forEach(src => {
-            const imgWrapper = document.createElement("div");
-            imgWrapper.classList.add("image-wrapper");
+            gallery.innerHTML = ""; // Clear existing images
+            shuffleArray(images); // Randomize images
 
-            const img = document.createElement("img");
-            img.src = src;
-            img.alt = "Gallery Image";
-            img.loading = "lazy"; // Lazy loading for performance
-            img.classList.add("gallery-img");
-            img.addEventListener("click", () => openModal(src));
-
-            imgWrapper.appendChild(img);
-            gallery.appendChild(imgWrapper);
-        });
-    }
-
-    // ✅ Open the modal with the selected image
-    function openModal(src) {
-        const modal = document.getElementById("image-modal");
-        const modalImg = document.getElementById("modal-img");
-
-        if (!modal || !modalImg) {
-            console.error("Modal elements not found!");
-            return;
+            images.forEach(src => {
+                const img = document.createElement("img");
+                img.src = src;
+                img.alt = "Gallery Image";
+                img.loading = "lazy"; // Lazy loading for performance
+                img.classList.add("gallery-img");
+                img.addEventListener("click", () => openModal(src));
+                gallery.appendChild(img);
+            });
         }
 
-        modalImg.src = src; // Set the modal image source
-        modal.style.display = "flex"; // Show modal
-        setTimeout(() => {
-            modal.classList.add("active");
-            modalImg.classList.add("active");
-        }, 50); // Small delay for smooth transition
-    }
+        function openModal(src) {
+            const modal = document.getElementById("image-modal");
+            const modalImg = document.getElementById("modal-img");
 
-    // ✅ Close the modal when clicking outside the image or the "BACK" button
-    function closeModal() {
-        const modal = document.getElementById("image-modal");
-        const modalImg = document.getElementById("modal-img");
+            if (!modal || !modalImg) {
+                console.error("Modal elements not found!");
+                return;
+            }
 
-        if (modal) {
-            modal.classList.remove("active");
-            modalImg.classList.remove("active");
+            modal.style.display = "flex"; // Show modal
             setTimeout(() => {
-                modal.style.display = "none";
-                modalImg.src = ""; // Clear the image after hiding
-            }, 300); // Matches CSS transition time
+                modal.classList.add("active");
+                modalImg.classList.add("active");
+            }, 50); // Delay to allow transition effect
+            
+            modalImg.src = src; // Set the image source
         }
-    }
 
-    // ✅ Event listener for clicking outside the modal
-    document.addEventListener("click", function (event) {
-        const modal = document.getElementById("image-modal");
-        if (modal && modal.classList.contains("active") && event.target === modal) {
-            closeModal();
+        function closeModal() {
+            const modal = document.getElementById("image-modal");
+            const modalImg = document.getElementById("modal-img");
+
+            if (modal) {
+                modal.classList.remove("active");
+                modalImg.classList.remove("active");
+                setTimeout(() => {
+                    modal.style.display = "none";
+                    modalImg.src = ""; // Clear the image after hiding
+                }, 300); // Matches CSS transition time
+            }
         }
+
+        // Close modal when clicking outside the image
+        document.addEventListener("click", function (event) {
+            const modal = document.getElementById("image-modal");
+            if (modal && modal.classList.contains("active")) {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            }
+        });
+
+        // ✅ Add event listener for "BACK" button
+        document.addEventListener("click", function (event) {
+            if (event.target.classList.contains("close")) {
+                closeModal();
+            }
+        });
+
+        // Load images on page load
+        loadImages();
     });
-
-    // ✅ Event listener for "BACK" button
-    document.querySelector(".modal .close").addEventListener("click", closeModal);
-
-    // ✅ Load images when the page loads
-    loadImages();
-});
+</script>
 
     
         <script src="/assets/js/header.js"></script>
