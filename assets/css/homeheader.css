@@ -475,6 +475,10 @@ main {
             .modal-arrow:hover {
                 opacity: 0.6;
             }
+
+            body {
+                overflow-y: hidden; 
+            }
         }
 
         @media (max-width: 1366px) {
