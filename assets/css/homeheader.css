@@ -472,10 +472,6 @@ main {
             .modal-arrow:hover {
                 opacity: 0.6;
             }
-
-            body {
-                overflow-y: hidden; 
-            }
         }
 
         @media (max-width: 1366px) {
@@ -485,8 +481,7 @@ main {
             }
             
             main {
-            margin-left: 0;
-            overflow-y: auto;
+            margin-left: 0;                      
             padding: 100px 20px 20px;  /* 100px top padding pushes content down, 20px on sides and bottom */
             transition: transform 0.3s ease-in-out;
         }
@@ -517,7 +512,7 @@ main {
             align-items: center;
             justify-content: space-between;
             padding: 10px 20px;
-            z-index: 100;
+            z-index: 1600;
             transition: transform 0.3s ease-in-out, background-color 0.5s ease, color 0.5s ease;
         }
 
@@ -555,7 +550,7 @@ main {
         }
 
         .hamburger.open svg rect:nth-child(1) {
-        transform: translateY(9px) rotate(45deg);
+        transform: translateY(8px) rotate(-47deg);
         }
 
         .hamburger.open svg rect:nth-child(2) {
@@ -563,7 +558,7 @@ main {
         }
 
         .hamburger.open svg rect:nth-child(3) {
-        transform: translateY(-4px) rotate(-45deg);
+        transform: translateY(-4px) rotate(47deg);
         }
     
     /* Mobile slide-in menu */
@@ -571,7 +566,7 @@ main {
         position: fixed;
         top: 50px; /* Moves menu below the header */
         left: -75vw; /* Hidden by default */
-        width: 75%; /* Takes up 75% of the viewport width */
+        width: 75vw; /* Takes up 75% of the viewport width */
         height: 100%;
         background-color: rgba(255, 255, 255, 0.97); /* Light mode background */
         display: flex;
@@ -736,3 +731,11 @@ body:not(.dark-mode) h1 a {
 .dark-mode .close {
     color: #fff !important;
 }
+
+
+
+
+
+
+
+
