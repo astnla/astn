@@ -32,7 +32,6 @@ body {
     color: #000000;
     line-height: 1.6;
     display: flex;
-    height: 100vh;
     overflow: hidden;
     transition: background-color 0.5s ease, color 0.5s ease;
 }
@@ -41,7 +40,6 @@ body {
 /* ========== HEADER (LEFT SIDEBAR) ========== */
 header {
     width: 300px; /* Consistent sidebar width */
-    height: 100vh; /* Full height */
     position: fixed;
     left: 0;
     top: 50%;
@@ -222,7 +220,6 @@ main {
     flex-direction: column;
     align-items: center;
     overflow-y: auto;
-    height: 100vh;
     padding: 75px;
 }
 
@@ -485,7 +482,7 @@ main {
             
             main {
             margin-left: 0;           
-            width: 100vw;             
+            width: 100%;             
             padding: 100px 20px 20px;  /* 100px top padding pushes content down, 20px on sides and bottom */
             transition: transform 0.3s ease-in-out;
         }
@@ -735,3 +732,11 @@ body:not(.dark-mode) h1 a {
 .dark-mode .close {
     color: #fff !important;
 }
+
+
+
+
+
+
+
+
