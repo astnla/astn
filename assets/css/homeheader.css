@@ -10,6 +10,10 @@ a, h1, h2, h3, h4, h5, h6, p, li, span {
     transition: color 0.5s ease, background-color 0.5s ease, opacity 0.5s ease;
 }
 
+        html {
+            overflow-y: scroll;
+        }
+
 
 /* Explicitly set and transition color for sort text and year filters */
 .filter-label,
