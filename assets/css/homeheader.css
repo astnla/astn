@@ -10,6 +10,10 @@ a, h1, h2, h3, h4, h5, h6, p, li, span {
     transition: color 0.5s ease, background-color 0.5s ease, opacity 0.5s ease;
 }
 
+        html {
+            overflow-y: scroll;
+        }
+
 
 /* Explicitly set and transition color for sort text and year filters */
 .filter-label,
@@ -473,6 +477,7 @@ main {
                 opacity: 0.6;
             }
 
+
         }
 
         @media (max-width: 1366px) {
@@ -483,6 +488,7 @@ main {
             
             main {
             margin-left: 0;
+                
             padding: 100px 20px 20px;  /* 100px top padding pushes content down, 20px on sides and bottom */
             transition: transform 0.3s ease-in-out;
         }
@@ -732,11 +738,3 @@ body:not(.dark-mode) h1 a {
 .dark-mode .close {
     color: #fff !important;
 }
-
-
-
-
-
-
-
-
