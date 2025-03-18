@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="Austin Lara">
+    <meta property="og:description" content="Capture Happiness.">
+    <meta property="og:image" content="https://astnla.com/assets/graph/home.png">
+    <meta property="og:url" content="https://astnla.com/">
+    <meta property="og:type" content="website">
+
+    <!-- Favicon Image -->
+    <link rel="icon" type="image/svg+xml" href="/assets/images/astn.svg">
+    <link rel="apple-touch-icon" href="/assets/images/astn.png">
+
+
+    <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/homeheader.css">
+
+
+    <style>
+/* 🔹 Masonry Grid */
+#homeGrid {
+    column-count: 3; /* Default: Two columns */
+    column-gap: 10px;
+    width: 100%;
+    max-width: 85%;
+    padding-top: 20px;
+}
+
+/* 🔹 Individual Grid Items */
+.grid-item {
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 1px;
+    break-inside: avoid;
+}
+
+/* 🔹 Image Styling */
+.grid-item img {
+    width: 100%;
+    height: auto;
+    display: block;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+/* 🔹 Fade-in Effect */
+.grid-item img.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 🔹 Desktop: Keep Grid Running Off the Top */
+@media (min-width: 769px) {
+    #homeGrid {
+        column-count: 4; /* More columns for desktop */
+        padding-top: 0px; /* Run off the top slightly */
+    }
+}
+
+/* 🔹 Mobile: Keep Grid Visible, Set to 2 Columns */
+@media (max-width: 768px) {
+    #homeGrid {
+        column-count: 2;
+        max-width: 100%;
+        padding-top: 0;
+        column-gap: 8px; /* Reduce spacing between columns */
+    }
+
+    .grid-item {
+        margin-bottom: 1px; /* Reduce spacing between images */
+    }
+}
+
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <a href="/" class="mobile-logo">astn</a>
+        <div class="hamburger">
+            <svg width="22" height="18" viewBox="0 0 30 30" fill="none">
+                <rect y="5" width="30" height="1.5" fill="black"/>
+                <rect y="14" width="30" height="1.5" fill="black"/>
+                <rect y="23" width="30" height="1.5" fill="black"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Mobile Slide-In Menu -->
+    <div class="mobile-menu">
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/stills/">Stills</a></li>
+                <li><a href="/films/">Films</a></li>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/contact/">Contact</a></li>
+            </ul>
+        </nav>
+        <div class="theme-toggle-mobile">
+            <label class="switch">
+                <input type="checkbox" id="themeToggleMobile">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Desktop Header -->
+    <header>
+        <h1><a href="/" class="logo">astn</a></h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/stills/">Stills</a></li>
+                <li><a href="/films/">Films</a></li>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/contact/">Contact</a></li>
+            </ul>
+        </nav>
+        <div class="theme-toggle">
+            <label class="switch">
+                <input type="checkbox" id="themeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div id="social">
+            <ul>
+                <li><a href="#">Twitter</a></li>
+                <li><a href="#">Instagram</a></li>
+            </ul>
+        </div>
+        <div class="post_text">© 2025</div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main>
+        <div id="homeGrid"></div>
+    </main>
+    
+
+    <script>
+
+        // === Mobile Welcome Section ===
+
+document.addEventListener("DOMContentLoaded", function () {
+    const welcomeText = document.getElementById("mobileWelcome");
+
+    // Fade-in effect
+    setTimeout(() => {
+        welcomeText.classList.add("visible");
+    }, 500);
+});
+
+
+// === Masonry Grid Section ===
+
+document.addEventListener("DOMContentLoaded", function () {
+    const homeGrid = document.getElementById("homeGrid");
+    const homeImages = [
+        "/assets/img/soccer t.webp", "/assets/img/grow.webp", "/assets/img/softball e.webp", "/assets/img/spooky.webp",
+        "/assets/img/soccer r.webp", "/assets/img/paint.webp", "/assets/img/softball a.webp", "/assets/img/parade a.webp",
+        "/assets/img/softball i.webp", "/assets/img/soccer i.webp", "/assets/img/frame.webp", "/assets/img/softball k.webp",
+        "/assets/img/habit2.webp", "/assets/img/soccer j.webp", "/assets/img/speakers.webp", "/assets/img/softball f.webp",
+        "/assets/img/portrait.webp", "/assets/img/maraca2.webp", "/assets/img/soccer e.webp", "/assets/img/basketball e.webp",
+        "/assets/img/softball h.webp"
+    ];
+
+    // Append images dynamically
+    homeImages.forEach(src => {
+        const gridItem = document.createElement("div");
+        gridItem.classList.add("grid-item");
+
+        const img = document.createElement("img");
+        img.src = src;
+        img.alt = "Gallery Image";
+
+        gridItem.appendChild(img);
+        homeGrid.appendChild(gridItem);
+    });
+
+    // Fade-in effect
+    const images = document.querySelectorAll("#homeGrid img");
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add("visible");
+            }
+        });
+    }, { threshold: 0.3 });
+
+    images.forEach(img => observer.observe(img));
+});
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // === DARK MODE TOGGLE ===
+            const body = document.body;
+            const themeToggle = document.getElementById("themeToggle");
+            const themeToggleMobile = document.getElementById("themeToggleMobile");
+
+            function applyDarkMode(isDark) {
+                body.classList.toggle("dark-mode", isDark);
+                localStorage.setItem("theme", isDark ? "dark" : "light");
+                if (themeToggle) themeToggle.checked = isDark;
+                if (themeToggleMobile) themeToggleMobile.checked = isDark;
+            }
+
+            let storedTheme = localStorage.getItem("theme") || "light";
+            applyDarkMode(storedTheme === "dark");
+
+            if (themeToggle) themeToggle.addEventListener("change", (e) => applyDarkMode(e.target.checked));
+            if (themeToggleMobile) themeToggleMobile.addEventListener("change", (e) => applyDarkMode(e.target.checked));
+
+            // === MOBILE MENU ===
+            const hamburger = document.querySelector(".hamburger");
+            const mobileMenu = document.querySelector(".mobile-menu");
+            const mainContent = document.querySelector("main");
+
+            hamburger.addEventListener("click", function (e) {
+                e.stopPropagation();
+                mobileMenu.classList.toggle("open");
+                mainContent.classList.toggle("shift");
+                hamburger.classList.toggle("open");
+            });
+
+            document.addEventListener("click", function (e) {
+                if (!mobileMenu.contains(e.target) && !hamburger.contains(e.target)) {
+                    mobileMenu.classList.remove("open");
+                    mainContent.classList.remove("shift");
+                    hamburger.classList.remove("open");
+                }
+            });
+
+            // === PLACEHOLDER TAB FUNCTIONALITY (Optional) ===
+            const tabs = document.querySelectorAll(".filter-label");
+            tabs.forEach(tab => {
+                tab.addEventListener("click", function () {
+                    tabs.forEach(t => t.classList.remove("active"));
+                    this.classList.add("active");
+                    // Placeholder: add your photo filtering logic here.
+                    console.log("Selected tab:", this.textContent);
+                });
+            });
+
+        });
+    </script>
+
+</body>
+</html>
