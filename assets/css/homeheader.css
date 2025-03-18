@@ -483,7 +483,6 @@ main {
             
             main {
             margin-left: 0;
-            width: 100%;
             padding: 100px 20px 20px;  /* 100px top padding pushes content down, 20px on sides and bottom */
             transition: transform 0.3s ease-in-out;
         }
