@@ -554,7 +554,7 @@ main {
         }
 
         .hamburger.open svg rect:nth-child(1) {
-        transform: translateY(8px) rotate(-47deg);
+        transform: translateY(9px) rotate(45deg);
         }
 
         .hamburger.open svg rect:nth-child(2) {
@@ -562,7 +562,7 @@ main {
         }
 
         .hamburger.open svg rect:nth-child(3) {
-        transform: translateY(-4px) rotate(47deg);
+        transform: translateY(-4px) rotate(-45deg);
         }
     
     /* Mobile slide-in menu */

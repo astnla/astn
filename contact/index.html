@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
+    <title>Contact</title>
 
     <!-- Open Graph Tags -->
-    <meta property="og:title" content="Austin Lara">
+    <meta property="og:title" content="Contact">
     <meta property="og:description" content="Capture Happiness.">
-    <meta property="og:image" content="https://astnla.com/assets/graph/home.png">
-    <meta property="og:url" content="https://astnla.com/">
+    <meta property="og:image" content="https://astnla.com/assets/graph/contact.png">
+    <meta property="og:url" content="https://astnla.com/contact/">
     <meta property="og:type" content="website">
 
     <!-- Favicon Image -->
@@ -17,65 +17,97 @@
     <link rel="apple-touch-icon" href="/assets/images/astn.png">
 
 
+
     <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/homeheader.css">
+    <link rel="stylesheet" href="/assets/css/header.css">
 
 
     <style>
-/* 🔹 Masonry Grid */
-#homeGrid {
-    column-count: 3; /* Default: Two columns */
-    column-gap: 10px;
-    width: 100%;
-    max-width: 85%;
-    padding-top: 20px;
-}
 
-/* 🔹 Individual Grid Items */
-.grid-item {
-    display: inline-block;
-    width: 100%;
-    margin-bottom: 1px;
-    break-inside: avoid;
-}
+/* Contact Container */
+.contact-container {
+            max-width: 400px;
+            width: 100%;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.8s ease-out forwards;
+        }
 
-/* 🔹 Image Styling */
-.grid-item img {
-    width: 100%;
-    height: auto;
-    display: block;
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-}
+        /* Fade-In Animation */
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-/* 🔹 Fade-in Effect */
-.grid-item img.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
+        /* Section Headers */
+        .contact-section {
+            margin-bottom: 20px;
+        }
 
-/* 🔹 Desktop: Keep Grid Running Off the Top */
-@media (min-width: 769px) {
-    #homeGrid {
-        column-count: 4; /* More columns for desktop */
-        padding-top: 0px; /* Run off the top slightly */
-    }
-}
+        .contact-section p {
+            font-size: 1rem;
+            color: #000;
+            margin-bottom: 8px;
+            transition: color 0.3s ease;
+        }
 
-/* 🔹 Mobile: Keep Grid Visible, Set to 2 Columns */
-@media (max-width: 768px) {
-    #homeGrid {
-        column-count: 2;
-        max-width: 100%;
-        padding-top: 0;
-        column-gap: 8px; /* Reduce spacing between columns */
-    }
+        /* Contact Links */
+        .contact-container a {
+            display: block;
+            font-size: 1.1rem;
+            color: #000;
+            text-decoration: none;
+            transition: color 0.3s ease;
+            padding: 5px 0;
+        }
 
-    .grid-item {
-        margin-bottom: 1px; /* Reduce spacing between images */
-    }
-}
+        .contact-container a:hover {
+            color: #cecece;
+        }
+
+        /* Social Links */
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .social-links a {
+            font-size: 1.1rem;
+            color: #000;
+            transition: transform 0.2s ease, color 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: #cecece;
+            transform: translateY(-3px);
+        }
+
+        .dark-mode .contact-container p {
+            color: #fff;
+        }
+
+        .dark-mode .contact-container a {
+            color: #fff;
+        }
+
+        .dark-mode .contact-container a:hover {
+            color: #5f5f5f;
+        }
+
+        .dark-mode .social-links a {
+            color: #fff;
+        }
+
+        .dark-mode .social-links a:hover {
+            color: #5f5f5f;
+        }
 
     </style>
 </head>
@@ -139,66 +171,35 @@
         <div class="post_text">© 2025</div>
     </header>
 
-    <!-- MAIN CONTENT AREA -->
     <main>
-        <div id="homeGrid"></div>
+        <div class="contact-container">
+            <!-- Contact Info -->
+            <div class="contact-section">
+                <p>direct</p>
+                <a href="mailto:astnla@icloud.com" target="_blank">astnla@icloud.com</a>
+            </div>
+    
+            <div class="contact-section">
+                <p>work</p>
+                <a href="mailto:hello@astnla.com" target="_blank">hello@astnla.com</a>
+            </div>
+    
+            <!-- Social Links -->
+            <div class="contact-section">
+                <p>follow</p>
+                <div class="social-links">
+                    <a href="https://instagram.com/astnla" target="_blank">instagram</a>
+                    <a href="https://twitter.com/MrLaraMES" target="_blank">twitter</a>
+                </div>
+            </div>
+        </div>
     </main>
     
 
-    <script>
 
-        // === Mobile Welcome Section ===
-
-document.addEventListener("DOMContentLoaded", function () {
-    const welcomeText = document.getElementById("mobileWelcome");
-
-    // Fade-in effect
-    setTimeout(() => {
-        welcomeText.classList.add("visible");
-    }, 500);
-});
-
-
-// === Masonry Grid Section ===
+<script>
 
 document.addEventListener("DOMContentLoaded", function () {
-    const homeGrid = document.getElementById("homeGrid");
-    const homeImages = [
-        "/assets/img/soccer t.webp", "/assets/img/grow.webp", "/assets/img/softball e.webp", "/assets/img/spooky.webp",
-        "/assets/img/soccer r.webp", "/assets/img/paint.webp", "/assets/img/softball a.webp", "/assets/img/parade a.webp",
-        "/assets/img/softball i.webp", "/assets/img/soccer i.webp", "/assets/img/frame.webp", "/assets/img/softball k.webp",
-        "/assets/img/habit2.webp", "/assets/img/soccer j.webp", "/assets/img/speakers.webp", "/assets/img/softball f.webp",
-        "/assets/img/portrait.webp", "/assets/img/maraca2.webp", "/assets/img/soccer e.webp", "/assets/img/basketball e.webp",
-        "/assets/img/softball h.webp"
-    ];
-
-    // Append images dynamically
-    homeImages.forEach(src => {
-        const gridItem = document.createElement("div");
-        gridItem.classList.add("grid-item");
-
-        const img = document.createElement("img");
-        img.src = src;
-        img.alt = "Gallery Image";
-
-        gridItem.appendChild(img);
-        homeGrid.appendChild(gridItem);
-    });
-
-    // Fade-in effect
-    const images = document.querySelectorAll("#homeGrid img");
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add("visible");
-            }
-        });
-    }, { threshold: 0.3 });
-
-    images.forEach(img => observer.observe(img));
-});
-
-        document.addEventListener("DOMContentLoaded", function () {
             // === DARK MODE TOGGLE ===
             const body = document.body;
             const themeToggle = document.getElementById("themeToggle");
@@ -249,6 +250,8 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
         });
+
+
     </script>
 
 </body>

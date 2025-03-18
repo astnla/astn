@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Films</title>
+
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="Films">
+    <meta property="og:description" content="Capture Happiness.">
+    <meta property="og:image" content="https://astnla.com/assets/graph/films.png">
+    <meta property="og:url" content="https://astnla.com/films/">
+    <meta property="og:type" content="website">
+
+    <!-- Favicon Image -->
+    <link rel="icon" type="image/svg+xml" href="/assets/images/astn.svg">
+    <link rel="apple-touch-icon" href="/assets/images/astn.png">
+
+
+    <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
+
+
+    <style>
+/* ========== GLOBAL STYLES ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Global text transitions for consistent dark/light mode */
+a, h1, h2, h3, h4, h5, h6, p, li, span {
+    transition: color 0.5s ease, background-color 0.5s ease, opacity 0.5s ease;
+}
+
+
+/* Explicitly set and transition color for sort text and year filters */
+.filter-label,
+.sort-option {
+    color: #000; /* Light mode color */
+    transition: color 0.5s ease, background-color 0.5s ease, opacity 0.5s ease;
+    transition-delay: 0s;
+}
+
+.dark-mode .filter-label,
+.dark-mode .sort-option {
+    color: #fff; /* Dark mode color */
+}
+
+
+
+body {
+    font-family: 'Questrial', sans-serif;
+    background-color: #ffffff;
+    color: #000000;
+    line-height: 1.6;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+
+/* ========== HEADER (LEFT SIDEBAR) ========== */
+header {
+    width: 300px; /* Consistent sidebar width */
+    height: 100vh; /* Full height */
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Align content to the left */
+    padding: 85px 0px;
+    margin-left: 50px;
+    justify-content: flex-start; /* Align from the top */
+}
+
+h1 {
+    font-size: 25px;
+    font-weight: 200;
+    letter-spacing: 1px;
+    margin-bottom: 30px;
+    width: 100%;
+    text-align: left;
+}
+
+h1 a {
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.5s ease-in-out;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+nav ul li {
+    margin-bottom: 6px;
+}
+
+nav ul li a {
+    text-decoration: none;
+    color: #000000;
+    font-size: 10px;
+    font-weight: 400;
+    text-transform: uppercase;
+    transition: opacity 0.3s;
+}
+
+nav ul li a {
+    position: relative;
+    overflow: hidden; /* Ensure the underline doesn't overflow */
+}
+
+nav ul li a::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px; /* Thickness of the underline */
+    background: currentColor; /* Matches the link color */
+    transform: scaleX(0);
+    transform-origin: left; /* Starts expanding from the left */
+    transition: transform 0.3s ease;
+}
+
+nav ul li a:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+}
+
+/* When not hovered, contract the underline toward the right */
+nav ul li a:not(:hover)::after {
+    transform: scaleX(0);
+    transform-origin: right;
+}
+
+/* Social links */
+#social {
+    margin-top: 40px;
+    font-size: 10px;
+}
+
+#social ul {
+    list-style: none;
+    padding: 0;
+}
+
+#social ul li {
+    margin-bottom: 5px;
+}
+
+#social ul li a {
+    text-decoration: none;
+    color: #000000;
+}
+
+/* Copyright text */
+.post_text {
+    font-size: 10px;
+    margin-top: 10px;
+    width: 100%; /* Ensure alignment with nav */
+    text-align: left;
+}
+
+/* ========== DARK MODE TOGGLE ========== */
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 15px;
+    width: 100%;
+}
+
+.theme-toggle .toggle-label,
+.theme-toggle-mobile .toggle-label {
+    display: none !important;
+}
+
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 20px;
+}
+
+/* Hide default checkbox */
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Slider */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    border-radius: 20px;
+    transition: 0.4s ease-in-out;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.4s ease-in-out;
+}
+
+input:checked + .slider {
+    background-color: #444;
+}
+
+input:checked + .slider:before {
+    transform: translateX(14px);
+}
+
+/* ========== HIDE MOBILE MENU IN DESKTOP MODE ========== */
+@media (min-width: 1367px) {
+    .mobile-logo, .mobile-header, .hamburger, .mobile-menu {
+        display: none !important;
+    }
+}
+
+
+/* ========== MAIN CONTENT ========== */
+main {
+    margin-left: 200px;
+    width: calc(100vw - 200px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    height: 100vh;
+    padding: 75px;
+}
+
+.featured-video {
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Remove or reduce padding-bottom if not needed */
+    /* padding-bottom: 15px; */
+}
+
+.featured-video iframe {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;  /* This makes the video fill the container */
+    display: block;     /* Remove any inline spacing */
+}
+
+
+/* ========== VIDEO GRID ========== */
+.video-grid {
+  flex: 1 0 auto; /* Prevents it from shrinking */
+  display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    width: 100%;
+    max-width: 100%;
+    justify-items: stretch;
+    align-content: start; /* Ensures items start from the top, avoiding stretching */
+    min-height: 1500px; /* maintains your desired minimum height */
+}
+
+/* Force each video item to maintain a 16:9 aspect ratio */
+.video-item {
+  position: relative;
+  overflow: hidden; /* Clip any overflow */
+  aspect-ratio: 16 / 9; /* Maintain 16:9 ratio */
+  background: #000; /* Fallback background color */
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+/* When the item is shown */
+.video-item.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Soft white overlay behind the title text */
+.video-item::after {
+  content: "";
+  position: absolute;
+  inset: 0; /* top: 0; right: 0; bottom: 0; left: 0; */
+  background: rgba(255, 255, 255, 0.3); /* Adjust alpha for desired softness */
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1;
+  pointer-events: none; /* Allow clicks to pass through to the image */
+}
+
+/* Show the overlay on hover */
+.video-item:hover::after {
+  opacity: 1;
+}
+
+/* Video thumbnail images fill the item and cover the area */
+.video-grid img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+/* Video Thumbnail Labels */
+.video-item span {
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: uppercase;
+  text-align: left;
+  display: block;
+  color: white;
+  transition: color 0.3s ease;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  z-index: 2;
+}
+
+.video-item:hover span {
+  color: black;
+}
+
+
+/* ===== VIDEO FILTERING STYLES (with slide-from-behind effect) ===== */
+
+.filter-tabs {
+  display: flex;
+  gap: 50px;
+  margin-bottom: 10px; /* Space between tabs and sort container */
+}
+
+.filter-tabs .tab {
+  background: transparent;
+  border: none;
+  font-family: 'Questrial', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: uppercase;
+  color: #000;
+  cursor: pointer;
+  padding: 5px 10px;
+  transition: background 0.3s;
+}
+
+.filter-tabs .tab.active,
+.filter-tabs .tab:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .filter-tabs .tab {
+  color: #fff;
+}
+
+.dark-mode .filter-tabs .tab.active,
+.dark-mode .filter-tabs .tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+
+.sort-container {
+  position: relative;            /* Allow absolute positioning inside */
+  align-self: flex-start;        /* Align left relative to main content */
+  display: inline-block;         /* Wrap to content size */
+  font-family: 'Questrial', sans-serif;
+  font-size: 12px;               /* Match your nav links */
+  font-weight: 400;              /* Match your nav links */
+  text-transform: uppercase;
+  color: #000;
+  margin: 20px 0;                /* Top and bottom spacing */
+}
+
+.sort-container .filter-label {
+    margin: 5px 0;
+  padding: 0;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.sort-options {
+  position: absolute;
+  left: 0;          /* Adjust as needed to align with "sort" */
+  top: 5px;         /* Adjust this value for vertical alignment */
+  display: inline-flex;
+  gap: 50px;        /* Space between buttons */
+  opacity: 0;       /* Start hidden */
+  pointer-events: none; /* Disable clicks when hidden */
+  transition: opacity 0.5s ease;
+  transform: translateX(90px); /* Adjust this value (e.g., 20px) to push further right */
+  white-space: nowrap;
+}
+
+.sort-container.expanded .sort-options {
+  opacity: 1;
+  transform: translateX(90px); /* Adjust this value (e.g., 20px) to push further right */
+  pointer-events: auto; /* Enable clicks when visible */
+}
+
+
+
+
+/* Underline effect for individual sort options (except clear) */
+.sort-container .sort-option {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: color 0.3s, opacity 0.3s;
+}
+
+.sort-container .sort-option:not(.clear)::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;           /* Underline thickness */
+  background: currentColor; /* Matches text color */
+  transform: scaleX(0);
+  transform-origin: right; /* Default retracts toward the right */
+  transition: transform 0.3s ease;
+}
+
+.sort-container .sort-option:not(.clear):hover::after {
+  transform: scaleX(1);
+  transform-origin: left;  /* Expands from left on hover */
+}
+
+/* Clear button styling */
+.sort-container .sort-option.clear {
+  pointer-events: none;
+  color: #ccc;
+}
+
+.sort-container .sort-option.clear.active {
+  pointer-events: auto;
+  color: red;
+}
+
+/* 🔹 Default style for tabs */
+.sort-container .filter-label {
+    position: relative;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: 400;
+    font-size: 12px;
+    color: black;
+    padding-bottom: 5px;
+    transition: color 0.3s ease;
+}
+
+/* Active Sort */
+.sort-container .filter-label.active {
+    font-weight: bold;
+}
+
+/* 🔹 Hover Effect - Underline Appears */
+.sort-container .filter-label::after {
+    content: "";
+    position: absolute;
+    bottom: 5px;
+    left: 0;
+    width: 100%;
+    height: 2px; /* Underline thickness */
+    background: black;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.3s ease;
+}
+
+.sort-container .filter-label:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+}
+
+/* 🔹 Active Tab - Underline Stays */
+.sort-container .filter-label.active::after {
+    transform: scaleX(1);
+    transform-origin: left;
+}
+
+.sort-container .filter-label:not(:last-child) {
+    margin-right: 15px;
+}
+
+
+
+
+
+
+
+/* ========== MODAL (VIDEO PLAYER) ========== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.97);
+    justify-content: center;
+    align-items: center;
+}
+
+/* Ensure modal text matches desktop nav styling */
+.modal-text {
+    font-size: 10px;
+    font-weight: 400;
+    text-transform: uppercase;
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* Modal Centering */
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 90%;
+    max-width: 1000px;
+}
+
+/* Modal Video */
+.modal-video {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%;
+}
+
+.modal-video iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Modal Close Button */
+.close {
+    position: absolute;
+    top: 27px;
+    right: 30px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-weight: bold;
+    color: black;
+}
+
+.modal-arrows-container {
+  display: flex;
+  justify-content: center;
+  gap: 75px;
+  margin-top: 10px;
+}
+
+/* Desktop Arrow Positioning */
+.modal-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    z-index: 1000;
+}
+
+.modal-arrow.prev {
+    left: 100px;
+}
+
+.modal-arrow.next {
+    right: 100px;
+}
+
+.modal-arrow:hover {
+    opacity: 0.6;
+}
+
+        /* ========== MOBILE STYLES ========== */
+
+        @media (max-width: 1200px) {
+            /* Desktop Arrow Positioning */
+            .modal-arrow {
+                position: absolute;
+                /* top: 727px; */
+                transform: translateY(-50%);
+                cursor: pointer;
+                z-index: 1000;
+                position: absolute;
+                top: calc(100% - 200px); /* positions arrows responsively near bottom */
+                transform: translateY(0);
+            }
+
+            .modal-arrow.prev {
+                left: 50px;
+            }
+
+            .modal-arrow.next {
+                right: 50px;
+            }
+
+            .modal-arrow:hover {
+                opacity: 0.6;
+            }
+        }
+
+        @media (max-width: 1366px) {
+            /* Hide desktop header */
+            header {
+                display: none;
+            }
+            
+            main {
+            margin-left: 0;           
+            width: 100vw;             
+            padding: 100px 20px 20px;  /* 100px top padding pushes content down, 20px on sides and bottom */
+            transition: transform 0.3s ease-in-out;
+        }
+
+
+        /* Shift main content when mobile menu is open */
+        main.shift {
+            transform: translateX(75vw); /* Moves content over */
+        }
+
+            /* Video grid stacks thumbnails vertically */
+            .video-grid {
+            grid-template-columns: repeat(2, 1fr);
+            justify-items: center;
+            width: 100%;
+        }
+
+            
+        /* Mobile header styling */
+        .mobile-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 75px; /* Fixed height */
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            z-index: 1600;
+            transition: transform 0.3s ease-in-out, background-color 0.5s ease, color 0.5s ease;
+        }
+
+
+            
+            /* Dark mode for mobile header */
+            .dark-mode .mobile-header {
+                background: black;
+            }
+            
+        /* Remove fixed positioning from children */
+        .mobile-logo {
+            /* Remove position: fixed; */
+            font-size: 18px;
+            font-weight: 200;
+            color: black;
+            text-decoration: none;
+            opacity: 0.9;
+            z-index: 2000;
+            /* Remove top/left if not needed; they now flow within .mobile-header */
+        }
+            
+        .hamburger {
+            /* Remove position: fixed; */
+            font-size: 30px;
+            cursor: pointer;
+            z-index: 2000;
+            /* They will align naturally within .mobile-header */
+        }
+
+        /* ===== Hamburger to X Animation Adjustments ===== */
+        .hamburger svg rect {
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        transform-origin: 15px 15px; /* center of the 30x30 viewBox */
+        }
+
+        .hamburger.open svg rect:nth-child(1) {
+        transform: translateY(9px) rotate(45deg);
+        }
+
+        .hamburger.open svg rect:nth-child(2) {
+        opacity: 0;
+        }
+
+        .hamburger.open svg rect:nth-child(3) {
+        transform: translateY(-4px) rotate(-45deg);
+        }
+    
+    /* Mobile slide-in menu */
+    .mobile-menu {
+        position: fixed;
+        top: 50px; /* Moves menu below the header */
+        left: -75vw; /* Hidden by default */
+        width: 75vw; /* Takes up 75% of the viewport width */
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.97); /* Light mode background */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        padding: 80px 20px;
+        transition: left 0.3s ease-in-out, background-color 0.5s ease, color 0.5s ease;
+        z-index: 1500;
+    }
+    
+    /* When menu is open */
+    .mobile-menu.open {
+        left: 0;
+    }
+    
+    /* Mobile menu link styling */
+    .mobile-menu a {
+        font-size: 14px; /* Increased font size */
+        text-decoration: none;
+        color: #000;
+        text-transform: uppercase;
+        font-weight: 400;
+        transition: opacity 0.3s;
+        margin-left: 25px;
+    }
+    
+    /* Dark mode mobile menu text */
+    .dark-mode .mobile-menu a {
+        color: white !important;
+    }
+    
+    /* Space between mobile nav items */
+    .mobile-menu nav ul li {
+        margin-bottom: 20px;
+    }
+    
+    /* Dark mode toggle in mobile menu */
+    .theme-toggle-mobile {
+        position: relative;
+        margin-top: auto;         /* Push toggle to bottom */
+        padding-bottom: 40px;      /* Spacing from bottom */
+        padding-left: 20px;        /* Aligns with text */
+        display: flex;
+        align-items: center;
+        gap: 10px;               /* Space between slider and text */
+        width: 100%;
+    }
+    
+    .theme-toggle-mobile .toggle-label {
+        display: none;           /* Hide toggle label if desired */
+    }
+
+    /* Desktop Arrow Positioning */
+    .modal-arrow {
+        position: absolute;
+        /* top: 727px; */
+        transform: translateY(-50%);
+        cursor: pointer;
+        z-index: 1000;
+        position: absolute;
+        transform: translateY(0);
+    }
+
+    .modal-arrow.prev {
+        left: 50px;
+    }
+
+    .modal-arrow.next {
+        right: 50px;
+    }
+
+    .modal-arrow:hover {
+        opacity: 0.6;
+    }
+}
+
+
+/* 🔹 Move Dark Mode Toggle to Bottom with Proper Spacing */
+.theme-toggle-mobile {
+    position: relative; /* Ensures it stays inside the menu */
+    margin-top: auto; /* Pushes it to the bottom naturally */
+    padding-bottom: 40px; /* Increases spacing from bottom */
+    padding-left: 20px; /* Aligns with text */
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Space between slider and text */
+    width: 100%;
+}
+
+
+
+.theme-toggle-mobile .toggle-label {
+    display: none; /* ⬅️ Hide text */
+}
+
+
+/* ========== DARK MODE ========== */
+.dark-mode {
+    background-color: #000;
+    color: #fff;
+}
+
+.dark-mode #social ul li a {
+    color: #fff !important;
+    transition: color 0.4s ease-in-out;
+}
+
+.dark-mode .hamburger svg rect {
+    fill: white !important; /* ⬅️ Ensures icon turns white */
+}
+
+
+
+.dark-mode a,
+.dark-mode .sort-option {
+    color: #fff;
+}
+
+.dark-mode h1 a {
+    color: #fff !important;
+    transition: color 0.4s ease-in-out !important;
+}
+
+body:not(.dark-mode) h1 a {
+    color: #000 !important;
+    transition: color 0.4s ease-in-out !important;
+}
+
+.dark-mode .mobile-menu {
+    background-color: rgba(0, 0, 0, 0.97) !important; /* ⬅️ Ensure it turns black */
+}
+
+.dark-mode .mobile-menu a {
+    color: white !important; /* ⬅️ Ensure text stays visible */
+}
+
+
+.dark-mode .modal {
+    background: rgba(0, 0, 0, 0.97);
+}
+
+.dark-mode .close {
+    color: #fff;
+}
+
+/* Tabs dark mode text and underline color */
+.dark-mode .sort-container .filter-label {
+    color: #fff !important;
+}
+
+.dark-mode .sort-container .filter-label::after {
+    background-color: #fff !important;
+}
+
+/* Modal arrows for dark mode */
+.dark-mode .modal-arrow svg path {
+    stroke: #fff !important;
+}
+
+/* Modal close button */
+.dark-mode .close {
+    color: #fff !important;
+}
+
+
+
+
+
+
+    </style>
+</head>
+<body>
+    <div class="mobile-header">
+        <a href="/" class="mobile-logo">astn</a>
+        <!-- Hamburger Menu Icon -->
+        <div class="hamburger">
+            <svg width="22" height="18" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect y="5" width="30" height="1.5" fill="black"/>
+                <rect y="14" width="30" height="1.5" fill="black"/>
+                <rect y="23" width="30" height="1.5" fill="black"/>
+            </svg>
+        </div>
+    </div>
+    
+    <!-- Mobile Slide-In Menu -->
+    <div class="mobile-menu">
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/stills/">Stills</a></li>
+                <li><a href="/films/">Films</a></li>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/contact/">Contact</a></li>
+            </ul>
+        </nav>
+        
+        <!-- Dark Mode Toggle moved out of the nav list -->
+        <div class="theme-toggle-mobile">
+            <span class="toggle-label">Dark Mode</span>
+            <label class="switch">
+                <input type="checkbox" id="themeToggleMobile">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+    
+
+<!-- Desktop Header (Unchanged) -->
+<header>
+    <h1><a href="/" class="logo text">astn</a></h1>
+    <nav>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/stills/">Stills</a></li>
+            <li><a href="/films/">Films</a></li>
+            <li><a href="/about/">About</a></li>
+            <li><a href="/contact/">Contact</a></li>
+        </ul>
+    </nav>
+
+    <div class="theme-toggle">
+        <span class="toggle-label">Dark Mode</span>
+        <label class="switch">
+            <input type="checkbox" id="themeToggle">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <div id="social">
+        <ul>
+            <li><a href="http://twitter.com/MrLaraMES" target="_blank">Twitter</a></li>
+            <li><a href="http://instagram.com/astnla" target="_blank">Instagram</a></li>
+        </ul>
+    </div>
+    <div class="post_text">© 2025</div>
+</header>
+
+
+    <main>
+        <div class="featured-video">
+            <iframe id="video-player" width="100%" height="500" src="https://www.youtube.com/embed/mT77HGdVI2Y" frameborder="0" allowfullscreen></iframe>
+        </div>
+          
+        <div class="sort-container">
+            <span class="filter-label active" data-filter="all">All</span>
+            <span class="filter-label" data-filter="top5">Top 5</span>
+            <span class="filter-label" data-year="2025">2025</span>
+            <span class="filter-label" data-year="2024">2024</span>
+            <span class="filter-label" data-year="2023">2023</span>
+            <span class="filter-label" data-year="2022">2022</span>
+        </div>
+        
+          
+          
+
+        <div class="video-grid" id="videoGrid">
+            <!-- Video thumbnails will be inserted here dynamically -->
+        </div>
+    </main>
+
+        <!-- Video Modal -->
+    <div id="videoModal" class="modal">
+        <div class="modal-content">
+            <span class="close">BACK</span>
+            <div class="modal-video">
+                <iframe id="modal-video-player" src="" frameborder="0" allowfullscreen></iframe>
+            </div>
+            <p class="modal-text">Filmed & edited by Austin Lara</p>
+        </div>
+    </div>
+
+
+   <!-- <script>
+
+        
+
+document.addEventListener("DOMContentLoaded", function () {
+  // ... your other code ...
+
+  // Set up the sort toggle
+  const sortContainer = document.querySelector('.sort-container');
+  if (sortContainer) {
+    const filterLabel = sortContainer.querySelector('.filter-label');
+    // Toggle only when clicking on the "sort" label
+    filterLabel.addEventListener('click', function(e) {
+      sortContainer.classList.toggle('expanded');
+      e.stopPropagation(); // Prevent the event from bubbling up
+
+      
+    });
+  }
+
+  
+
+  // ... rest of your code (video filtering, modal, etc.)
+});
+
+        /* ==================== THEME TOGGLE (DARK/LIGHT MODE) ==================== */
+        
+        document.addEventListener("DOMContentLoaded", function () {
+            const body = document.body;
+            const themeToggle = document.getElementById("themeToggle");
+            const themeToggleMobile = document.getElementById("themeToggleMobile");
+        
+            function applyDarkMode(isDark) {
+                if (isDark) {
+                    body.classList.add("dark-mode");
+                    localStorage.setItem("theme", "dark");
+                } else {
+                    body.classList.remove("dark-mode");
+                    localStorage.setItem("theme", "light");
+                }
+                
+                // Sync toggle switches
+                if (themeToggle) themeToggle.checked = isDark;
+                if (themeToggleMobile) themeToggleMobile.checked = isDark;
+            }
+        
+            function toggleTheme(event) {
+                applyDarkMode(event.target.checked);
+            }
+        
+            // Get stored theme preference
+            let storedTheme = localStorage.getItem("theme") || "light";
+            applyDarkMode(storedTheme === "dark");
+        
+            // Attach event listeners
+            if (themeToggle) themeToggle.addEventListener("change", toggleTheme);
+            if (themeToggleMobile) themeToggleMobile.addEventListener("change", toggleTheme);
+        });
+        
+        /* ==================== MOBILE HEADER HIDE/SHOW ON SCROLL ==================== */
+        document.addEventListener("DOMContentLoaded", function () {
+            let lastScrollTop = 0;
+            const mobileHeader = document.querySelector(".mobile-header");
+        
+            window.addEventListener("scroll", function () {
+                let currentScroll = window.scrollY;
+                if (currentScroll > lastScrollTop && currentScroll > 50) {
+                    mobileHeader.style.transform = "translateY(-100%)";
+                    mobileHeader.style.opacity = "0";
+                } else {
+                    mobileHeader.style.transform = "translateY(0)";
+                    mobileHeader.style.opacity = "1";
+                }
+                lastScrollTop = Math.max(0, currentScroll); // Prevent negative values
+            });
+        });
+        
+        /* ==================== MOBILE MENU (SLIDE-IN NAV) ==================== */
+        document.addEventListener("DOMContentLoaded", function () {
+            const hamburger = document.querySelector(".hamburger");
+            const mobileMenu = document.querySelector(".mobile-menu");
+            const mainContent = document.querySelector("main");
+            const overlay = document.createElement("div");
+        
+            overlay.classList.add("overlay");
+            document.body.appendChild(overlay);
+        
+            // Toggle menu & overlay on hamburger click
+            hamburger.addEventListener("click", function (event) {
+    event.stopPropagation();
+    mobileMenu.classList.toggle("open");
+    mainContent.classList.toggle("shift");
+    overlay.classList.toggle("active");
+    hamburger.classList.toggle("open");  // Toggle the class for animation
+});
+
+document.addEventListener("click", function (event) {
+    if (!mobileMenu.contains(event.target) && !hamburger.contains(event.target)) {
+        mobileMenu.classList.remove("open");
+        mainContent.classList.remove("shift");
+        overlay.classList.remove("active");
+        hamburger.classList.remove("open"); // Reset hamburger icon
+    }
+});
+
+        
+            // Close menu when clicking outside
+            document.addEventListener("click", function (event) {
+                if (!mobileMenu.contains(event.target) && !hamburger.contains(event.target)) {
+                    mobileMenu.classList.remove("open");
+                    mainContent.classList.remove("shift");
+                    overlay.classList.remove("active");
+                }
+            });
+        
+            // Prevent menu from closing when clicking inside
+            mobileMenu.addEventListener("click", function (event) {
+                event.stopPropagation();
+            });
+        });
+        
+        /* ==================== VIDEO PORTFOLIO (FILTER & MODAL) ==================== */
+        document.addEventListener("DOMContentLoaded", function () {
+            /* 🔹 Variables */
+            const videoGrid = document.getElementById("videoGrid");
+            const sortOptions = document.querySelectorAll(".sort-option[data-year]");
+            const clearFilter = document.getElementById("clear-filter");
+            const videoModal = document.getElementById("videoModal");
+            const modalVideoPlayer = document.getElementById("modal-video-player");
+            const closeModal = document.querySelector(".close");
+            
+            sortOptions.forEach(option => {
+    option.addEventListener("click", function() {
+        const selectedYear = this.getAttribute("data-year");
+        renderVideos(selectedYear);
+    });
+});
+
+clearFilter.addEventListener("click", function() {
+    renderVideos("all");
+});
+
+
+            // Create navigation arrows dynamically
+            const prevArrow = document.createElement("span");
+            const nextArrow = document.createElement("span");
+        
+            /* 🔹 Video List */
+            const videos = [
+            { title: "Field Day '25", year: "2025", thumbnail: "images/thumb/field25.webp", url: "https://www.youtube.com/embed/mT77HGdVI2Y" },
+                { title: "Friendship Bracelets", year: "2025", thumbnail: "images/thumb/bracelets.webp", url: "https://www.youtube.com/embed/vu6PTSjqj3k" },
+                { title: "Hurricanes Volleyball '25", year: "2024", thumbnail: "images/thumb/hurricanes.webp", url: "https://www.youtube.com/embed/yeZkcxd3Nr8" },
+                { title: "Trunk or Treat '25", year: "2024", thumbnail: "images/thumb/trunk25.webp", url: "https://www.youtube.com/embed/xhU3j1VueGc" },
+                { title: "Marley-Palooza", year: "2024", thumbnail: "images/thumb/palooza.webp", url: "https://www.youtube.com/embed/9cy2ae1UL4o" },
+                { title: "Hispanic Heritage Month '25", year: "2024", thumbnail: "images/thumb/hispanic.webp", url: "https://www.youtube.com/embed/ZGkC4-htSqM" },
+                { title: "Rating Our First Day", year: "2024", thumbnail: "images/thumb/firstday.webp", url: "https://www.youtube.com/embed/ye3UjIz9jxY" },
+                { title: "Make Us Proud", year: "2024", thumbnail: "images/thumb/proud.webp", url: "https://www.youtube.com/embed/IAfNfhlod5Y" },
+                { title: "Yearbooks", year: "2024", thumbnail: "images/thumb/yearbooks.webp", url: "https://www.youtube.com/embed/npAAAWfkdzs" },
+                { title: "Lighthouse Celebration", year: "2024", thumbnail: "images/thumb/lighthouse.webp", url: "https://www.youtube.com/embed/W2AyRdgaVG8" },
+                { title: "Thank You, Ms. Papworth.", year: "2024", thumbnail: "images/thumb/papworth.webp", url: "https://www.youtube.com/embed/rXlTcxSXH4k" },
+                { title: "Family Picnic '24", year: "2024", thumbnail: "images/thumb/fampic24.webp", url: "https://www.youtube.com/embed/YE1GqrZ4YsA" },
+                { title: "Field Day '24", year: "2024", thumbnail: "images/thumb/field24.webp", url: "https://www.youtube.com/embed/56LniJRap90" },
+                { title: "Walkathon", year: "2023", thumbnail: "images/thumb/walkathon.webp", url: "https://www.youtube.com/embed/5aTqg0Cn0bM" },
+                { title: "Trunk or Treat '24", year: "2023", thumbnail: "images/thumb/trunk24.webp", url: "https://www.youtube.com/embed/Rrjpt12fQYI" },
+                { title: "Aracely & Brett", year: "2023", thumbnail: "images/thumb/aracelybrett.webp", url: "https://www.youtube.com/embed/cKci-BdFoKo" },
+                { title: "Jackie's XV", year: "2023", thumbnail: "images/thumb/jackie.webp", url: "https://www.youtube.com/embed/CwHzBi4DV7M" },
+                { title: "This is MES", year: "2023", thumbnail: "images/thumb/mes.webp", url: "https://www.youtube.com/embed/sbD0hp_ZSJs0" },
+                { title: "Field Day '23", year: "2023", thumbnail: "images/thumb/field23.webp", url: "https://www.youtube.com/embed/VtP1P_Bu1tU" },
+                { title: "Family Picnic '23", year: "2023", thumbnail: "images/thumb/fampic23.webp", url: "https://www.youtube.com/embed/qMbTH5UfQWE" },
+                { title: "Student Leaders", year: "2022", thumbnail: "images/thumb/studlead.webp", url: "https://www.youtube.com/embed/hRF-zRr2mXA" },
+                { title: "Blue Zone Celebration", year: "2022", thumbnail: "images/thumb/bluecel.webp", url: "https://www.youtube.com/embed/_BKLjwGGky4" },
+                { title: "What is Blue Zone?", year: "2022", thumbnail: "images/thumb/whatblue.webp", url: "https://www.youtube.com/embed/kf4qxxGVlnc" },
+                { title: "Homerun Celebration", year: "2022", thumbnail: "images/thumb/homerun.webp", url: "https://www.youtube.com/embed/jFQUsTIB--I" },
+                { title: "Identity Crisis", year: "2022", thumbnail: "images/thumb/crisis.webp", url: "https://www.youtube.com/embed/MwMFABhzNxk" },
+                { title: "Manatee A-ssembly", year: "2022", thumbnail: "images/thumb/assembly.webp", url: "https://www.youtube.com/embed/A-6e53W0LJw" },
+                { title: "Crystal & Marco", year: "2022", thumbnail: "images/thumb/crystalmarc.webp", url: "https://www.youtube.com/embed/MSR59bpwfJQ" },
+                { title: "Field Day '22", year: "2022", thumbnail: "images/thumb/field22.webp", url: "https://www.youtube.com/embed/tLcdKXZBzVI" },
+            ];
+        
+            let currentVideos = [...videos]; // Default: All videos
+            let currentIndex = 0; // Track video in modal
+        
+            /* 🔹 Create Modal Arrows */
+            prevArrow.innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
+            nextArrow.innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
+        
+            prevArrow.classList.add("modal-arrow", "prev");
+            nextArrow.classList.add("modal-arrow", "next");
+        
+            const arrowContainer = document.createElement("div");
+            arrowContainer.classList.add("modal-arrows-container");
+            arrowContainer.appendChild(prevArrow);
+            arrowContainer.appendChild(nextArrow);
+            document.querySelector(".modal-content").appendChild(arrowContainer);
+        
+            /* ==================== VIDEO FILTERING ==================== */
+
+            document.addEventListener("DOMContentLoaded", function () {
+
+
+    // Set up the sort toggle
+    const sortContainer = document.querySelector('.sort-container');
+  const filterLabel = sortContainer.querySelector('.filter-label');
+  
+  // Toggle only when clicking on the "sort" label
+  filterLabel.addEventListener('click', function(e) {
+    sortContainer.classList.toggle('expanded');
+    // Stop the click from affecting other elements if needed
+    e.stopPropagation();
+  });
+});
+
+
+
+
+
+            function renderVideos(filterYear = "all") {
+                videoGrid.innerHTML = "";
+                currentVideos = filterYear === "all" ? [...videos] : videos.filter(video => video.year === filterYear);
+        
+                currentVideos.forEach((video, index) => {
+                    const videoItem = document.createElement("div");
+                    videoItem.classList.add("video-item");
+        
+                    const title = document.createElement("span");
+                    title.textContent = video.title;
+                    title.classList.add("video-title");
+        
+                    const img = document.createElement("img");
+                    img.src = video.thumbnail;
+                    img.alt = video.title;
+                    img.classList.add("video-thumbnail");
+                    img.addEventListener("click", () => openModal(index));
+        
+                    videoItem.appendChild(title);
+                    videoItem.appendChild(img);
+                    videoGrid.appendChild(videoItem);
+        
+                    // Ensure fade-in effect
+                    setTimeout(() => videoItem.classList.add("show"), 50);
+                });
+        
+                clearFilter.style.pointerEvents = filterYear !== "all" ? "auto" : "none";
+                clearFilter.classList.toggle("active", filterYear !== "all");
+            }
+
+            
+        
+            /* ==================== MODAL VIDEO FUNCTIONALITY ==================== */
+            function openModal(index) {
+                currentIndex = index;
+                modalVideoPlayer.src = currentVideos[currentIndex].url;
+                videoModal.style.display = "flex";
+
+                // Show/hide arrows based on video position
+                prevArrow.style.visibility = currentIndex === 0 ? "hidden" : "visible";
+                nextArrow.style.visibility = currentIndex === currentVideos.length - 1 ? "hidden" : "visible";
+
+                // 🔹 Add keyboard event listener when modal opens
+                document.addEventListener("keydown", handleKeyDown);
+            }
+
+            function navigateModal(direction) {
+                currentIndex += direction;
+
+                // Hide left arrow if at first video
+                prevArrow.style.visibility = currentIndex === 0 ? "hidden" : "visible";
+
+                // Hide right arrow if at last video
+                nextArrow.style.visibility = currentIndex === currentVideos.length - 1 ? "hidden" : "visible";
+
+                modalVideoPlayer.src = currentVideos[currentIndex].url;
+            }
+
+            function closeModalFunction() {
+                videoModal.style.display = "none";
+                modalVideoPlayer.src = "";
+
+                // 🔹 Remove keyboard event listener when modal closes
+                document.removeEventListener("keydown", handleKeyDown);
+            }
+
+            /* ==================== HANDLE KEYBOARD NAVIGATION ==================== */
+            function handleKeyDown(event) {
+                if (event.key === "ArrowLeft") {
+                    if (currentIndex > 0) navigateModal(-1); // Left arrow moves to previous video
+                } else if (event.key === "ArrowRight") {
+                    if (currentIndex < currentVideos.length - 1) navigateModal(1); // Right arrow moves to next video
+                } else if (event.key === "Escape") {
+                    closeModalFunction(); // ESC key closes the modal
+                }
+            }
+
+            /* 🔹 Event Listeners */
+            prevArrow.addEventListener("click", () => navigateModal(-1));
+            nextArrow.addEventListener("click", () => navigateModal(1));
+            closeModal.addEventListener("click", closeModalFunction);
+
+            window.addEventListener("click", function (event) {
+                if (event.target === videoModal) closeModalFunction();
+            });
+
+        
+            renderVideos(); // Load all videos initially
+        });
+        </script>
+
+    -->
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            /* ==================== THEME TOGGLE (DARK/LIGHT MODE) ==================== */
+            const body = document.body;
+            const themeToggle = document.getElementById("themeToggle");
+            const themeToggleMobile = document.getElementById("themeToggleMobile");
+        
+            function applyDarkMode(isDark) {
+                body.classList.toggle("dark-mode", isDark);
+                localStorage.setItem("theme", isDark ? "dark" : "light");
+                if (themeToggle) themeToggle.checked = isDark;
+                if (themeToggleMobile) themeToggleMobile.checked = isDark;
+            }
+        
+            let storedTheme = localStorage.getItem("theme") || "light";
+            applyDarkMode(storedTheme === "dark");
+        
+            if (themeToggle) themeToggle.addEventListener("change", (e) => applyDarkMode(e.target.checked));
+            if (themeToggleMobile) themeToggleMobile.addEventListener("change", (e) => applyDarkMode(e.target.checked));
+        
+            /* ==================== MOBILE MENU (HAMBURGER) ==================== */
+            const hamburger = document.querySelector(".hamburger");
+            const mobileMenu = document.querySelector(".mobile-menu");
+            const mainContent = document.querySelector("main");
+        
+            hamburger.addEventListener("click", function (event) {
+                event.stopPropagation();
+                mobileMenu.classList.toggle("open");
+                mainContent.classList.toggle("shift");
+                hamburger.classList.toggle("open");
+            });
+        
+            document.addEventListener("click", function (event) {
+                if (!mobileMenu.contains(event.target) && !hamburger.contains(event.target)) {
+                    mobileMenu.classList.remove("open");
+                    mainContent.classList.remove("shift");
+                    hamburger.classList.remove("open");
+                }
+            });
+        
+            /* ==================== VIDEO DATA & RENDERING ==================== */
+            const videoGrid = document.getElementById("videoGrid");
+
+            /* 🔹 Get reference to all tabs */
+            const tabAll = document.querySelector(".sort-container .filter-label:nth-child(1)");
+            const tabTop5 = document.querySelector(".sort-container .filter-label:nth-child(2)");
+            const tab2025 = document.querySelector(".sort-container .filter-label[data-year='2025']");
+            const tab2024 = document.querySelector(".sort-container .filter-label[data-year='2024']");
+            const tab2023 = document.querySelector(".sort-container .filter-label[data-year='2023']");
+            const tab2022 = document.querySelector(".sort-container .filter-label[data-year='2022']");
+
+            // 🔹 Video Data
+            const videos = [
+            { title: "Field Day '25", year: "2025", thumbnail: "images/thumb/field25.webp", url: "https://www.youtube.com/embed/mT77HGdVI2Y" },
+                { title: "Friendship Bracelets", year: "2025", thumbnail: "images/thumb/bracelets.webp", url: "https://www.youtube.com/embed/vu6PTSjqj3k" },
+                { title: "Hurricanes Volleyball '25", year: "2024", thumbnail: "images/thumb/hurricanes.webp", url: "https://www.youtube.com/embed/yeZkcxd3Nr8" },
+                { title: "Trunk or Treat '25", year: "2024", thumbnail: "images/thumb/trunk25.webp", url: "https://www.youtube.com/embed/xhU3j1VueGc" },
+                { title: "Marley-Palooza", year: "2024", thumbnail: "images/thumb/palooza.webp", url: "https://www.youtube.com/embed/9cy2ae1UL4o" },
+                { title: "Hispanic Heritage Month '25", year: "2024", thumbnail: "images/thumb/hispanic.webp", url: "https://www.youtube.com/embed/ZGkC4-htSqM" },
+                { title: "Rating Our First Day", year: "2024", thumbnail: "images/thumb/firstday.webp", url: "https://www.youtube.com/embed/ye3UjIz9jxY" },
+                { title: "Make Us Proud", year: "2024", thumbnail: "images/thumb/proud.webp", url: "https://www.youtube.com/embed/IAfNfhlod5Y" },
+                { title: "Yearbooks", year: "2024", thumbnail: "images/thumb/yearbooks.webp", url: "https://www.youtube.com/embed/npAAAWfkdzs" },
+                { title: "Lighthouse Celebration", year: "2024", thumbnail: "images/thumb/lighthouse.webp", url: "https://www.youtube.com/embed/W2AyRdgaVG8" },
+                { title: "Thank You, Ms. Papworth.", year: "2024", thumbnail: "images/thumb/papworth.webp", url: "https://www.youtube.com/embed/rXlTcxSXH4k" },
+                { title: "Family Picnic '24", year: "2024", thumbnail: "images/thumb/fampic24.webp", url: "https://www.youtube.com/embed/YE1GqrZ4YsA" },
+                { title: "Field Day '24", year: "2024", thumbnail: "images/thumb/field24.webp", url: "https://www.youtube.com/embed/56LniJRap90" },
+                { title: "Walkathon", year: "2023", thumbnail: "images/thumb/walkathon.webp", url: "https://www.youtube.com/embed/5aTqg0Cn0bM" },
+                { title: "Trunk or Treat '24", year: "2023", thumbnail: "images/thumb/trunk24.webp", url: "https://www.youtube.com/embed/Rrjpt12fQYI" },
+                { title: "Aracely & Brett", year: "2023", thumbnail: "images/thumb/aracelybrett.webp", url: "https://www.youtube.com/embed/cKci-BdFoKo" },
+                { title: "Jackie's XV", year: "2023", thumbnail: "images/thumb/jackie.webp", url: "https://www.youtube.com/embed/CwHzBi4DV7M" },
+                { title: "This is MES", year: "2023", thumbnail: "images/thumb/mes.webp", url: "https://www.youtube.com/embed/sbD0hp_ZSJs0" },
+                { title: "Field Day '23", year: "2023", thumbnail: "images/thumb/field23.webp", url: "https://www.youtube.com/embed/VtP1P_Bu1tU" },
+                { title: "Family Picnic '23", year: "2023", thumbnail: "images/thumb/fampic23.webp", url: "https://www.youtube.com/embed/qMbTH5UfQWE" },
+                { title: "Student Leaders", year: "2022", thumbnail: "images/thumb/studlead.webp", url: "https://www.youtube.com/embed/hRF-zRr2mXA" },
+                { title: "Blue Zone Celebration", year: "2022", thumbnail: "images/thumb/bluecel.webp", url: "https://www.youtube.com/embed/_BKLjwGGky4" },
+                { title: "What is Blue Zone?", year: "2022", thumbnail: "images/thumb/whatblue.webp", url: "https://www.youtube.com/embed/kf4qxxGVlnc" },
+                { title: "Homerun Celebration", year: "2022", thumbnail: "images/thumb/homerun.webp", url: "https://www.youtube.com/embed/jFQUsTIB--I" },
+                { title: "Identity Crisis", year: "2022", thumbnail: "images/thumb/crisis.webp", url: "https://www.youtube.com/embed/MwMFABhzNxk" },
+                { title: "Manatee A-ssembly", year: "2022", thumbnail: "images/thumb/assembly.webp", url: "https://www.youtube.com/embed/A-6e53W0LJw" },
+                { title: "Crystal & Marco", year: "2022", thumbnail: "images/thumb/crystalmarc.webp", url: "https://www.youtube.com/embed/MSR59bpwfJQ" },
+                { title: "Field Day '22", year: "2022", thumbnail: "images/thumb/field22.webp", url: "https://www.youtube.com/embed/tLcdKXZBzVI" },
+            
+            ];
+        
+            /* 🔹 Custom Top 5 Videos */
+            const top5Videos = [
+                videos.find(video => video.title === "Field Day '25"),
+                videos.find(video => video.title === "Yearbooks"),
+                videos.find(video => video.title === "Field Day '24"),
+                videos.find(video => video.title === "Aracely & Brett"),
+                videos.find(video => video.title === "Family Picnic '24")
+            ].filter(Boolean); // Ensures no undefined values
+
+            let currentVideos = [...videos];
+
+            /* 🔹 Function to Render Videos */
+            function renderVideos(filterYear = "all") {
+                videoGrid.innerHTML = "";
+                currentVideos = filterYear === "all" ? [...videos] : videos.filter(video => video.year === filterYear);
+
+                currentVideos.forEach((video, index) => {
+                    const videoItem = document.createElement("div");
+                    videoItem.classList.add("video-item");
+
+                    const title = document.createElement("span");
+                    title.textContent = video.title;
+                    title.classList.add("video-title");
+
+                    const img = document.createElement("img");
+                    img.src = video.thumbnail;
+                    img.alt = video.title;
+                    img.classList.add("video-thumbnail");
+                    img.addEventListener("click", () => openModal(index));
+
+                    videoItem.appendChild(title);
+                    videoItem.appendChild(img);
+                    videoGrid.appendChild(videoItem);
+                    setTimeout(() => videoItem.classList.add("show"), 50);
+                });
+            }
+
+            /* 🔹 Function to Render Top 5 */
+            function renderTop5() {
+                videoGrid.innerHTML = "";
+                currentVideos = [...top5Videos];
+
+                currentVideos.forEach((video, index) => {
+                    const videoItem = document.createElement("div");
+                    videoItem.classList.add("video-item");
+
+                    const title = document.createElement("span");
+                    title.textContent = video.title;
+                    title.classList.add("video-title");
+
+                    const img = document.createElement("img");
+                    img.src = video.thumbnail;
+                    img.alt = video.title;
+                    img.classList.add("video-thumbnail");
+                    img.addEventListener("click", () => openModal(index));
+
+                    videoItem.appendChild(title);
+                    videoItem.appendChild(img);
+                    videoGrid.appendChild(videoItem);
+                    setTimeout(() => videoItem.classList.add("show"), 50);
+                });
+            }
+
+            /* 🔹 Function to Handle Tab Clicks */
+            function clearTabActive() {
+                document.querySelectorAll(".sort-container .filter-label").forEach(label => {
+                    label.classList.remove("active");
+                });
+            }
+
+            function showAllVideos() {
+                clearTabActive();
+                tabAll.classList.add("active");
+                renderVideos("all");
+            }
+
+            function showTop5Videos() {
+                clearTabActive();
+                tabTop5.classList.add("active");
+                renderTop5();
+            }
+
+            function showVideosByYear(year) {
+                clearTabActive();
+                document.querySelector(`.sort-container .filter-label[data-year="${year}"]`).classList.add("active");
+                renderVideos(year);
+            }
+
+            /* 🔹 Add Event Listeners */
+            tabAll.addEventListener("click", showAllVideos);
+            tabTop5.addEventListener("click", showTop5Videos);
+            tab2025.addEventListener("click", () => showVideosByYear("2025"));
+            tab2024.addEventListener("click", () => showVideosByYear("2024"));
+            tab2023.addEventListener("click", () => showVideosByYear("2023"));
+            tab2022.addEventListener("click", () => showVideosByYear("2022"));
+
+            /* 🔹 Initial Load */
+            showAllVideos();
+        
+            /* ==================== VIDEO MODAL FUNCTIONALITY ==================== */
+            const videoModal = document.getElementById("videoModal");
+            const modalContent = document.querySelector(".modal-content");
+            const modalVideoPlayer = document.getElementById("modal-video-player");
+            const closeModal = document.querySelector(".close");
+        
+            let currentIndex = 0;
+        
+            /* ✅ Fix Navigation Arrows */
+            const prevArrow = document.createElement("span");
+            const nextArrow = document.createElement("span");
+        
+            prevArrow.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
+            nextArrow.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
+        
+            prevArrow.classList.add("modal-arrow", "prev");
+            nextArrow.classList.add("modal-arrow", "next");
+        
+            /*
+            prevArrow.style.position = "absolute";
+            prevArrow.style.left = "20px";
+            prevArrow.style.top = "50%";
+            prevArrow.style.transform = "translateY(-50%)";
+            prevArrow.style.cursor = "pointer";
+            prevArrow.style.zIndex = "1000";
+        
+            nextArrow.style.position = "absolute";
+            nextArrow.style.right = "20px";
+            nextArrow.style.top = "50%";
+            nextArrow.style.transform = "translateY(-50%)";
+            nextArrow.style.cursor = "pointer";
+            nextArrow.style.zIndex = "1000"; */
+        
+            if (!modalContent.contains(prevArrow)) {
+                modalContent.appendChild(prevArrow);
+                modalContent.appendChild(nextArrow);
+            }
+        
+            prevArrow.addEventListener("click", () => navigateModal(-1));
+            nextArrow.addEventListener("click", () => navigateModal(1));
+        
+            function openModal(index) {
+                currentIndex = index;
+                modalVideoPlayer.src = currentVideos[currentIndex].url;
+                videoModal.style.display = "flex";
+                updateArrows();
+                document.addEventListener("keydown", handleKeyDown);
+            }
+        
+            function updateArrows() {
+                prevArrow.style.display = currentIndex === 0 ? "none" : "block";
+                nextArrow.style.display = currentIndex === currentVideos.length - 1 ? "none" : "block";
+            }
+        
+            function navigateModal(direction) {
+                currentIndex += direction;
+                modalVideoPlayer.src = currentVideos[currentIndex].url;
+                updateArrows();
+            }
+        
+            function closeModalFunction() {
+                videoModal.style.display = "none";
+                modalVideoPlayer.src = "";
+                document.removeEventListener("keydown", handleKeyDown);
+            }
+        
+            closeModal.addEventListener("click", closeModalFunction);
+            videoModal.addEventListener("click", function (event) {
+                if (event.target === videoModal) closeModalFunction();
+            });
+
+            /* ==================== MODAL KEYBOARD NAVIGATION ==================== */
+            function handleModalKeydown(event) {
+                if (videoModal.style.display !== "flex") return;
+                switch (event.key) {
+                    case "ArrowLeft":
+                        if (currentIndex > 0) navigateModal(-1);
+                        break;
+                    case "ArrowRight":
+                        if (currentIndex < currentVideos.length - 1) navigateModal(1);
+                        break;
+                    case "Escape":
+                        closeModalFunction();
+                        break;
+                }
+            }
+
+            document.addEventListener("keydown", handleModalKeydown);
+
+            /* ==================== INITIAL VIDEO LOAD (KEEP THIS LAST) ==================== */
+            showAllVideos(); // ensures everything above is already set
+        });
+
+        
+    </script>
+        
+        
+        
+        
+    
+    
+        
+    
+    
+        
+        
+</body>
+</html>
+
+
+
+
+

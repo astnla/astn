@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stills</title>
+
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="Stills">
+    <meta property="og:description" content="Capture Happiness.">
+    <meta property="og:image" content="https://astnla.com/assets/graph/stills.png">
+    <meta property="og:url" content="https://astnla.com/stills/">
+    <meta property="og:type" content="website">
+
+    <!-- Favicon Image -->
+    <link rel="icon" type="image/svg+xml" href="/assets/images/astn.svg">
+    <link rel="apple-touch-icon" href="/assets/images/astn.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/header.css">
+
+    <style>
+
+/* Masonry Grid */
+#photoGrid {
+    column-count: 2; /* Two columns on desktop */
+    column-gap: 15px; /* Spacing */
+    width: 100%;
+    max-width: 85%;
+    margin: 0 auto;
+    padding-top: 20px;
+}
+
+/* Ensure images fit inside columns properly */
+.grid-item {
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 10px; /* Space between images */
+    break-inside: avoid; /* Prevent images from breaking across columns */
+}
+
+/* Image Styling */
+.grid-item img {
+    width: 100%;
+    height: auto; /* Maintain aspect ratio */
+    display: block;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    cursor: pointer; /* ✅ Show pointer cursor on hover */
+
+}
+
+/* Fade in effect */
+.grid-item img.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 🔹 Image Container */
+.grid-item {
+    position: relative;
+    overflow: hidden;
+}
+
+/* 🔹 White Overlay Effect */
+.grid-item::before {
+    content: "";
+    position: absolute;
+    inset: 0; /* Covers entire image */
+    background: rgba(255, 255, 255, 0.3); /* White overlay */
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.3s ease-in-out;
+    z-index: 1;
+    pointer-events: none; /* ✅ Allows clicks to pass through to the image */
+}
+
+
+/* 🔹 Show Overlay on Hover */
+.grid-item:hover::before {
+    opacity: 1;
+}
+
+
+/* 🔹 Mobile: Stack images in 1 column */
+@media (max-width: 768px) {
+    #photoGrid {
+        column-count: 1;
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Sorting Container */
+.sort-container {
+    text-align: center;
+    margin: 20px auto;
+    padding-bottom: 10px;
+}
+
+/* Sorting Labels */
+.sort-container .filter-label {
+    cursor: pointer;
+    margin: 0 15px;
+    font-size: 12px;
+    text-transform: uppercase;
+    transition: color 0.3s;
+}
+
+/* Active Sort */
+.sort-container .filter-label.active {
+    font-weight: bold;
+}
+
+/* ========== MODAL STYLES ========== */
+/* Modal default state (hidden) */
+.modal {
+    display: flex;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.97);
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
+}
+
+/* Show the modal (fade-in effect) */
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Hide the modal (fade-out effect) */
+.modal.hide {
+    opacity: 0;
+    visibility: hidden;
+}
+
+
+/* Modal Image */
+.modal-image {
+    width: auto;
+    max-width: 90vw;
+    max-height: 90vh;
+}
+
+/* Modal Close Button */
+.close {
+    position: absolute;
+    top: 27px;
+    right: 30px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-weight: bold;
+    color: black;
+}
+
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <a href="/" class="mobile-logo">astn</a>
+        <div class="hamburger">
+            <svg width="22" height="18" viewBox="0 0 30 30" fill="none">
+                <rect y="5" width="30" height="1.5" fill="black"/>
+                <rect y="14" width="30" height="1.5" fill="black"/>
+                <rect y="23" width="30" height="1.5" fill="black"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Mobile Slide-In Menu -->
+    <div class="mobile-menu">
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/stills/">Stills</a></li>
+                <li><a href="/films/">Films</a></li>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/contact/">Contact</a></li>
+            </ul>
+        </nav>
+        <div class="theme-toggle-mobile">
+            <label class="switch">
+                <input type="checkbox" id="themeToggleMobile">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Desktop Header -->
+    <header>
+        <h1><a href="/" class="logo">astn</a></h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/stills/">Stills</a></li>
+                <li><a href="/films/">Films</a></li>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/contact/">Contact</a></li>
+            </ul>
+        </nav>
+        <div class="theme-toggle">
+            <label class="switch">
+                <input type="checkbox" id="themeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div id="social">
+            <ul>
+                <li><a href="#">Twitter</a></li>
+                <li><a href="#">Instagram</a></li>
+            </ul>
+        </div>
+        <div class="post_text">© 2025</div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main>
+        <!-- Sorting Container -->
+        <div class="sort-container">
+            <span class="filter-label active" data-filter="all">All</span>
+            <span class="filter-label" data-filter="work">work</span>
+            <span class="filter-label" data-filter="life">Life</span>
+            <span class="filter-label" data-filter="sports">Sports</span>
+            <span class="filter-label" data-filter="portraits">Portraits</span>
+        </div>
+
+        <!-- PHOTO GRID -->
+        <div id="photoGrid"></div>
+    </main>
+
+    <!-- MODAL -->
+    <div id="imageModal" class="modal">
+        <span id="closeModal" class="close">BACK</span>
+        <img id="modalImg" class="modal-image" src="" alt="Expanded Image">
+    </div>
+  
+
+    <script>
+document.addEventListener("DOMContentLoaded", function () {
+    const photoGrid = document.getElementById("photoGrid");
+    const modal = document.getElementById("imageModal");
+    const modalImg = document.getElementById("modalImg");
+    const closeModal = document.getElementById("closeModal");
+
+        // 🔹 PRESET ORDER FOR "ALL" CATEGORY
+        const allImagesOrdered = [
+        "img/soccer t.webp", "img/grow.webp", "img/softball e.webp", "img/spooky.webp",
+            "img/soccer r.webp", "img/paint.webp", "img/softball a.webp", "img/parade a.webp",
+            "img/softball i.webp", "img/soccer i.webp", "img/frame.webp", "img/softball k.webp",
+            "img/habit2.webp", "img/soccer j.webp", "img/speakers.webp", "img/softball f.webp",
+            "img/portrait.webp", "img/maraca2.webp", "img/soccer e.webp", "img/basketball e.webp",
+            "img/softball h.webp", "img/training.webp", "img/soccer s.webp", "img/georgia2.webp",
+            "img/career.webp", "img/softball d.webp", "img/cat.webp", "img/vball2.webp",
+            "img/soccer p.webp", "img/lola.webp", "img/basketball c.webp", "img/eagle.webp",
+            "img/helpers.webp", "img/trunk2.webp", "img/georgia3.webp", "img/soccer a.webp",
+            "img/softball b.webp", "img/georgia.webp", "img/chain.webp", "img/habit.webp",
+            "img/soccer g.webp", "img/soccer2.webp", "img/habit3.webp", "img/softball g.webp",
+            "img/soccer1.webp", "img/sub.webp", "img/basketball b.webp", "img/instruments.webp",
+            "img/picnic.webp", "img/soccer b.webp", "img/wedding.webp", "img/statement.webp",
+            "img/softball j.webp", "img/eagle2.webp", "img/friends.webp", "img/game.webp",
+            "img/pancakes2.webp", "img/vball5.webp", "img/decades4.webp", "img/basketball f.webp",
+            "img/soccer o.webp", "img/boys.webp", "img/centralpark.webp", "img/lead.webp",
+            "img/maraca.webp", "img/nyc.webp", "img/soccer q.webp", "img/nyc2.webp",
+            "img/nyc3.webp", "img/pancakes.webp", "img/police.webp", "img/softball c.webp",
+            "img/soccer n.webp", "img/rocks.webp", "img/saw.webp", "img/safety.webp",
+            "img/saw2.webp", "img/soccer d.webp", "img/snowcones.webp", "img/friends2.webp",
+            "img/decades.webp", "img/crowd.webp", "img/basketball d.webp", "img/soccer h.webp",
+            "img/medal.webp", "img/bubbles.webp", "img/trunk.webp", "img/flag3.webp",
+            "img/certificates.webp", "img/bubbles2.webp", "img/decades3.webp", "img/speaker.webp",
+            "img/soccer m.webp", "img/trot.webp", "img/parade b.webp", "img/flags.webp",
+            "img/teach.webp", "img/trunk3.webp", "img/soccer f.webp", "img/bubbles3.webp",
+            "img/bubbles4.webp", "img/portrait2.webp", "img/vets.webp", "img/vball.webp",
+            "img/soccer c.webp", "img/drive.webp", "img/vball3.webp", "img/vball4.webp",
+            "img/flag.webp", "img/soccer k.webp", "img/vball6.webp", "img/vball7.webp",
+            "img/decades2.webp", "img/trot2.webp", "img/basketball a.webp", "img/soccer l.webp",
+            "img/portrait3.webp"
+    ];
+
+    // === IMAGE CATEGORIES ===
+    const images = [
+    // 🏢 WORK
+    { src: "img/picnic.webp", category: ["all", "work"] },
+    { src: "img/habit3.webp", category: ["all", "work"] },
+    { src: "img/flag3.webp", category: ["all", "work"] },
+    { src: "img/parade a.webp", category: ["all", "work"] },
+    { src: "img/maraca.webp", category: ["all", "work"] },
+    { src: "img/speakers.webp", category: ["all", "work"] },
+    { src: "img/spooky.webp", category: ["all", "work"] },
+    { src: "img/career.webp", category: ["all", "work"] },
+    { src: "img/decades2.webp", category: ["all", "work"] },
+    { src: "img/trunk.webp", category: ["all", "work"] },
+    { src: "img/cat.webp", category: ["all", "work"] },
+    { src: "img/eagle2.webp", category: ["all", "work"] },
+    { src: "img/helpers.webp", category: ["all", "work"] },
+    { src: "img/bubbles.webp", category: ["all", "work"] },
+    { src: "img/trot2.webp", category: ["all", "work"] },
+    { src: "img/trunk2.webp", category: ["all", "work"] },
+    { src: "img/decades4.webp", category: ["all", "work"] },
+    { src: "img/lead.webp", category: ["all", "work"] },
+    { src: "img/saw2.webp", category: ["all", "work"] },
+    { src: "img/flags.webp", category: ["all", "work"] },
+    { src: "img/medal.webp", category: ["all", "work"] },
+    { src: "img/police.webp", category: ["all", "work"] },
+    { src: "img/saw.webp", category: ["all", "work"] },
+    { src: "img/safety.webp", category: ["all", "work"] },
+    { src: "img/training.webp", category: ["all", "work"] },
+    { src: "img/crowd.webp", category: ["all", "work"] },
+    { src: "img/trot.webp", category: ["all", "work"] },
+    { src: "img/speaker.webp", category: ["all", "work"] },
+    { src: "img/certificates.webp", category: ["all", "work"] },
+    { src: "img/parade b.webp", category: ["all", "work"] },
+    { src: "img/teach.webp", category: ["all", "work"] },
+    { src: "img/chain.webp", category: ["all", "work"] },
+    { src: "img/grow.webp", category: ["all", "work"] },
+    { src: "img/snowcones.webp", category: ["all", "work"] },
+    { src: "img/flag.webp", category: ["all", "work"] },
+    { src: "img/bubbles3.webp", category: ["all", "work"] },
+    { src: "img/paint.webp", category: ["all", "work"] },
+    { src: "img/friends.webp", category: ["all", "work"] },
+    { src: "img/boys.webp", category: ["all", "work"] },
+    { src: "img/trunk3.webp", category: ["all", "work"] },
+    { src: "img/decades.webp", category: ["all", "work"] },
+    { src: "img/vets.webp", category: ["all", "work"] },
+    { src: "img/frame.webp", category: ["all", "work"] },
+    { src: "img/decades3.webp", category: ["all", "work"] },
+    { src: "img/pancakes.webp", category: ["all", "work"] },
+    { src: "img/habit2.webp", category: ["all", "work"] },
+    { src: "img/eagle.webp", category: ["all", "work"] },
+    { src: "img/habit.webp", category: ["all", "work"] },
+    { src: "img/game.webp", category: ["all", "work"] },
+    { src: "img/maraca2.webp", category: ["all", "work"] },
+    { src: "img/friends2.webp", category: ["all", "work"] },
+    { src: "img/instruments.webp", category: ["all", "work"] },
+    { src: "img/statement.webp", category: ["all", "work"] },
+    { src: "img/pancakes2.webp", category: ["all", "work"] },
+    { src: "img/rocks.webp", category: ["all", "work"] },
+    { src: "img/bubbles2.webp", category: ["all", "work"] },
+    { src: "img/bubbles4.webp", category: ["all", "work"] },
+
+    // 🌿 LIFE
+    { src: "img/nyc2.webp", category: ["all", "life"] },
+    { src: "img/wedding.webp", category: ["all", "life"] },
+    { src: "img/nyc3.webp", category: ["all", "life"] },
+    { src: "img/georgia.webp", category: ["all", "life"] },
+    { src: "img/sub.webp", category: ["all", "life"] },
+    { src: "img/drive.webp", category: ["all", "life"] },
+    { src: "img/lola.webp", category: ["all", "life"] },
+    { src: "img/nyc.webp", category: ["all", "life"] },
+    { src: "img/georgia2.webp", category: ["all", "life"] },
+    { src: "img/georgia3.webp", category: ["all", "life"] },
+    { src: "img/centralpark.webp", category: ["all", "life"] },
+
+    // ⚽ SPORTS
+    { src: "img/soccer i.webp", category: ["all", "sports"] },
+    { src: "img/softball i.webp", category: ["all", "sports"] },
+    { src: "img/vball7.webp", category: ["all", "sports"] },
+    { src: "img/softball e.webp", category: ["all", "sports"] },
+    { src: "img/soccer l.webp", category: ["all", "sports"] },
+    { src: "img/soccer r.webp", category: ["all", "sports"] },
+    { src: "img/vball3.webp", category: ["all", "sports"] },
+    { src: "img/softball a.webp", category: ["all", "sports"] },
+    { src: "img/soccer t.webp", category: ["all", "sports"] },
+    { src: "img/softball k.webp", category: ["all", "sports"] },
+    { src: "img/soccer j.webp", category: ["all", "sports"] },
+    { src: "img/vball4.webp", category: ["all", "sports"] },
+    { src: "img/soccer k.webp", category: ["all", "sports"] },
+    { src: "img/soccer c.webp", category: ["all", "sports"] },
+    { src: "img/softball f.webp", category: ["all", "sports"] },
+    { src: "img/soccer e.webp", category: ["all", "sports"] },
+    { src: "img/vball6.webp", category: ["all", "sports"] },
+    { src: "img/softball h.webp", category: ["all", "sports"] },
+    { src: "img/softball d.webp", category: ["all", "sports"] },
+    { src: "img/soccer p.webp", category: ["all", "sports"] },
+    { src: "img/softball b.webp", category: ["all", "sports"] },
+    { src: "img/vball2.webp", category: ["all", "sports"] },
+    { src: "img/soccer s.webp", category: ["all", "sports"] },
+    { src: "img/soccer a.webp", category: ["all", "sports"] },
+    { src: "img/soccer g.webp", category: ["all", "sports"] },
+    { src: "img/softball g.webp", category: ["all", "sports"] },
+    { src: "img/soccer f.webp", category: ["all", "sports"] },
+    { src: "img/soccer b.webp", category: ["all", "sports"] },
+    { src: "img/softball j.webp", category: ["all", "sports"] },
+    { src: "img/vball5.webp", category: ["all", "sports"] },
+    { src: "img/soccer o.webp", category: ["all", "sports"] },
+    { src: "img/soccer q.webp", category: ["all", "sports"] },
+    { src: "img/softball c.webp", category: ["all", "sports"] },
+    { src: "img/soccer m.webp", category: ["all", "sports"] },
+    { src: "img/vball.webp", category: ["all", "sports"] },
+    { src: "img/soccer n.webp", category: ["all", "sports"] },
+    { src: "img/soccer d.webp", category: ["all", "sports"] },
+    { src: "img/soccer h.webp", category: ["all", "sports"] },
+
+    // 🎭 PORTRAITS
+    { src: "img/basketball f.webp", category: ["all", "portraits"] },
+    { src: "img/portrait3.webp", category: ["all", "portraits"] },
+    { src: "img/basketball e.webp", category: ["all", "portraits"] },
+    { src: "img/basketball b.webp", category: ["all", "portraits"] },
+    { src: "img/basketball d.webp", category: ["all", "portraits"] },
+    { src: "img/soccer1.webp", category: ["all", "portraits"] },
+    { src: "img/basketball c.webp", category: ["all", "portraits"] },
+    { src: "img/portrait.webp", category: ["all", "portraits"] },
+    { src: "img/soccer2.webp", category: ["all", "portraits"] },
+    { src: "img/portrait2.webp", category: ["all", "portraits"] },
+    { src: "img/basketball a.webp", category: ["all", "portraits"] },
+
+];
+
+
+
+    // 🔹 Function to Display Images
+    function displayImages(filter) {
+        photoGrid.innerHTML = ""; // Clear grid
+
+        let filteredImages = [];
+
+        if (filter === "all") {
+            // If "all" is selected, display the images in the specified order
+            filteredImages = allImagesOrdered.map(src => ({ src }));
+        } else {
+            // Otherwise, filter based on category
+            filteredImages = images.filter(img => img.category.includes(filter));
+        }
+
+        filteredImages.forEach(image => {
+            const gridItem = document.createElement("div");
+            gridItem.classList.add("grid-item");
+
+            const img = document.createElement("img");
+            img.src = image.src;
+            img.alt = "Filtered Image";
+            img.classList.add("fade-in");
+
+            // Click to Open Modal
+            img.addEventListener("click", function () {
+                modal.style.display = "flex";
+                setTimeout(() => modal.classList.add("show"), 10);
+                modalImg.src = this.src;
+            });
+
+            gridItem.appendChild(img);
+            photoGrid.appendChild(gridItem);
+
+            // Delay adding visible class for fade-in effect
+            setTimeout(() => img.classList.add("visible"), 100);
+        });
+    }
+
+    // 🔹 Initial Load: Show All Images in the Preset Order
+    displayImages("all");
+
+    // 🔹 Event Listeners for Sorting
+    document.querySelectorAll(".sort-container .filter-label").forEach(tab => {
+        tab.addEventListener("click", function () {
+            document.querySelectorAll(".sort-container .filter-label").forEach(t => t.classList.remove("active"));
+            this.classList.add("active");
+            displayImages(this.dataset.filter);
+        });
+    });
+
+    // 🔹 Close Modal with Smooth Fade-out
+    function closeImageModal() {
+        modal.classList.remove("show");
+        modal.classList.add("hide");
+        setTimeout(() => {
+            modal.style.display = "none";
+            modal.classList.remove("hide");
+        }, 400);
+    }
+
+    // 🔹 Close Modal Click Events
+    closeModal.addEventListener("click", closeImageModal);
+    modal.addEventListener("click", function (e) {
+        if (e.target === modal) closeImageModal();
+    });
+});
+        document.addEventListener("DOMContentLoaded", function () {
+            // === DARK MODE TOGGLE ===
+            const body = document.body;
+            const themeToggle = document.getElementById("themeToggle");
+            const themeToggleMobile = document.getElementById("themeToggleMobile");
+
+            function applyDarkMode(isDark) {
+                body.classList.toggle("dark-mode", isDark);
+                localStorage.setItem("theme", isDark ? "dark" : "light");
+                if (themeToggle) themeToggle.checked = isDark;
+                if (themeToggleMobile) themeToggleMobile.checked = isDark;
+            }
+
+            let storedTheme = localStorage.getItem("theme") || "light";
+            applyDarkMode(storedTheme === "dark");
+
+            if (themeToggle) themeToggle.addEventListener("change", (e) => applyDarkMode(e.target.checked));
+            if (themeToggleMobile) themeToggleMobile.addEventListener("change", (e) => applyDarkMode(e.target.checked));
+
+            // === MOBILE MENU ===
+            const hamburger = document.querySelector(".hamburger");
+            const mobileMenu = document.querySelector(".mobile-menu");
+            const mainContent = document.querySelector("main");
+
+            hamburger.addEventListener("click", function (e) {
+                e.stopPropagation();
+                mobileMenu.classList.toggle("open");
+                mainContent.classList.toggle("shift");
+                hamburger.classList.toggle("open");
+            });
+
+            document.addEventListener("click", function (e) {
+                if (!mobileMenu.contains(e.target) && !hamburger.contains(e.target)) {
+                    mobileMenu.classList.remove("open");
+                    mainContent.classList.remove("shift");
+                    hamburger.classList.remove("open");
+                }
+            });
+
+            // === PLACEHOLDER TAB FUNCTIONALITY (Optional) ===
+            const tabs = document.querySelectorAll(".filter-label");
+            tabs.forEach(tab => {
+                tab.addEventListener("click", function () {
+                    tabs.forEach(t => t.classList.remove("active"));
+                    this.classList.add("active");
+                    // Placeholder: add your photo filtering logic here.
+                    console.log("Selected tab:", this.textContent);
+                });
+            });
+
+        });
+    </script>
+
+</body>
+</html>

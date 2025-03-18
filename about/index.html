@@ -8,7 +8,7 @@
     <!-- Open Graph Tags -->
     <meta property="og:title" content="About">
     <meta property="og:description" content="Capture Happiness.">
-    <meta property="og:image" content="https://astnla.com/assets/images/graph/about.png">
+    <meta property="og:image" content="https://astnla.com/assets/graph/about.png">
     <meta property="og:url" content="https://astnla.com/about/">
     <meta property="og:type" content="website">
 
@@ -16,439 +16,354 @@
     <link rel="icon" type="image/svg+xml" href="/assets/images/astn.svg">
     <link rel="apple-touch-icon" href="/assets/images/astn.png">
 
-    
-    <!-- Fira Code Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300&display=swap" rel="stylesheet">
-
-    <!-- CSS Style Referencing -->
+    <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/header.css">
-    <link rel="stylesheet" href="/assets/css/footer.css">
-    <link rel="stylesheet" href="/assets/css/carousel.css">
-    <link rel="stylesheet" href="/assets/css/scrollbar.css">
 
-    <!-- Font Awesome CDN -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&display=swap');
 
-        html {
-            overflow-y: scroll;
+/* 🚀 Apply fade-in only on page load */
+.content-container, .quote-section {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeIn 0.8s ease-out forwards;
+}
+
+/* 🚀 Fade-In Animation */
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 🚀 Override transition delays ONLY for about & quote sections */
+.content-container h2,
+.content-container p,
+.quote-section h2 {
+    transition: none !important; /* Instant color switch in dark mode */
+}
+
+/* 🚀 Dark mode fixes (Instant text color switch) */
+.dark-mode .content-container h2,
+.dark-mode .content-container p,
+.dark-mode .quote-section h2 {
+    color: #fff;
+}
+
+
+/* Keep the image the same size as before */
+.image-container {
+    flex: 1;
+    max-width: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.single-image {
+    width: 100%;
+    max-width: 450px;
+    height: 450px; /* Keeps the same square shape */
+    border-radius: 15px;
+    object-fit: cover;
+}
+
+
+        /* Full-Screen Quote */
+        .quote-section {
+            text-align: center;
+            padding-top: 1.2rem;
+            max-width: 75%;
+            transition: color 0.3s ease;
+        }
+        .quote-section h2 {
+            font-size: 2.0rem;
+            font-style: italic;
+            font-weight: 300;
+            max-width: 100%;
+            transition: color 0.3s ease;
         }
 
-    body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Work Sans', sans-serif;
-            background-color: #000;
-            color: #fff;
-
-        }
-
-        header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 1rem 1.3rem;
-            background: none;
-            z-index: 10;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        header h1 {
-            font-family: 'Fira Code', monospace;
-            font-size: 1.5rem;
-            margin: 0;
-        }
-
-        .hero {
-            padding-top: 50px;
+        /* Content Section - Centering */
+        .content-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #000; /* Optional background color */
-        }
-
-        .hero-logo {
-            max-width: 50%; /* Scale down the logo for smaller screens */
-        }
-
-        .about-intro {
-            text-align: center;
-            font-size: 10rem;
-            font-weight: 300;
-        }
-
-        .container {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            padding: 50px;
+            flex-wrap: wrap;
+            padding: 50px 5%;
+            gap: 50px;
             max-width: 1200px;
-            margin: 0 auto;
+            width: 100%;
+            text-align: center;
         }
 
-        .container .title {
-            line-height: 1.8;
+        /* Scrollable Text Box */
+        .text-box {
             flex: 1;
-            font-family: 'Fira Code', monospace;
-            font-size: 1rem;
-            text-transform: uppercase;
+            max-width: 45%;
+            border-radius: 10px;
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+            text-align: left;
+            transition: color 0.3s ease;
         }
 
-        .container .content {
-            line-height: 1.8;
-            flex: 2;
+        .text-box::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .text-box::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+        }
+
+        .text-box h2 {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            transition: color 0.3s ease;
+        }
+
+        .text-box p {
             font-size: 1.2rem;
+            line-height: 1.8;
+            opacity: 0.9;
+            margin-bottom: 20px;
+            transition: color 0.3s ease;
+        }
+
+
+/* Mobile View - Moves Carousel BELOW Text */
+@media (max-width: 768px) {
+    .content-container {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .image-container {
+    flex: 1;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.single-image {
+    width: 100%;
+    max-width: 450px;
+    height: 450px; /* Keeps the same square shape */
+    border-radius: 15px;
+    object-fit: cover;
+}
+
+
+    .text-box {
+        max-width: 100%;
+        height: auto;
+        overflow-y: visible;
+        padding-bottom: 20px;
+        border-left: none;
+        text-align: center;
+    }
+
+            /* Full-Screen Quote */
+            .quote-section {
+            text-align: center;
+            padding-top: 1.2rem;
+            padding-bottom: 5.0rem;
+            max-width: 85%;
+            transition: color 0.3s ease;
+            
+        }
+
+    .quote-section h2 {
+            font-size: 1.5rem;
+            font-style: italic;
             font-weight: 300;
-            /* text-indent: 50px; */
+            opacity: 0.8;
+            max-width: 100%;
+            transition: color 0.3s ease;
         }
-
-        .container .content p {
-            margin-bottom: 1rem;
         }
-
-        .note {
-            padding: 0 0 0 50px;
-        }
-
-        .container .content a {
-            color: #fff;
-            text-decoration: none;
-            border-bottom: 1px solid #fff;
-            transition: color 0.3s, border-bottom-color 0.3s;
-        }
-
-        .container .content a:hover {
-            color: #ffa600;
-            border-bottom-color: #ffa600;
-        }
-
-        .family {
-            display: flex;
-            justify-content: center; /* Center horizontally */
-            align-items: center;    /* Center vertically */
-            max-width: 1200px;      /* Limit the container width */
-            margin: 0 auto;         /* Center the container itself on the page */
-            aspect-ratio: 16 / 9;   /* Maintain a 16:9 aspect ratio */
-            width: 90%;            /* Ensure it scales responsively */
-        }
-
-        .family img {
-            width: 100%;            /* Make the image fill the container */
-            height: auto;           /* Maintain the image's aspect ratio */
-            object-fit: cover;      /* Ensure the image fills the container without distortion */
-        }
-
-        @media (max-width: 768px) {
-
-            .hero-logo {
-                max-width: 91%; /* Scale down the logo for smaller screens */
-            }
-
-            .container {
-                flex-direction: column;
-                padding: 20px;
-                width: 100%;
-            }
-
-            .container .title {
-                font-size: 1.4rem;
-                margin-bottom: 20px;
-            }
-
-            .container .content {
-                line-height: 1.8;
-                flex: 2;
-                font-size: 1.2rem;
-                font-weight: 300;
-                /* text-indent: 50px; */
-            }
-
-            .container .content p {
-                margin-bottom: 1rem;
-            }
-
-            .container .content a {
-                color: #fff;
-                text-decoration: none;
-                border-bottom: 1px solid #fff;
-                transition: color 0.3s, border-bottom-color 0.3s;
-            }
-
-            .family {
-                display: flex;
-                justify-content: center; /* Center horizontally */
-                align-items: center;    /* Center vertically */
-                max-width: 1200px;      /* Limit the container width */
-                margin: 0 auto;         /* Center the container itself on the page */
-                aspect-ratio: 16 / 9;   /* Maintain a 16:9 aspect ratio */
-                width: 92%;            /* Ensure it scales responsively */
-            }
-
-
-        }
-
-        /* SECOND CAROUSEL 
-        <div class="carousel-2">
-            <div class="carousel-images-2">
-                <img src="assets/images/work2.jpg" alt="Image 1" data-full="assets/images/work2.jpg">
-                <img src="assets/images/work3.jpg" alt="Image 1" data-full="assets/images/work3.jpg">
-            </div>
-            <div class="carousel-controls">
-                <button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button>
-                <button class="carousel-button next"><i class="fas fa-chevron-right"></i></button>
-            </div>
-        </div>
-
-        <div class="modal" id="modal-2">
-            <button class="modal-button prev modal-prev"><i class="fas fa-chevron-left"></i></button>
-            <img class="modal-image" src="" alt="Expanded View">
-            <button class="modal-button next modal-next"><i class="fas fa-chevron-right"></i></button>
-            <button class="modal-close close-modal">BACK</button>
-        </div>
-        */
-
+        
 
     </style>
-
-    <script>
-        // Check if the user is authenticated
-        if (localStorage.getItem('isAuthenticated') !== 'true') {
-            // Redirect to the password page with the original page as a query parameter
-            const currentPage = window.location.pathname; // e.g., "/about/"
-            window.location.href = `/login/?redirect=${encodeURIComponent(currentPage)}`;
-        }
-    </script>
-
 </head>
 <body>
-    <header>
-        <h1>ABOUT</h1>
-    </header>
 
-    <!-- Navigation Bar -->
-    <header class="nav-header">
-
-        <!-- Hamburger icon (desktop-hidden, mobile-shown) -->
-        <div class="menu-toggle">
-            <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="hamburger-icon">
-                <rect y="4" width="24" height="1.5" rx="0.75" fill="#FFFFFF"/>
-                <rect y="11" width="24" height="1.5" rx="0.75" fill="#FFFFFF"/>
-                <rect y="18" width="24" height="1.5" rx="0.75" fill="#FFFFFF"/>
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <a href="/" class="mobile-logo">astn</a>
+        <div class="hamburger">
+            <svg width="22" height="18" viewBox="0 0 30 30" fill="none">
+                <rect y="5" width="30" height="1.5" fill="black"/>
+                <rect y="14" width="30" height="1.5" fill="black"/>
+                <rect y="23" width="30" height="1.5" fill="black"/>
             </svg>
         </div>
+    </div>
 
+    <!-- Mobile Slide-In Menu -->
+    <div class="mobile-menu">
         <nav>
-            <div class="nav-menu">
-                <ul>
-                    <li>
-                        <a href="/">
-                            <img src="/assets/images/house 2.svg" alt="Home Icon">
-                            <span class="menu-text">HOME</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/frames/">
-                            <img src="/assets/images/image.svg" alt="Photos Icon">
-                            <span class="menu-text">FRAMES</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/theater/">
-                            <img src="/assets/images/video.svg" alt="Videos Icon">
-                            <span class="menu-text">THEATER</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/about/">
-                            <img src="/assets/images/user 2.svg" alt="About Icon">
-                            <span class="menu-text">ABOUT</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <!-- Close icon within .nav-menu -->
-                <div class="close-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="close-icon-svg">
-                        <line x1="3" y1="3" x2="21" y2="21" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
-                        <line x1="21" y1="3" x2="3" y2="21" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </div>
-            </div>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/stills/">Stills</a></li>
+                <li><a href="/films/">Films</a></li>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/contact/">Contact</a></li>
+            </ul>
         </nav>
+        <div class="theme-toggle-mobile">
+            <label class="switch">
+                <input type="checkbox" id="themeToggleMobile">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Desktop Header -->
+    <header>
+        <h1><a href="/" class="logo">astn</a></h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/stills/">Stills</a></li>
+                <li><a href="/films/">Films</a></li>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/contact/">Contact</a></li>
+            </ul>
+        </nav>
+        <div class="theme-toggle">
+            <label class="switch">
+                <input type="checkbox" id="themeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div id="social">
+            <ul>
+                <li><a href="#">Twitter</a></li>
+                <li><a href="#">Instagram</a></li>
+            </ul>
+        </div>
+        <div class="post_text">© 2025</div>
     </header>
 
-    <div class="hero">
-        <img src="/assets/images/signature.svg" alt="Hero Logo" class="hero-logo">
-    </div>
-    
-<section>
-    <div class="container">
-        <div class="title">PROFILE</div>
-        <div class="content">
-            <p>
-                Hi there, my name is Austin Lara! I'm a 25-year-old self-taught small creator who likes to tinker in all forms of media. My roots began with making <a href="https://soundcloud.com/astn" target="_blank">music</a> and creating things for others to enjoy. It wasn't long before I began teaching myself how to video edit in Adobe Premiere or design in Adobe Photoshop. Granted, to this day, I still consider myself a rookie.
-            </p>
-            <p>
-                In 2021, I picked up a camera after a trip out to the mountains in Blue Ridge, Georgia and fell in love with photography. Three months later, I made my first <a href="https://youtu.be/tLcdKXZBzVI?si=F9Bgc6yq5_ih-oZY" target="_blank">video</a> highlighting moments from a work event - the growth is evident.
-            </p>
-            <p>
-                That leads us to where I am today - A small man, from a small town, working at a school, freezing happy moments with photos & creating timeless memories with videos while enjoying every second doing it.
-            </p>
-        </div>
-    </div>
-</section>
+    <!-- MAIN CONTENT AREA -->
+    <main>
 
-<div class="carousel">
-    <div class="carousel-images">
-        <img src="images/carousel/austin.webp" alt="Image 1" data-full="images/carousel/austin.webp">
-        <img src="images/carousel/austin b.webp" alt="Image 1" data-full="images/carousel/austin b.webp">
-        <img src="images/carousel/austin c.webp" alt="Image 1" data-full="images/carousel/austin c.webp">
-        <img src="images/carousel/austin d.webp" alt="Image 1" data-full="images/carousel/austin d.webp">
-        <img src="images/carousel/austin e.webp" alt="Image 1" data-full="images/carousel/austin e.webp">
-        <img src="images/carousel/austin f.webp" alt="Image 1" data-full="images/carousel/austin f.webp">
-        <img src="images/carousel/austin g.webp" alt="Image 1" data-full="images/carousel/austin g.webp">
-        <img src="images/carousel/austin h.webp" alt="Image 1" data-full="images/carousel/austin h.webp">
-        <img src="images/carousel/austin i.webp" alt="Image 1" data-full="images/carousel/austin i.webp">
-        <img src="images/carousel/austin j.webp" alt="Image 1" data-full="images/carousel/austin j.webp">
-        <img src="images/carousel/austin k.webp" alt="Image 1" data-full="images/carousel/austin k.webp">
-        <img src="images/carousel/austin l.webp" alt="Image 1" data-full="images/carousel/austin l.webp">
-        <img src="images/carousel/austin m.webp" alt="Image 1" data-full="images/carousel/austin m.webp">
-    </div>
-    <div class="carousel-controls">
-        <button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button>
-        <button class="carousel-button next"><i class="fas fa-chevron-right"></i></button>
-    </div>
-</div>
-
-<div class="modal" id="modal">
-    <button class="modal-button prev modal-prev"><i class="fas fa-chevron-left"></i></button>
-    <img class="modal-image" src="" alt="Expanded View">
-    <button class="modal-button next modal-next"><i class="fas fa-chevron-right"></i></button>
-    <button class="modal-close close-modal">BACK</button>
-</div>
-
-
-
-<section>
-    <div class="container">
-        <div class="title">BACKGROUND</div>
-        <div class="content">
-            <p>
-                Born in a small Fort Myers, FL hospital, I've lived in Naples, FL my entire life. A son of two very hardworking, supportive, and loving parents, as well as a brother to four siblings.
-            </p>
-            <p>
-                My childhood plays a big factor in who I am today - music, video games, & my computer. Growing up with so much technology always infatuated me to just learn and create things. I began with designing things for myself at a very young age, as I always wanted to start a YouTube channel.
-            </p>
-            <p>
-                In high school, I took classes that I felt would better my design process or teach me how to video edit. It wasn't until I began watching other creators online that I truly started to appreciate and develop an eye for cinematography. Creators like Gawx, Gaku Yen, Cole Bennett, BRTHR, & Skymography are some of the many few that inspire my work.
-
-            </p>
-
-            <p>
-                Recently, I started teaching myself how to code with guidance from my uncle, Rodolfo Treviño, a Software Engineering graduate who has always encouraged me to learn throughout my life. Thanks to his support and my determination, I'm proud to say this website is a product of my creativity and self-taught coding skills.
-
-            </p>
-            
-            <p>
-                Currently, I'm employed by my local school district and fortunate to work at an elementary school with amazing colleagues and loving students! I count my lucky stars to be able to do what I do—it's not part of my job description, but my administration fully approves and supports it. I was never asked to do this; I simply brought my camera to work one day and filmed an event. The rest was in God's hands.
-            </p>
-            <p class="note">
-                Even our school district Superintendent, Dr. Leslie Ricciardelli, approached me at a work event that we were hosting! Dr. Ricciardelli complimented me on my work, said how she's seen it all over social media, and went on to say how much she loves it. After our conversation, I got to interview her for that event's video! Take a peak at it <a href="https://x.com/MrLaraMES/status/1846189116750274857" target="_blank"> here.</a>
-            </p>
-            <p>
-                I'm lucky enough to be able to say I've found my passion. One might ask, "Is it designing, photography, or videography?" To that, I'd respond that it's much more than that. Instead, I'd say it's making others just feel happy inside through my work and creations. I use my photography & videography to capture those happy moments at our school—moments we can look back to and relive. I've taken my job and mended so much love in my relationships with my colleagues, students, and families. At our school, the bond between staff, students, and families is truly like no other. It feels like we're one big family. It's safe to say that I live and breathe my job.
-            </p>
-        </div>
-    </div>
-</section>
-
-<div class="family">
-    <img src="images/work.webp" alt="recess group">
-</div>
-
-<section>
-    <div class="container">
-        <div class="title"></div>
-        <div class="content">
-            <p>
-                When I'm creating something, I'm a critical, self-conscious, overthinking perfectionist. I can spend two days editing a 30-second sequence just because the color feels slightly off—but that's the beauty of it! It's not just the thought I put into my work; it's the love. I pour my heart into every detail because I deeply care about the people I'm creating for.
-            </p>
-            <p>
-                If I'm shooting photos, I try to capture the moment so it'll live forever. When I'm filming and editing, my goal is to create an immersive experience—one that lets you virtually step into the video and relive the moment for those few minutes. My hope is that when you look at my work, you can truly feel that connection.
-            </p>
-            <p>
-                Thanks for taking the time to learn a bit more about me. 
-            </p>
-        </div>
-    </div>
-</section>
-
-<section>
-    <div class="container">
-        <div class="title">Thanks</div>
-        <div class="content">
-            <p>
-                I'm sure it's unsual to leave thanks in a page about me, but I wouldn't be who I am or in the position I'm in today without these people.
-            </p>
-            <p>
-                My parents, siblings, & extended-family. My uncle, Rodolfo Treviño & cousin, Moises Almaraz. Dr. Laurie Mearsheimer & Ms. Allyson Dunn. My biggest supporters, Odalys Garza, Kelsey Papworth & Kristina Thomas. My work family, amazing students, and their families. My supportive friend group. My amazing artist friend, Ruthie Sumner, for always supporting my visions and designing art for me... including my cartoon caricature that I use for everything! Finally, to those who've trusted me to expand my craft and gain experience by giving me an opportunity to create something for them.
-            </p>
-            <p>
-                You all have always shaped, encouraged, & inspired me in more ways than I can express. My Thanks will never be enough.
-            </p>
-        </div>
-    </div>
-</section>
-
-    <div class="container">
-        <div class="title">Contact</div>
-        <div class="content">
-            <p>
-                You can find more of my work on my socials below.
-            </p>
-            <p>
-                If you have any questions, concerns, or simply any feedback, I would love to hear your thoughts on my work as it helps me better myself. Please feel free to use the email below to get in touch with me & I'll always try my best to respond in a quick manner.
-            </p>
-            <p>
-                <a href="mailto:hello@astnla.com">hello@astnla.com</a> | <a href="https://instagram.com/astnla">Instagram</a> | <a href="https://twitter.com/MrLaraMES">Twitter</a>
-            </p>
-        </div>
-    </div>
-
-        <!-- Footer Section -->
-        <footer class="footer">
+    <!-- Content Section -->
+    <div class="content-container">
         
-            <ul class="social-links">
-            <li>
-                <a href="https://instagram.com/astn" target="_blank" rel="noopener noreferrer">
-                <img src="/assets/images/instagram.svg" alt="Instagram">
-                </a>
-            </li>
-            <li>
-                <a href="https://facebook.com/astnla" target="_blank" rel="noopener noreferrer">
-                <img src="/assets/images/facebook.svg" alt="Facebook">
-                </a>
-            </li>
-            <li>
-                <a href="https://twitter.com/astnla" target="_blank" rel="noopener noreferrer">
-                <img src="/assets/images/twitter.svg" alt="Twitter">
-                </a>
-            </li>
-            <li>
-                <a href="https://youtube.com/@astnv" target="_blank" rel="noopener noreferrer">
-                <img src="/assets/images/youtube.svg" alt="YouTube">
-                </a>
-            </li>
-            
-            </ul>
-            <p style="font-size: 10px; color: grey;">&copy; 2025, astn</p>
-        </footer>
+        <!-- Scrollable Text Box -->
+        <div class="text-box">
+            <h2>About Me</h2>
+            <p>I'm Austin Lara, a self-taught creator that strives to deliver pieces that evoke emotion. Every frame, every edit, or every moment I capture is built with so much love. Whether through photography, film, or design, I put forth my all in capturing memories and creating something that will last a lifetime.</p>
+            <p>I've never seen myself as the most skilled or the most trained—I just know that I love making others feel something with my work. What may have started as curiosity became something deeper and a way to capture and preserve moments. It's always stuck in my head that as we grow older, all we have are our memories. Memories are just highlights of the happiest moments of our lives.</p>
+            <p>Over time, photography & filmmaking became more than a passion of mine. It became a way to document life and preserve those moments that felt like they're slipping away. I've always been drawn to the idea that a single image or a few seconds of footage can bring someone back to a moment and allow them to feel it just for that little bit of time. That's what keeps me motivated behind the lens.</p>
+            <p>Today, I work within my local school district, surrounded by people who inspire me daily. The camera wasn't part of the job description, but it became part of how I contribute—capturing moments that matter to the students, staff, and families who make that space what it is. Beyond that, I continue to build this passion by pouring a piece of myself into projects that hold meaning—not just for others, but for me as well. I strive to create work that feels lived-in and deeply personal.</p>
+            <p> My work isn't about chasing perfection, it's about capturing something with real. Whether it's a fleeting moment or a story waiting to be told, I want my work to make people feel something real.</p>
+        </div>
 
-        <script src="/assets/js/header.js"></script>
-        <script src="/assets/js/carousel.js"></script>
+        <div class="image-container">
+            <img src="images/about.webp" class="single-image" alt="Austin">
+        </div>
+        
+
+
+    </div>
+
+                        <!-- Full-Screen Quote -->
+                        <div class="quote-section">
+                            <h2>"The heart of my work isn't just in what I create, but in the feeling it leaves behind. Something that's real, something that's lived, something that's worth remembering. If I do my job right, the work won't just be seen—it'll be felt."
+                               <br> - Austin Lara
+                            </h2>
+                        </div>
+
+    </main>
+
+<!-- Image Modal -->
+<div id="imageModal" class="modal">
+    <span class="close" id="close-modal">BACK</span>
+    <div class="modal-content">
+        <img id="modal-image">
+        <div class="modal-arrows-container">
+            <span class="modal-arrow prev" id="prev-modal">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </span>
+            <span class="modal-arrow next" id="next-modal">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 6l6 6-6 6"/>
+                </svg>
+            </span>
+        </div>
+    </div>
+</div>
+
+
+
+  
+
+    <script>
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // === DARK MODE TOGGLE ===
+            const body = document.body;
+            const themeToggle = document.getElementById("themeToggle");
+            const themeToggleMobile = document.getElementById("themeToggleMobile");
+
+            function applyDarkMode(isDark) {
+                body.classList.toggle("dark-mode", isDark);
+                localStorage.setItem("theme", isDark ? "dark" : "light");
+                if (themeToggle) themeToggle.checked = isDark;
+                if (themeToggleMobile) themeToggleMobile.checked = isDark;
+            }
+
+            let storedTheme = localStorage.getItem("theme") || "light";
+            applyDarkMode(storedTheme === "dark");
+
+            if (themeToggle) themeToggle.addEventListener("change", (e) => applyDarkMode(e.target.checked));
+            if (themeToggleMobile) themeToggleMobile.addEventListener("change", (e) => applyDarkMode(e.target.checked));
+
+            // === MOBILE MENU ===
+            const hamburger = document.querySelector(".hamburger");
+            const mobileMenu = document.querySelector(".mobile-menu");
+            const mainContent = document.querySelector("main");
+
+            hamburger.addEventListener("click", function (e) {
+                e.stopPropagation();
+                mobileMenu.classList.toggle("open");
+                mainContent.classList.toggle("shift");
+                hamburger.classList.toggle("open");
+            });
+
+            document.addEventListener("click", function (e) {
+                if (!mobileMenu.contains(e.target) && !hamburger.contains(e.target)) {
+                    mobileMenu.classList.remove("open");
+                    mainContent.classList.remove("shift");
+                    hamburger.classList.remove("open");
+                }
+            });
+
+            // === PLACEHOLDER TAB FUNCTIONALITY (Optional) ===
+            const tabs = document.querySelectorAll(".filter-label");
+            tabs.forEach(tab => {
+                tab.addEventListener("click", function () {
+                    tabs.forEach(t => t.classList.remove("active"));
+                    this.classList.add("active");
+                    // Placeholder: add your photo filtering logic here.
+                    console.log("Selected tab:", this.textContent);
+                });
+            });
+
+        });
+    </script>
+
 </body>
 </html>
