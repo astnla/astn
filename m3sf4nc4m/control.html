@@ -81,16 +81,30 @@
       color: white;
       cursor: pointer;
     }
-    
+
     .goLiveBtn.live {
       background: #00031F;
       color: white;
     }
 
+    #endSessionBtn {
+      padding: 8px 14px;
+      background: #00031F;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 900;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
   </style>
 </head>
 <body>
+
   <h1>Manatee Fan Cam — Control</h1>
+
+  <button id="endSessionBtn">END SESSION</button>
+
   <div class="subtitle">
     Live list of everyone who joined via j0in.html
   </div>
@@ -99,7 +113,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
@@ -118,6 +132,26 @@
 
   const participantsRef = ref(db, "participants");
   const liveUserRef     = ref(db, "live/activeUser");
+  const resetFlagRef    = ref(db, "meta/resetFlag");
+
+  /* -------------------------------------
+       END SESSION BUTTON
+  -------------------------------------- */
+  const endBtn = document.getElementById("endSessionBtn");
+
+  endBtn.addEventListener("click", async () => {
+    const confirmEnd = confirm("End session and clear all participants?");
+    if (!confirmEnd) return;
+
+    try {
+      await set(participantsRef, null);  // clear all participants
+      await set(liveUserRef, null);      // reset active user
+      await set(resetFlagRef, Date.now()); // notify all devices to wipe their data
+      alert("Session cleared.");
+    } catch (err) {
+      console.error("Error clearing session:", err);
+    }
+  });
 
   /* -------------------------------------
        BUILD PARTICIPANT GRID
