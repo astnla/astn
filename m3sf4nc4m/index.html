@@ -42,9 +42,8 @@
       z-index: 1;
       min-height: 100vh;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px 0;
+      justify-content: center;  /* vertical centering */
+      align-items: center;      /* horizontal centering */
     }
 
     .live-app-wrapper {
@@ -188,6 +187,21 @@
     text-align: center;
     }
 
+    .fan-cam-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  
+  /* Key line: limit width just like Panthers */
+  width: 100%;
+  max-width: 480px;
+
+  /* This balances the layout */
+  transform: translateY(-5%); /* adjust between -5% and -15% as needed */
+}
+
+
 
   </style>
 </head>
@@ -195,7 +209,7 @@
   <div class="contributor-page app-name-live">
 
     <div class="contributor-wrapper">
-      <div class="live-app-wrapper">
+      <div class="fan-cam-content">
 
         <!-- Title area (replaces their streaming-title-image) -->
         <div class="streaming-title-textblock">
