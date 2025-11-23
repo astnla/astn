@@ -18,7 +18,7 @@
 
     body {
       font-family: "Outfit", sans-serif;
-      background: #f3f3f3;
+      background: #DA1A32;
       color: var(--navy);
       min-height: 100vh;
       padding: 16px;
@@ -77,13 +77,13 @@
       font-weight: 900;
       border-radius: 6px;
       border: none;
-      background: #DA1A32;
+      background: #00031F;
       color: white;
       cursor: pointer;
     }
 
     .goLiveBtn.live {
-      background: #00031F;
+      background: #DA1A32;
       color: white;
     }
 
@@ -95,21 +95,21 @@
       border-radius: 6px;
       font-weight: 900;
       cursor: pointer;
-      margin-bottom: 16px;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
 
-  <h1>Manatee Fan Cam — Control</h1>
+  <h1>CONTROL ROOM</h1>
 
-  <button id="endSessionBtn">END SESSION</button>
-
-  <div class="subtitle">
-    Live list of everyone who joined via j0in.html
-  </div>
+    <div class="subtitle">
+    LIVE LIST OF PARTICIPANTS.
+    </div>
 
   <div id="grid" class="grid"></div>
+
+    <button id="endSessionBtn">END SESSION</button>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
