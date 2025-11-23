@@ -117,7 +117,11 @@
   const grid = document.getElementById("grid");
 
   const participantsRef = ref(db, "participants");
+  const liveUserRef     = ref(db, "live/activeUser");
 
+  /* -------------------------------------
+       BUILD PARTICIPANT GRID
+  -------------------------------------- */
   onValue(participantsRef, (snapshot) => {
     grid.innerHTML = "";
 
@@ -153,12 +157,10 @@
         timeDiv.textContent = "Joined";
       }
 
-      /* -------------------------------
-         ⭐ INSERTING GO LIVE BUTTONS ⭐
-         ------------------------------- */
       const liveBtn = document.createElement("button");
       liveBtn.className = "goLiveBtn";
       liveBtn.textContent = "GO LIVE";
+      liveBtn.dataset.uid = key;
       liveBtn.onclick = () => setLiveUser(key);
 
       card.appendChild(img);
@@ -170,51 +172,29 @@
     }
   });
 
-  /* ======================================================
-     ⭐ STEP 3 — FUNCTION THAT SETS THE LIVE USER IN FIREBASE ⭐
-     ====================================================== */
+  /* -------------------------------------
+       SET LIVE USER
+  -------------------------------------- */
   async function setLiveUser(id) {
-    const userRef = ref(db, "participants/" + id);
-    const snapshot = await get(userRef);
-
-    if (!snapshot.exists()) return;
-
-    const user = snapshot.val();
-
-    // Write to /live/current
-    await set(ref(db, "live/current"), {
-      id: id,
-      name: user.name,
-      selfie: user.selfie,
-      timestamp: Date.now()
-    });
-
-    console.log("Now live:", user.name);
+    await set(liveUserRef, id);
+    console.log("Now live:", id);
   }
 
-  /* ======================================================
-     ⭐ STEP 4 — WATCH LIVE USER AND UPDATE BUTTONS ⭐
-     ====================================================== */
-  const liveRef = ref(db, "live/current");
-  onValue(liveRef, (snapshot) => {
-    const live = snapshot.val();
+  /* -------------------------------------
+       WATCH LIVE USER + UPDATE BUTTONS
+  -------------------------------------- */
+  onValue(liveUserRef, (snap) => {
+    const liveId = snap.val();
 
-    document.querySelectorAll(".goLiveBtn").forEach((btn) => {
+    document.querySelectorAll(".goLiveBtn").forEach(btn => {
       btn.classList.remove("live");
       btn.textContent = "GO LIVE";
+
+      if (btn.dataset.uid === liveId) {
+        btn.classList.add("live");
+        btn.textContent = "LIVE";
+      }
     });
-
-    if (!live) return;
-
-    // Highlight active button
-    const activeBtn = [...document.querySelectorAll(".goLiveBtn")].find(
-      (btn) => btn.onclick.toString().includes(`setLiveUser("${live.id}")`)
-    );
-
-    if (activeBtn) {
-      activeBtn.classList.add("live");
-      activeBtn.textContent = "LIVE";
-    }
   });
 </script>
 
