@@ -33,7 +33,6 @@
       transform: translateY(-5%);
     }
 
-    /* Title block */
     .manatee-logo {
       width: 80px;
       height: 80px;
@@ -50,7 +49,6 @@
       margin-bottom: 12px;
     }
 
-    /* Camera / Display box */
     #displayBox {
       background: var(--overlay);
       width: calc(100% - 70px);
@@ -70,7 +68,6 @@
       display: none;
     }
 
-    /* Empty state */
     #emptyState {
       position: absolute;
       inset: 0;
@@ -99,16 +96,13 @@
 
 <div class="wrapper">
 
-  <!-- Logo -->
   <img src="assets/mestv.png" class="manatee-logo">
 
-  <!-- Title -->
   <div class="title">MANATEE CAM</div>
 
-  <!-- Display Area -->
   <div id="displayBox">
     <img id="liveImage">
-    
+
     <div id="emptyState">
       Scan to Join the Manatee Fan Cam!
       <img id="qrImage" src="assets/qr.png">
@@ -117,8 +111,6 @@
 
 </div>
 
-
-<!-- Firebase logic -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
   import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
@@ -136,27 +128,37 @@
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
-  const liveImage = document.getElementById("liveImage");
+  const imgEl = document.getElementById("liveImage");
   const emptyState = document.getElementById("emptyState");
 
-  const liveRef = ref(db, "live/current");
+  const activeUserRef = ref(db, "live/activeUser");
+  const frameRef      = ref(db, "live/frame");
 
-  onValue(liveRef, (snapshot) => {
-    const live = snapshot.val();
+  let currentlyActive = null;
 
-    if (!live) {
-      // No live user → Show QR + text
+  // Watch who is live
+  onValue(activeUserRef, snap => {
+    currentlyActive = snap.val();
+
+    if (!currentlyActive) {
+      // No one is live
+      imgEl.style.display = "none";
       emptyState.style.display = "flex";
-      liveImage.style.display = "none";
-      liveImage.src = "";
-      return;
     }
+  });
 
-    // User is live → Show selfie
-    liveImage.src = live.selfie;
-    liveImage.style.display = "block";
+  // Watch incoming frames
+  onValue(frameRef, snap => {
+    if (!currentlyActive) return;
+
+    const jpeg = snap.val();
+    if (!jpeg) return;
+
+    imgEl.src = jpeg;
+    imgEl.style.display = "block";
     emptyState.style.display = "none";
   });
+
 </script>
 
 </body>
