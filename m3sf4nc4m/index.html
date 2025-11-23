@@ -5,24 +5,18 @@
   <title>Panthers Fan Cam Clone</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Fonts similar to their setup:
-       - "Söhne-Fett" → Outfit 900
-       - "Inter" for legal -->
+  <!-- Fonts similar to their setup -->
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --bg-red: #DA1A32;      /* their background-color */
-      --navy:   #00031F;      /* their text color */
-      --overlay: #00000022;   /* their preview strip bg */
-      --highlight: #DA1A32;   /* link color in legal text */
+      --bg-red: #DA1A32;
+      --navy:   #00031F;
+      --overlay: #00000022;
+      --highlight: #DA1A32;
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       min-height: 100vh;
@@ -32,14 +26,12 @@
       overflow-x: hidden;
     }
 
-    /* Full-page container like .contributor-page */
     .contributor-page {
       position: relative;
       min-height: 100vh;
       width: 100%;
     }
 
-    /* Background image placeholder (they use an <img> that covers) */
     #background-image {
       position: absolute;
       left: 0;
@@ -48,7 +40,7 @@
       height: 100%;
       object-fit: cover;
       z-index: 0;
-      opacity: 0.2; /* optional; tweak or remove */
+      opacity: 0.2;
     }
 
     .contributor-wrapper {
@@ -70,7 +62,6 @@
       align-items: stretch;
     }
 
-    /* Title image area (their .streaming-title-image) */
     .streaming-title-image {
       display: flex;
       justify-content: center;
@@ -82,49 +73,43 @@
     .streaming-title-image img {
       width: 100%;
       max-width: 260px;
-      aspect-ratio: 3 / 1;  /* they set aspect-ratio: 3; */
+      aspect-ratio: 3 / 1;
       height: auto;
       display: block;
     }
 
-    /* Main preview container: #publishCameraPreview */
     #publishCameraPreview {
       display: flex;
       flex-direction: column;
       align-items: stretch;
       justify-content: flex-start;
-      font-family: "Outfit", sans-serif; /* their Söhne-Fett replacement */
+      font-family: "Outfit", sans-serif;
     }
 
-    /* Semi-transparent strip: #publishCameraState */
     #publishCameraState {
-    background-color: var(--overlay);
-    width: calc(100% - 70px);
-    margin: 20px 35px 10px;
-    box-sizing: border-box;
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
-
-    /* Make the container 4:3 */
-    aspect-ratio: 3 / 4;
+      background-color: var(--overlay);
+      width: calc(100% - 70px);
+      margin: 20px 35px 10px;
+      box-sizing: border-box;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 3 / 4; /* taller, portrait */
     }
 
-    /* camera area fills the whole strip */
     .camera-shell {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    background: transparent;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: transparent;
     }
 
-    /* Mirror selfie & fill */
     #preview {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: none;
-    transform: scaleX(-1); /* mirror */
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+      transform: scaleX(-1);
     }
 
     .camera-shell.active #preview {
@@ -149,11 +134,8 @@
       color: var(--navy);
     }
 
-    .camera-shell.active .camera-overlay {
-      display: none;
-    }
+    .camera-shell.active .camera-overlay { display: none; }
 
-    /* TAP TO ENABLE CAMERA line below state (their .start-contributor-stream) */
     .start-contributor-stream {
       margin-top: 8px;
       text-align: center;
@@ -163,7 +145,6 @@
       color: var(--navy);
     }
 
-    /* Legal text like their .legal-text */
     .legal-text {
       margin-top: 8px;
       text-align: center;
@@ -184,16 +165,11 @@
       text-decoration: underline;
     }
 
-    @media (min-width: 600px) {
-      .live-app-wrapper {
-        max-width: 420px;
-      }
-    }
   </style>
 </head>
 <body>
   <div class="contributor-page app-name-live">
-    <!-- background image placeholder (you can swap src later) -->
+
     <img
       id="background-image"
       src="https://storage.googleapis.com/vixi2-prod-assets/assets%2F47c43f17%2Fconfig%2Ftemplates%2F89787c06-fbc0-42f9-8e6b-e7e8010dbc73_assets__layers__background_image%2Fd79epmin71kexdamumrt3ebfs2eihp9s.png"
@@ -203,16 +179,13 @@
     <div class="contributor-wrapper">
       <div class="live-app-wrapper">
 
-        <!-- Title image (their streaming-title-image) -->
         <div class="streaming-title-image">
-          <!-- Use their real image or your own logo here -->
           <img
             src="https://storage.googleapis.com/vixi2-prod-assets/assets%2F47c43f17%2Fconfig%2Fam%2F47c43f17_am_title_image_streaming_url%2Fopzdcd8xcc4h16mkr1edsirpv2fd46jg.png"
             alt="Title Image"
           />
         </div>
 
-        <!-- Preview & controls -->
         <div id="publishCameraPreview">
           <div id="publishCameraState">
             <div class="camera-shell" id="cameraShell">
@@ -226,12 +199,11 @@
             </div>
           </div>
 
-          <!-- Legal text -->
           <p class="legal-text">
-            By submitting your video, you agree that it may be used on the live
-            broadcast.
+            By submitting your video, you agree that it may be used on the live broadcast.
           </p>
         </div>
+
       </div>
     </div>
   </div>
@@ -243,12 +215,41 @@
 
     async function enableCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
+        // --- STEP 1: initial permission request ---
+        const temp = await navigator.mediaDevices.getUserMedia({
+          video: true,
           audio: true
         });
+
+        // Stop this stream immediately
+        temp.getTracks().forEach(t => t.stop());
+
+        // --- STEP 2: enumerate devices ---
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter(d => d.kind === "videoinput");
+
+        // Prefer main front camera (not ultra wide)
+        let preferred = cameras.find(c =>
+          /front/i.test(c.label) && !/ultra/i.test(c.label)
+        );
+
+        if (!preferred) {
+          preferred = cameras.find(c => /front/i.test(c.label));
+        }
+
+        if (!preferred) {
+          preferred = cameras[0];
+        }
+
+        // --- STEP 3: request actual correct stream ---
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: preferred.deviceId }},
+          audio: true
+        });
+
         video.srcObject = stream;
         shell.classList.add("active");
+
       } catch (err) {
         console.error("Error accessing camera/mic", err);
         overlay.querySelector(".camera-overlay-text").textContent =
