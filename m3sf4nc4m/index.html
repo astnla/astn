@@ -363,31 +363,43 @@ const example = document.getElementById("example");
 
 let userName = null;
 
+// Always force typing to uppercase inside the hidden input
+nameInput.style.textTransform = "uppercase";
+
+// Move the hidden input on top of the prompt text so the caret is aligned
+function positionInputOverPrompt() {
+  const rect = namePrompt.getBoundingClientRect();
+  nameInput.style.position = "fixed";
+  nameInput.style.left = rect.left + "px";
+  nameInput.style.top = rect.top + "px";
+  nameInput.style.width = rect.width + "px";
+  nameInput.style.height = rect.height + "px";
+}
+positionInputOverPrompt();
+window.addEventListener("resize", positionInputOverPrompt);
+
 // Tap → focus hidden input
 namePrompt.addEventListener("click", () => {
   nameInput.focus();
+  positionInputOverPrompt();
 });
 
-// Show typed characters live
+// Live typing behavior
 nameInput.addEventListener("input", () => {
-  const value = nameInput.value;
+  const value = nameInput.value.toUpperCase();
 
   if (value.length === 0) {
-    // restore placeholder
     namePrompt.innerHTML = `ENTER NAME<br><span id="example">(GONZALEZ, SECKORA, VASQUEZ)</span>`;
   } else {
-    // show typed text
     namePrompt.textContent = value;
   }
 });
 
-// Only close overlay when Enter is pressed
+// Only close overlay on Enter
 nameInput.addEventListener("keyup", (e) => {
   if (e.key === "Enter") {
-    const value = nameInput.value.trim();
-    if (value.length > 0) {
-      finishName(value);
-    }
+    const value = nameInput.value.trim().toUpperCase();
+    if (value.length > 0) finishName(value);
   }
 });
 
@@ -403,8 +415,6 @@ function finishName(value) {
 
   console.log("USER NAME:", userName);
 }
-
-
 </script>
 
 </body>
