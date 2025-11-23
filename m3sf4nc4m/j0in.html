@@ -30,30 +30,31 @@
       align-items: center;
       justify-content: space-between;
       padding-top: env(safe-area-inset-top);
-      padding-bottom: 20px;
+      padding-bottom: 16px;
     }
 
-    /* TEXT ABOVE CAMERA (does not affect centering) */
+    /* HEADER TEXT (above viewfinder, does NOT affect centering) */
     #topInstruction {
-      margin-top: 10px;
+      margin-top: 6px;
       font-size: 18px;
       font-weight: 900;
       color: var(--navy);
       text-align: center;
-      height: 24px;          /* fixed height to avoid shifting */
+      height: 22px;  /* fixed so layout doesn't jump */
     }
 
-    /* CENTER COLUMN — camera ALWAYS stays centered */
+    /* CENTER COLUMN — keeps viewfinder centered at all times */
     .centerColumn {
       flex: 1;
       width: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;   /* 🔥 ALWAYS centers the viewfinder */
+      justify-content: center;  /* 🔥 centers the camera/selfie */
+      gap: 10px;                /* tight spacing between viewfinder & name */
     }
 
-    /* VIEWFINDER BOX (camera or selfie) */
+    /* VIEWFINDER BOX (camera or taken selfie) */
     #cameraBox {
       width: calc(100% - 70px);
       max-width: 360px;
@@ -64,7 +65,7 @@
       position: relative;
     }
 
-    /* TAP TO ENABLE OVERLAY */
+    /* Tap to enable overlay */
     .camera-overlay {
       position: absolute;
       inset: 0;
@@ -97,7 +98,7 @@
       display: none;
     }
 
-    /* NAME INPUT */
+    /* NAME INPUT (below viewfinder in name phase) */
     #nameInput {
       width: calc(100% - 70px);
       max-width: 360px;
@@ -111,13 +112,17 @@
       outline: none;
       padding: 0;
       display: none;
-      margin-top: 16px;
     }
 
     #nameInput::placeholder {
       color: var(--navy);
       opacity: 0.35;
       font-weight: 900;
+      transition: opacity 0.15s ease;
+    }
+
+    #nameInput:focus::placeholder {
+      opacity: 0;
     }
 
     /* SNAP BUTTON */
@@ -129,7 +134,7 @@
       border: 6px solid #f2f2f2;
       cursor: pointer;
       transition: opacity 0.2s, transform 0.1s;
-      margin-top: 16px;
+      margin-top: 10px;   /* closer to viewfinder */
     }
 
     #snapBtn:active { transform: scale(0.96); }
@@ -137,8 +142,8 @@
     /* RETAKE + CONTINUE */
     .actionRow {
       display: none;
-      margin-top: 16px;
-      gap: 24px;
+      margin-top: 10px;   /* tighter than before */
+      gap: 20px;
       justify-content: center;
     }
 
@@ -152,30 +157,30 @@
     }
 
     #retakeBtn { background: white; color: var(--navy); }
-    #continueBtn { background: var(--navy); color: white; opacity: 0.4; pointer-events: none; }
+    #continueBtn { background: var(--navy); color: white; opacity: 0.4; pointer-events:none; }
   </style>
 </head>
 <body>
 
 <div class="wrapper">
 
-  <!-- HEADER (does not affect center) -->
+  <!-- HEADER (above viewfinder) -->
   <div id="topInstruction">TAKE A SELFIE</div>
 
-  <!-- CENTERED CAMERA VIEWFINDER -->
+  <!-- CENTERED VIEWFINDER + NAME INPUT BELOW -->
   <div class="centerColumn">
 
     <div id="cameraBox">
       <video id="preview" autoplay playsinline></video>
       <canvas id="canvasOutput"></canvas>
 
-      <!-- Tap to enable overlay -->
+      <!-- TAP TO ENABLE CAMERA -->
       <div class="camera-overlay" id="cameraOverlay">
         <div class="camera-overlay-text">TAP TO ENABLE CAMERA</div>
       </div>
     </div>
 
-    <!-- NAME INPUT (below viewfinder but independent of centering) -->
+    <!-- NAME INPUT (only visible in second phase) -->
     <input id="nameInput" type="text" autocomplete="off" placeholder="GIVE YOURSELF A NAME HERE">
 
   </div>
@@ -207,8 +212,8 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
+  /* RESET FLAG */
   let alreadyReset = false;
-
   onValue(ref(db, "meta/resetFlag"), async snap => {
     if (snap.exists() && !alreadyReset) {
       alreadyReset = true;
@@ -218,19 +223,20 @@
     }
   });
 
-  const preview = document.getElementById("preview");
-  const canvas = document.getElementById("canvasOutput");
-  const overlay = document.getElementById("cameraOverlay");
-  const snapBtn = document.getElementById("snapBtn");
-  const retakeBtn = document.getElementById("retakeBtn");
-  const continueBtn = document.getElementById("continueBtn");
-  const actionRow = document.getElementById("actionRow");
-  const nameInput = document.getElementById("nameInput");
+  const preview        = document.getElementById("preview");
+  const canvas         = document.getElementById("canvasOutput");
+  const overlay        = document.getElementById("cameraOverlay");
+  const snapBtn        = document.getElementById("snapBtn");
+  const retakeBtn      = document.getElementById("retakeBtn");
+  const continueBtn    = document.getElementById("continueBtn");
+  const actionRow      = document.getElementById("actionRow");
+  const nameInput      = document.getElementById("nameInput");
   const topInstruction = document.getElementById("topInstruction");
 
   let stream = null;
   let cameraEnabled = false;
 
+  // Disable snap until camera is enabled
   snapBtn.style.opacity = "0.35";
   snapBtn.style.pointerEvents = "none";
 
@@ -249,16 +255,19 @@
       snapBtn.style.pointerEvents = "auto";
 
     } catch (e) {
+      console.error(e);
       overlay.querySelector(".camera-overlay-text").textContent = "CAMERA BLOCKED";
     }
   }
 
+  // TAP TO ENABLE CAMERA
   overlay.addEventListener("click", async () => {
     await startCamera();
     overlay.style.display = "none";
     cameraEnabled = true;
   });
 
+  // TAKE SELFIE
   snapBtn.addEventListener("click", () => {
     if (!cameraEnabled) return;
 
@@ -276,23 +285,25 @@
 
     if (stream) stream.getTracks().forEach(t => t.stop());
 
-    topInstruction.textContent = "";
+    // Switch to name phase
+    topInstruction.textContent = "GIVE YOURSELF A NAME HERE";
     nameInput.style.display = "block";
     nameInput.blur();
     actionRow.style.display = "flex";
     snapBtn.style.display = "none";
   });
 
+  // NAME VALIDATION
   nameInput.addEventListener("input", () => {
     const v = nameInput.value.toUpperCase().trim();
     nameInput.value = v;
 
     const valid = /[A-Z0-9]/.test(v);
-
     continueBtn.style.opacity = valid ? "1" : "0.4";
     continueBtn.style.pointerEvents = valid ? "auto" : "none";
   });
 
+  // RETAKE
   retakeBtn.addEventListener("click", () => {
     nameInput.style.display = "none";
     actionRow.style.display = "none";
@@ -310,6 +321,7 @@
     }
   });
 
+  // CONTINUE
   continueBtn.addEventListener("click", async () => {
     const v = nameInput.value.trim();
     if (!/[A-Z0-9]/.test(v)) return;
@@ -324,9 +336,8 @@
     retakeBtn.style.pointerEvents = "none";
 
     const selfieData = canvas.toDataURL("image/png");
-
     const safeName = finalName.replace(/[^A-Z0-9]/g, "_");
-    const userKey = safeName + "_" + Date.now();
+    const userKey  = safeName + "_" + Date.now();
 
     try {
       await set(ref(db, "participants/" + userKey), {
@@ -340,7 +351,9 @@
       localStorage.setItem("selfieBase64", selfieData);
 
       window.location.href = "index.html";
-    } catch {
+
+    } catch (err) {
+      console.error("Error writing to Firebase:", err);
       continueBtn.textContent = "ERROR — TRY AGAIN";
       continueBtn.style.opacity = "1";
       continueBtn.style.pointerEvents = "auto";
