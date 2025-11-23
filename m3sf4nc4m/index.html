@@ -355,42 +355,42 @@
     }
   });
 
-  // ---------- NAME OVERLAY LOGIC ----------
-  const nameOverlay = document.getElementById("nameOverlay");
-  const nameInput = document.getElementById("nameInput");
-  const namePrompt = document.getElementById("namePrompt");
+// ---------- NAME OVERLAY LOGIC ----------
+const nameOverlay = document.getElementById("nameOverlay");
+const nameInput = document.getElementById("nameInput");
+const namePrompt = document.getElementById("namePrompt");
 
-  let userName = null;
+let userName = null;
 
-  // Tap the text → focus hidden input
-  namePrompt.addEventListener("click", () => {
-    nameInput.focus();
-  });
+// Tap the text → focus hidden input → open keyboard
+namePrompt.addEventListener("click", () => {
+  nameInput.focus();
+});
 
-  nameInput.addEventListener("input", () => {
+// Only close overlay when user presses Enter/Done
+nameInput.addEventListener("keyup", (e) => {
+  if (e.key === "Enter") {
     const value = nameInput.value.trim();
-    if (value.length > 0) finishName(value);
-  });
-
-  nameInput.addEventListener("keyup", (e) => {
-    if (e.key === "Enter") {
-      const value = nameInput.value.trim();
-      if (value.length > 0) finishName(value);
+    if (value.length > 0) {
+      finishName(value);
     }
-  });
-
-  function finishName(value) {
-    userName = value;
-
-    nameOverlay.style.transition = "opacity 0.5s";
-    nameOverlay.style.opacity = "0";
-
-    setTimeout(() => {
-      nameOverlay.style.display = "none";
-    }, 500);
-
-    console.log("USER NAME:", userName);
   }
+});
+
+// Fade overlay out
+function finishName(value) {
+  userName = value;
+
+  nameOverlay.style.transition = "opacity 0.5s";
+  nameOverlay.style.opacity = "0";
+
+  setTimeout(() => {
+    nameOverlay.style.display = "none";
+  }, 500);
+
+  console.log("USER NAME:", userName);
+}
+
 </script>
 
 </body>
