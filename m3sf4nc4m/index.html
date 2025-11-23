@@ -187,10 +187,10 @@
 
 <script type="module">
   /* ----------------------------------------
-     CAMERA ENABLE
+     CAMERA ENABLE (unchanged)
   ---------------------------------------- */
-  const shell = document.getElementById("cameraShell");
-  const video = document.getElementById("preview");
+  const shell   = document.getElementById("cameraShell");
+  const video   = document.getElementById("preview");
   const overlay = document.getElementById("cameraOverlay");
 
   let stream = null;
@@ -260,13 +260,14 @@
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
-  const userName = localStorage.getItem("userName") || "unknown_user";
+  // 🔑 this device's unique key from j0in.html
+  const userKey = localStorage.getItem("fanCamUserKey") || null;
 
   let currentlyLiveUser = null;
 
-  onValue(ref(db, "live/current"), snap => {
-    const live = snap.val();
-    currentlyLiveUser = live ? live.id : null;
+  // 👀 watch /live/activeUser (string key)
+  onValue(ref(db, "live/activeUser"), snap => {
+    currentlyLiveUser = snap.val() || null;
   });
 
   let frameInterval = null;
@@ -278,7 +279,8 @@
     const ctx = canvas.getContext("2d");
 
     frameInterval = setInterval(() => {
-      if (currentlyLiveUser !== userName) return;
+      // Only stream if THIS device is the currently live one
+      if (!userKey || currentlyLiveUser !== userKey) return;
       if (!video || video.readyState < 2) return;
 
       canvas.width = video.videoWidth;
@@ -297,6 +299,7 @@
     }, 125); // 8 FPS
   }
 </script>
+
 
 </body>
 </html>
