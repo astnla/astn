@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Panthers Fan Cam Clone</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Fonts similar to their setup:
+       - "Söhne-Fett" → Outfit 900
+       - "Inter" for legal -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-red: #DA1A32;      /* their background-color */
+      --navy:   #00031F;      /* their text color */
+      --overlay: #00000022;   /* their preview strip bg */
+      --highlight: #DA1A32;   /* link color in legal text */
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      background-color: var(--bg-red);
+      font-family: "Outfit", sans-serif;
+      color: var(--navy);
+      overflow-x: hidden;
+    }
+
+    /* Full-page container like .contributor-page */
+    .contributor-page {
+      position: relative;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    /* Background image placeholder (they use an <img> that covers) */
+    #background-image {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      opacity: 0.2; /* optional; tweak or remove */
+    }
+
+    .contributor-wrapper {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 0;
+    }
+
+    .live-app-wrapper {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+    }
+
+    /* Title image area (their .streaming-title-image) */
+    .streaming-title-image {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 0 24px;
+    }
+
+    .streaming-title-image img {
+      width: 100%;
+      max-width: 260px;
+      aspect-ratio: 3 / 1;  /* they set aspect-ratio: 3; */
+      height: auto;
+      display: block;
+    }
+
+    /* Main preview container: #publishCameraPreview */
+    #publishCameraPreview {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      font-family: "Outfit", sans-serif; /* their Söhne-Fett replacement */
+    }
+
+    /* Semi-transparent strip: #publishCameraState */
+    #publishCameraState {
+      background-color: var(--overlay);
+      border-radius: 0;
+      /* inside here we mimic that calc(100% - 70px) width pattern */
+      padding-bottom: 10px;
+    }
+
+    /* Wrapper for camera preview area + overlay */
+    .camera-shell {
+    width: calc(100% - 70px);
+    margin: 20px 35px 10px;
+    box-sizing: border-box;
+    position: relative;
+    aspect-ratio: 9 / 16;
+    background: transparent; /* ← Remove inner color, matches Panthers */
+    overflow: hidden;
+    border-radius: 4px;
+    }
+
+
+    #preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none; /* shown after permission */
+    }
+
+    .camera-shell.active #preview {
+      display: block;
+    }
+
+    .camera-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    .camera-overlay-text {
+      font-family: "Outfit", sans-serif;
+      font-weight: 900;
+      font-size: 16px;
+      color: var(--navy);
+    }
+
+    .camera-shell.active .camera-overlay {
+      display: none;
+    }
+
+    /* TAP TO ENABLE CAMERA line below state (their .start-contributor-stream) */
+    .start-contributor-stream {
+      margin-top: 8px;
+      text-align: center;
+      font-family: "Outfit", sans-serif;
+      font-weight: 900;
+      font-size: 16px;
+      color: var(--navy);
+    }
+
+    /* Legal text like their .legal-text */
+    .legal-text {
+      margin-top: 8px;
+      text-align: center;
+      font-family: "Inter", sans-serif;
+      font-size: 10px;
+      color: var(--navy);
+      padding: 0 24px;
+      line-height: 1.4;
+    }
+
+    .legal-text a {
+      color: var(--highlight);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .legal-text a:hover {
+      text-decoration: underline;
+    }
+
+    @media (min-width: 600px) {
+      .live-app-wrapper {
+        max-width: 420px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="contributor-page app-name-live">
+    <!-- background image placeholder (you can swap src later) -->
+    <img
+      id="background-image"
+      src="https://storage.googleapis.com/vixi2-prod-assets/assets%2F47c43f17%2Fconfig%2Ftemplates%2F89787c06-fbc0-42f9-8e6b-e7e8010dbc73_assets__layers__background_image%2Fd79epmin71kexdamumrt3ebfs2eihp9s.png"
+      alt=""
+    />
+
+    <div class="contributor-wrapper">
+      <div class="live-app-wrapper">
+
+        <!-- Title image (their streaming-title-image) -->
+        <div class="streaming-title-image">
+          <!-- Use their real image or your own logo here -->
+          <img
+            src="https://storage.googleapis.com/vixi2-prod-assets/assets%2F47c43f17%2Fconfig%2Fam%2F47c43f17_am_title_image_streaming_url%2Fopzdcd8xcc4h16mkr1edsirpv2fd46jg.png"
+            alt="Title Image"
+          />
+        </div>
+
+        <!-- Preview & controls -->
+        <div id="publishCameraPreview">
+          <div id="publishCameraState">
+            <div class="camera-shell" id="cameraShell">
+              <video id="preview" autoplay playsinline muted></video>
+
+              <div class="camera-overlay" id="cameraOverlay">
+                <div class="camera-overlay-text">
+                  TAP TO ENABLE CAMERA
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legal text -->
+          <p class="legal-text">
+            By submitting your video, you agree that it may be used on the live
+            broadcast.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const shell = document.getElementById("cameraShell");
+    const video = document.getElementById("preview");
+    const overlay = document.getElementById("cameraOverlay");
+
+    async function enableCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: true
+        });
+        video.srcObject = stream;
+        shell.classList.add("active");
+      } catch (err) {
+        console.error("Error accessing camera/mic", err);
+        overlay.querySelector(".camera-overlay-text").textContent =
+          "UNABLE TO ACCESS CAMERA";
+      }
+    }
+
+    shell.addEventListener("click", () => {
+      if (!shell.classList.contains("active")) {
+        enableCamera();
+      }
+    });
+  </script>
+</body>
+</html>
