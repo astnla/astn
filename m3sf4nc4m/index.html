@@ -39,12 +39,14 @@
 
     #background-image {
       position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+      inset: 0;
       z-index: 0;
+    
+      background-image: url("https://storage.googleapis.com/vixi2-prod-assets/assets%2F47c43f17%2Fconfig%2Ftemplates%2F89787c06-fbc0-42f9-8e6b-e7e8010dbc73_assets__layers__background_image%2Fd79epmin71kexdamumrt3ebfs2eihp9s.png");
+      background-size: cover;        /* iOS safe */
+      background-position: center;
+      background-repeat: no-repeat;
+    
       opacity: 0.2;
     }
 
@@ -205,11 +207,7 @@
 <body>
   <div class="contributor-page app-name-live">
 
-    <img
-      id="background-image"
-      src="https://storage.googleapis.com/vixi2-prod-assets/assets%2F47c43f17%2Fconfig%2Ftemplates%2F89787c06-fbc0-42f9-8e6b-e7e8010dbc73_assets__layers__background_image%2Fd79epmin71kexdamumrt3ebfs2eihp9s.png"
-      alt=""
-    />
+    <div id="background-image"></div>
 
     <div class="contributor-wrapper">
       <div class="live-app-wrapper">
