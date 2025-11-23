@@ -243,9 +243,15 @@
 
         // --- STEP 3: request actual correct stream ---
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: preferred.deviceId }},
+          video: {
+            deviceId: { exact: preferred.deviceId },
+            width: { ideal: 1280 },
+            height: { ideal: 960 },     // 4:3 ratio forces main lens
+            facingMode: "user"
+          },
           audio: true
         });
+
 
         video.srcObject = stream;
         shell.classList.add("active");
