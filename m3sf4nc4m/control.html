@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fan Cam Control</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+
+<style>
+    body {
+        margin: 0;
+        background: #00031F; /* Panthers navy */
+        font-family: Arial, sans-serif;
+        color: white;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    header {
+        background: #DA1A32; /* Panthers red */
+        padding: 18px;
+        font-size: 22px;
+        font-weight: bold;
+        text-align: center;
+        letter-spacing: 1px;
+    }
+
+    #grid {
+        flex: 1;
+        overflow-y: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 14px;
+        padding: 16px;
+    }
+
+    .tile {
+        background: #11162B;
+        border: 2px solid #1F2541;
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .tile:hover {
+        border-color: #DA1A32;
+        transform: scale(1.02);
+    }
+
+    .tile.live {
+        border-color: #DA1A32;
+        box-shadow: 0 0 15px #DA1A32;
+    }
+
+    .tile-name {
+        margin-top: 8px;
+        font-size: 14px;
+        color: #fff;
+        opacity: 0.8;
+    }
+
+    footer {
+        background: #0A0F24;
+        padding: 14px;
+        font-size: 14px;
+        text-align: center;
+        color: #aaa;
+    }
+</style>
+
+</head>
+<body>
+
+<header>FAN CAM CONTROL PANEL</header>
+
+<div id="grid"></div>
+
+<footer>
+    Tap a user to send them LIVE · Connected users update automatically
+</footer>
+
+<script>
+// -----------------------------------------------------
+// 🔥 Firebase Initialization
+// -----------------------------------------------------
+const firebaseConfig = {
+  apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+  authDomain: "mes-fancam.firebaseapp.com",
+  databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+  projectId: "mes-fancam",
+  storageBucket: "mes-fancam.firebasestorage.app",
+  messagingSenderId: "1091345682482",
+  appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// -----------------------------------------------------
+// 🔌 Listen for all connected users
+// Path: /users/{userid}
+// -----------------------------------------------------
+const grid = document.getElementById("grid");
+
+db.ref("users").on("value", (snapshot) => {
+    grid.innerHTML = ""; // Clear existing
+
+    const users = snapshot.val() || {};
+
+    Object.keys(users).forEach((uid) => {
+        const user = users[uid];
+
+        // Create tile
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        tile.setAttribute("data-uid", uid);
+
+        // Live indicator
+        db.ref("liveUser").on("value", (snap) => {
+            const live = snap.val();
+            tile.classList.toggle("live", live === uid);
+        });
+
+        // Thumbnail placeholder (video comes later)
+        tile.innerHTML = `
+            <div style="
+                width:100%;
+                height:120px;
+                background:#1F2541;
+                border-radius:6px;
+            "></div>
+            <div class="tile-name">${user.name || "Unnamed User"}</div>
+        `;
+
+        tile.onclick = () => {
+            db.ref("liveUser").set(uid);
+        };
+
+        grid.appendChild(tile);
+    });
+});
+</script>
+
+</body>
+</html>
