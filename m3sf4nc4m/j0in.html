@@ -5,13 +5,13 @@
   <title>Join — Manatee Fan Cam</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
 
   <style>
     :root {
       --bg-red: #DA1A32;
       --navy:   #00031F;
-      --overlay: #00000022;
+      --overlay:#00000022;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -32,15 +32,19 @@
       padding-top: env(safe-area-inset-top);
     }
 
-    /* NAME BLOCK */
-    .name-block {
-      width: calc(100% - 70px);
-      max-width: 360px;
-      margin-bottom: 18px;
+    /* HEADER TEXT ABOVE CAMERA */
+    #topInstruction {
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--navy);
+      margin-bottom: 12px;
+      text-align: center;
     }
 
+    /* Name Input (hidden until selfie taken) */
     #nameInput {
-      width: 100%;
+      width: calc(100% - 70px);
+      max-width: 360px;
       border: none;
       background: transparent;
       color: var(--navy);
@@ -50,13 +54,15 @@
       text-transform: uppercase;
       outline: none;
       padding: 0;
+      display: none;
+      margin-bottom: 18px;
     }
 
     #nameInput::placeholder {
       color: var(--navy);
       opacity: 0.75;
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     /* Camera box */
@@ -101,11 +107,7 @@
 
     #snapBtn:active { transform: scale(0.96); }
 
-    #snapBtn.disabled {
-      opacity: 0.35;
-      pointer-events: none;
-    }
-
+    /* Retake + Continue buttons */
     .actionRow {
       display: none;
       margin-top: 12px;
@@ -115,7 +117,7 @@
 
     .actionBtn {
       padding: 10px 18px;
-      font-weight: 700;
+      font-weight: 900;
       border-radius: 6px;
       font-size: 15px;
       cursor: pointer;
@@ -123,29 +125,30 @@
     }
 
     #retakeBtn { background: white; color: var(--navy); }
-    #continueBtn { background: var(--navy); color: white; }
+    #continueBtn { background: var(--navy); color: white; opacity: 0.4; pointer-events:none; }
+
   </style>
 </head>
 <body>
 
 <div class="wrapper">
 
-  <div class="name-block">
-    <input
-      id="nameInput"
-      type="text"
-      autocomplete="off"
-      placeholder="ENTER NAME (GONZALEZ, SECKORA, VASQUEZ)"
-    />
-  </div>
+  <!-- HEADER ABOVE CAMERA -->
+  <div id="topInstruction">TAKE A SELFIE</div>
 
+  <!-- NAME INPUT (hidden at first) -->
+  <input id="nameInput" type="text" autocomplete="off" placeholder="ENTER NAME">
+
+  <!-- CAMERA -->
   <div id="cameraBox">
     <video id="preview" autoplay playsinline></video>
     <canvas id="canvasOutput"></canvas>
   </div>
 
-  <div id="snapBtn" class="disabled"></div>
+  <!-- SNAP -->
+  <div id="snapBtn"></div>
 
+  <!-- RETAKE + CONTINUE -->
   <div class="actionRow" id="actionRow">
     <button id="retakeBtn" class="actionBtn">RETAKE</button>
     <button id="continueBtn" class="actionBtn">CONTINUE</button>
@@ -168,88 +171,50 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const db  = getDatabase(app);
+  const db = getDatabase(app);
 
-  /* -----------------------------------------------------
-       🔥 FIXED RESET FLAG LISTENER (NO INFINITE LOOP)
-  ------------------------------------------------------ */
+  /* RESET FLAG PROTECTION */
   let alreadyReset = false;
-  
+
   onValue(ref(db, "meta/resetFlag"), async snap => {
     if (!snap.exists()) return;
-  
     if (alreadyReset) return;
     alreadyReset = true;
-  
-    console.log("RESET FLAG RECEIVED — clearing this device.");
-  
-    // Clear this device
+
     localStorage.clear();
-  
-    // ❗ VERY IMPORTANT: Clear the reset flag in Firebase
     await set(ref(db, "meta/resetFlag"), null);
-  
     location.reload();
   });
 
-  const preview      = document.getElementById("preview");
-  const canvas       = document.getElementById("canvasOutput");
-  const snapBtn      = document.getElementById("snapBtn");
-  const retakeBtn    = document.getElementById("retakeBtn");
-  const continueBtn  = document.getElementById("continueBtn");
-  const actionRow    = document.getElementById("actionRow");
-  const nameInput    = document.getElementById("nameInput");
+  const preview = document.getElementById("preview");
+  const canvas = document.getElementById("canvasOutput");
+  const snapBtn = document.getElementById("snapBtn");
+  const retakeBtn = document.getElementById("retakeBtn");
+  const continueBtn = document.getElementById("continueBtn");
+  const actionRow = document.getElementById("actionRow");
+  const nameInput = document.getElementById("nameInput");
+  const topInstruction = document.getElementById("topInstruction");
 
   let stream = null;
-  let userName = localStorage.getItem("fanCamName") || "";
-
-  if (userName) {
-    nameInput.value = userName;
-    snapBtn.classList.remove("disabled");
-  }
 
   async function startCamera() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 960 }
-        },
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 }},
         audio: false
       });
 
       preview.srcObject = stream;
       preview.style.display = "block";
       canvas.style.display = "none";
-    } catch (err) {
-      console.error("Camera error:", err);
-    }
+
+    } catch (err) { console.error(err); }
   }
 
   startCamera();
 
-  function commitName() {
-    const value = nameInput.value.trim();
-    if (!value) return;
-
-    userName = value.toUpperCase();
-    localStorage.setItem("fanCamName", userName);
-    nameInput.value = userName;
-    snapBtn.classList.remove("disabled");
-  }
-
-  nameInput.addEventListener("keyup", (e) => {
-    if (e.key === "Enter") commitName();
-  });
-  nameInput.addEventListener("blur", commitName);
-
-  /* -----------------------------------------------------
-        📸 TAKE SELFIE (mirrored)
-  ------------------------------------------------------ */
+  /* TAKE SELFIE */
   snapBtn.addEventListener("click", () => {
-    if (snapBtn.classList.contains("disabled")) return;
-
     const ctx = canvas.getContext("2d");
     canvas.width = preview.videoWidth;
     canvas.height = preview.videoHeight;
@@ -264,53 +229,58 @@
 
     if (stream) stream.getTracks().forEach(t => t.stop());
 
-    snapBtn.style.display = "none";
+    /* SWITCH TO NAME PHASE */
+    topInstruction.textContent = "GIVE YOURSELF A NAME HERE";
+    nameInput.style.display = "block";
     actionRow.style.display = "flex";
+    snapBtn.style.display = "none";
   });
 
-  /* -----------------------------------------------------
-        🔁 RETAKE
-  ------------------------------------------------------ */
+  /* ENABLE CONTINUE ONLY WHEN VALID NAME */
+  nameInput.addEventListener("input", () => {
+    const v = nameInput.value.toUpperCase().trim();
+    nameInput.value = nameInput.value.toUpperCase();
+
+    const valid = /[A-Z0-9]/.test(v);
+
+    continueBtn.style.opacity = valid ? "1" : "0.4";
+    continueBtn.style.pointerEvents = valid ? "auto" : "none";
+  });
+
+  /* RETAKE */
   retakeBtn.addEventListener("click", () => {
-    canvas.style.display = "none";
-    snapBtn.style.display = "block";
+    nameInput.style.display = "none";
     actionRow.style.display = "none";
+    snapBtn.style.display = "block";
+    topInstruction.textContent = "TAKE A SELFIE";
     startCamera();
   });
 
-  /* -----------------------------------------------------
-        🚀 CONTINUE → UPLOAD → GO TO INDEX
-  ------------------------------------------------------ */
+  /* CONTINUE */
   continueBtn.addEventListener("click", async () => {
-    const finalName = (userName || nameInput.value || "").trim();
-    if (!finalName) {
-      alert("Please enter your name before continuing.");
-      nameInput.focus();
-      return;
-    }
+    const v = nameInput.value.trim();
+    if (!/[A-Z0-9]/.test(v)) return;
 
-    const upperName = finalName.toUpperCase();
-    localStorage.setItem("fanCamName", upperName);
+    const finalName = v.toUpperCase();
 
     const selfieData = canvas.toDataURL("image/png");
-    localStorage.setItem("selfieBase64", selfieData);
 
-    const safeName = upperName.replace(/[^A-Z0-9]/g, "_");
-    const userKey  = safeName + "_" + Date.now();
+    const safeName = finalName.replace(/[^A-Z0-9]/g, "_");
+    const userKey = safeName + "_" + Date.now();
+
+    await set(ref(db, "participants/" + userKey), {
+      name: finalName,
+      selfie: selfieData,
+      joinedAt: Date.now()
+    });
+
+    localStorage.setItem("fanCamName", finalName);
     localStorage.setItem("fanCamUserKey", userKey);
-
-    try {
-      await set(ref(db, "participants/" + userKey), {
-        name: upperName,
-        selfie: selfieData,
-        joinedAt: Date.now()
-      });
-    } catch (err) {
-      console.error("Error writing to Firebase:", err);
-    }
+    localStorage.setItem("selfieBase64", selfieData);
 
     window.location.href = "index.html";
   });
+
 </script>
 
 </body>
