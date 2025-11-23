@@ -14,17 +14,13 @@
       --overlay:#00000022;
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     html, body {
       height: 100vh;
       background: var(--bg-red);
-      overflow: hidden;
       font-family: "Outfit", sans-serif;
+      overflow: hidden;
     }
 
     /* MAIN PAGE LAYOUT */
@@ -37,29 +33,52 @@
       padding-bottom: env(safe-area-inset-bottom);
     }
 
-    /* TOP INSTRUCTION — evenly above viewfinder */
+    /* FIXED AREA ABOVE VIEWFINDER */
+    .topArea {
+      height: 50px; /* This creates consistent spacing above viewfinder */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Selfie phase text */
     #topInstruction {
-      margin-top: 20px;
-      margin-bottom: 20px;
       font-size: 18px;
       font-weight: 900;
       color: var(--navy);
-      text-align: center;
-      min-height: 22px; /* Keeps layout from jumping */
     }
 
-    /* CENTER ZONE — keeps viewfinder centered perfectly */
+    /* Name phase input (same height, same location) */
+    #nameInput {
+      width: calc(100% - 70px);
+      max-width: 360px;
+      border: none;
+      background: transparent;
+      font-size: 22px;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+      color: var(--navy);
+      outline: none;
+      display: none; /* hidden until name phase */
+    }
+
+    #nameInput::placeholder {
+      color: var(--navy);
+      opacity: 0.35;
+      font-weight: 900;
+    }
+
+    /* CENTER — viewfinder ALWAYS centered perfectly */
     .centerColumn {
       flex: 1;
       display: flex;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 12px;
       width: 100%;
     }
 
-    /* VIEWFINDER — camera or selfie */
+    /* VIEWFINDER BOX */
     #cameraBox {
       width: calc(100% - 70px);
       max-width: 360px;
@@ -74,20 +93,19 @@
       position: absolute;
       inset: 0;
       display: flex;
-      justify-content: center;
       align-items: center;
-      text-align: center;
+      justify-content: center;
       cursor: pointer;
-      padding: 8px;
     }
 
     .camera-overlay-text {
       font-weight: 900;
       font-size: 16px;
       color: var(--navy);
+      text-align: center;
     }
 
-    #preview {
+    #preview, #canvasOutput {
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -95,32 +113,14 @@
       display: none;
     }
 
-    #canvasOutput {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: none;
-    }
-
-    /* NAME INPUT (below viewfinder in name mode) */
-    #nameInput {
-      width: calc(100% - 70px);
-      max-width: 360px;
-      border: none;
-      background: transparent;
-      color: var(--navy);
-      font-size: 22px;
-      font-weight: 900;
-      text-align: center;
-      text-transform: uppercase;
-      outline: none;
-      display: none;
-    }
-
-    #nameInput::placeholder {
-      color: var(--navy);
-      opacity: 0.35;
-      font-weight: 900;
+    /* FIXED AREA BELOW VIEWFINDER */
+    .bottomArea {
+      height: 90px; /* consistent spacing below viewfinder */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
     }
 
     /* SNAP BUTTON */
@@ -131,15 +131,14 @@
       border-radius: 50%;
       border: 6px solid #f2f2f2;
       cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
+      transition: transform 0.1s;
     }
     #snapBtn:active { transform: scale(0.96); }
 
-    /* RETAKE / CONTINUE ROW */
+    /* RETAKE + CONTINUE ROW */
     .actionRow {
       display: none;
       gap: 20px;
-      justify-content: center;
     }
 
     .actionBtn {
@@ -153,16 +152,6 @@
 
     #retakeBtn { background: white; color: var(--navy); }
     #continueBtn { background: var(--navy); color: white; opacity: 0.4; pointer-events:none; }
-
-    /* BOTTOM SECTION — evenly below viewfinder */
-    .bottomControls {
-      margin-top: 20px;
-      margin-bottom: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-    }
   </style>
 </head>
 
@@ -170,10 +159,13 @@
 
 <div class="wrapper">
 
-  <!-- TOP TEXT -->
-  <div id="topInstruction">TAKE A SELFIE</div>
+  <!-- TOP AREA -->
+  <div class="topArea">
+    <div id="topInstruction">TAKE A SELFIE</div>
+    <input id="nameInput" type="text" autocomplete="off" placeholder="GIVE YOURSELF A NAME HERE">
+  </div>
 
-  <!-- CENTERED VIEWFINDER & NAME INPUT -->
+  <!-- PERFECTLY CENTERED VIEWFINDER -->
   <div class="centerColumn">
 
     <div id="cameraBox">
@@ -185,20 +177,16 @@
       </div>
     </div>
 
-    <input id="nameInput" type="text" autocomplete="off" placeholder="GIVE YOURSELF A NAME HERE">
-
   </div>
 
-  <!-- BOTTOM BUTTONS -->
-  <div class="bottomControls">
-
+  <!-- BOTTOM AREA -->
+  <div class="bottomArea">
     <div id="snapBtn"></div>
 
     <div class="actionRow" id="actionRow">
       <button id="retakeBtn" class="actionBtn">RETAKE</button>
       <button id="continueBtn" class="actionBtn">CONTINUE</button>
     </div>
-
   </div>
 
 </div>
@@ -289,8 +277,10 @@
 
     if (stream) stream.getTracks().forEach(t => t.stop());
 
-    topInstruction.textContent = "GIVE YOURSELF A NAME HERE";
+    /* SWITCH TO NAME PHASE */
+    topInstruction.style.display = "none";
     nameInput.style.display = "block";
+
     actionRow.style.display = "flex";
     snapBtn.style.display = "none";
   });
@@ -306,9 +296,10 @@
 
   retakeBtn.addEventListener("click", () => {
     nameInput.style.display = "none";
+    topInstruction.style.display = "block";
+
     actionRow.style.display = "none";
     snapBtn.style.display = "block";
-    topInstruction.textContent = "TAKE A SELFIE";
 
     canvas.style.display = "none";
 
