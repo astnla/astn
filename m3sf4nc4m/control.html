@@ -1,151 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Fan Cam Control</title>
+  <meta charset="UTF-8" />
+  <title>Manatee Fan Cam — Control</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
 
-<style>
+  <style>
+    :root {
+      --bg-red: #DA1A32;
+      --navy:   #00031F;
+      --card:   #ffffff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-        margin: 0;
-        background: #00031F; /* Panthers navy */
-        font-family: Arial, sans-serif;
-        color: white;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
+      font-family: "Outfit", sans-serif;
+      background: #f3f3f3;
+      color: var(--navy);
+      min-height: 100vh;
+      padding: 16px;
     }
 
-    header {
-        background: #DA1A32; /* Panthers red */
-        padding: 18px;
-        font-size: 22px;
-        font-weight: bold;
-        text-align: center;
-        letter-spacing: 1px;
+    h1 {
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 12px;
     }
 
-    #grid {
-        flex: 1;
-        overflow-y: auto;
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 14px;
-        padding: 16px;
+    .subtitle {
+      font-size: 13px;
+      opacity: 0.7;
+      margin-bottom: 16px;
     }
 
-    .tile {
-        background: #11162B;
-        border: 2px solid #1F2541;
-        border-radius: 10px;
-        padding: 10px;
-        text-align: center;
-        cursor: pointer;
-        transition: 0.2s;
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
     }
 
-    .tile:hover {
-        border-color: #DA1A32;
-        transform: scale(1.02);
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
 
-    .tile.live {
-        border-color: #DA1A32;
-        box-shadow: 0 0 15px #DA1A32;
+    .thumb {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      object-fit: cover;
+      border-radius: 8px;
     }
 
-    .tile-name {
-        margin-top: 8px;
-        font-size: 14px;
-        color: #fff;
-        opacity: 0.8;
+    .name {
+      font-weight: 900;
+      font-size: 16px;
+      text-align: center;
     }
 
-    footer {
-        background: #0A0F24;
-        padding: 14px;
-        font-size: 14px;
-        text-align: center;
-        color: #aaa;
+    .joined {
+      font-size: 11px;
+      opacity: 0.7;
     }
-</style>
-
+  </style>
 </head>
 <body>
+  <h1>Manatee Fan Cam — Control</h1>
+  <div class="subtitle">
+    Live list of everyone who joined via j0in.html
+  </div>
 
-<header>FAN CAM CONTROL PANEL</header>
+  <div id="grid" class="grid"></div>
 
-<div id="grid"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
-<footer>
-    Tap a user to send them LIVE · Connected users update automatically
-</footer>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+      authDomain: "mes-fancam.firebaseapp.com",
+      databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+      projectId: "mes-fancam",
+      storageBucket: "mes-fancam.firebasestorage.app",
+      messagingSenderId: "1091345682482",
+      appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+    };
 
-<script>
-// -----------------------------------------------------
-// 🔥 Firebase Initialization
-// -----------------------------------------------------
-const firebaseConfig = {
-  apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
-  authDomain: "mes-fancam.firebaseapp.com",
-  databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
-  projectId: "mes-fancam",
-  storageBucket: "mes-fancam.firebasestorage.app",
-  messagingSenderId: "1091345682482",
-  appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
-};
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+    const grid = document.getElementById("grid");
 
-// -----------------------------------------------------
-// 🔌 Listen for all connected users
-// Path: /users/{userid}
-// -----------------------------------------------------
-const grid = document.getElementById("grid");
+    const participantsRef = ref(db, "participants");
 
-db.ref("users").on("value", (snapshot) => {
-    grid.innerHTML = ""; // Clear existing
+    onValue(participantsRef, (snapshot) => {
+      grid.innerHTML = "";
 
-    const users = snapshot.val() || {};
+      if (!snapshot.exists()) {
+        grid.innerHTML = "<div style='opacity:0.6;font-size:13px;'>No participants yet.</div>";
+        return;
+      }
 
-    Object.keys(users).forEach((uid) => {
-        const user = users[uid];
+      const data = snapshot.val();
+      // We want newest first
+      const entries = Object.entries(data).sort(
+        (a, b) => (b[1].joinedAt || 0) - (a[1].joinedAt || 0)
+      );
 
-        // Create tile
-        const tile = document.createElement("div");
-        tile.className = "tile";
-        tile.setAttribute("data-uid", uid);
+      for (const [key, p] of entries) {
+        const card = document.createElement("div");
+        card.className = "card";
 
-        // Live indicator
-        db.ref("liveUser").on("value", (snap) => {
-            const live = snap.val();
-            tile.classList.toggle("live", live === uid);
-        });
+        const img = document.createElement("img");
+        img.className = "thumb";
+        img.src = p.selfie;
+        img.alt = p.name || "selfie";
 
-        // Thumbnail placeholder (video comes later)
-        tile.innerHTML = `
-            <div style="
-                width:100%;
-                height:120px;
-                background:#1F2541;
-                border-radius:6px;
-            "></div>
-            <div class="tile-name">${user.name || "Unnamed User"}</div>
-        `;
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "name";
+        nameDiv.textContent = p.name || key;
 
-        tile.onclick = () => {
-            db.ref("liveUser").set(uid);
-        };
+        const timeDiv = document.createElement("div");
+        timeDiv.className = "joined";
+        if (p.joinedAt) {
+          const d = new Date(p.joinedAt);
+          timeDiv.textContent = "Joined: " + d.toLocaleTimeString();
+        } else {
+          timeDiv.textContent = "Joined";
+        }
 
-        grid.appendChild(tile);
+        card.appendChild(img);
+        card.appendChild(nameDiv);
+        card.appendChild(timeDiv);
+
+        grid.appendChild(card);
+      }
     });
-});
-</script>
-
+  </script>
 </body>
 </html>
