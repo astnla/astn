@@ -32,7 +32,7 @@
       padding-top: env(safe-area-inset-top);
     }
 
-    /* HEADER TEXT ABOVE CAMERA */
+    /* HEADER ABOVE CAMERA */
     #topInstruction {
       font-size: 18px;
       font-weight: 900;
@@ -41,7 +41,7 @@
       text-align: center;
     }
 
-    /* Name Input (hidden until selfie taken) */
+    /* NAME INPUT — hidden until selfie is taken */
     #nameInput {
       width: calc(100% - 70px);
       max-width: 360px;
@@ -60,9 +60,14 @@
 
     #nameInput::placeholder {
       color: var(--navy);
-      opacity: 0.75;
-      font-size: 16px;
+      opacity: 0.35;
       font-weight: 700;
+      transition: opacity 0.15s ease;
+      letter-spacing: 1px;
+    }
+
+    #nameInput:focus::placeholder {
+      opacity: 0;
     }
 
     /* Camera box */
@@ -124,20 +129,28 @@
       border: none;
     }
 
-    #retakeBtn { background: white; color: var(--navy); }
-    #continueBtn { background: var(--navy); color: white; opacity: 0.4; pointer-events:none; }
+    #retakeBtn { 
+      background: white; 
+      color: var(--navy); 
+    }
 
+    #continueBtn { 
+      background: var(--navy); 
+      color: white; 
+      opacity: 0.4; 
+      pointer-events:none; 
+    }
   </style>
 </head>
 <body>
 
 <div class="wrapper">
 
-  <!-- HEADER ABOVE CAMERA -->
+  <!-- HEADER -->
   <div id="topInstruction">TAKE A SELFIE</div>
 
-  <!-- NAME INPUT (hidden at first) -->
-  <input id="nameInput" type="text" autocomplete="off" placeholder="ENTER NAME">
+  <!-- NAME INPUT (hidden until selfie snapped) -->
+  <input id="nameInput" type="text" autocomplete="off" placeholder="GIVE YOURSELF A NAME HERE">
 
   <!-- CAMERA -->
   <div id="cameraBox">
@@ -145,7 +158,7 @@
     <canvas id="canvasOutput"></canvas>
   </div>
 
-  <!-- SNAP -->
+  <!-- SNAP BUTTON -->
   <div id="snapBtn"></div>
 
   <!-- RETAKE + CONTINUE -->
@@ -173,12 +186,13 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  /* RESET FLAG PROTECTION */
+  /* RESET FLAG */
   let alreadyReset = false;
 
   onValue(ref(db, "meta/resetFlag"), async snap => {
     if (!snap.exists()) return;
     if (alreadyReset) return;
+
     alreadyReset = true;
 
     localStorage.clear();
@@ -230,13 +244,14 @@
     if (stream) stream.getTracks().forEach(t => t.stop());
 
     /* SWITCH TO NAME PHASE */
-    topInstruction.textContent = "GIVE YOURSELF A NAME HERE";
+    topInstruction.textContent = "";
     nameInput.style.display = "block";
     actionRow.style.display = "flex";
     snapBtn.style.display = "none";
+    nameInput.focus();
   });
 
-  /* ENABLE CONTINUE ONLY WHEN VALID NAME */
+  /* ENABLE CONTINUE WHEN NAME VALID */
   nameInput.addEventListener("input", () => {
     const v = nameInput.value.toUpperCase().trim();
     nameInput.value = nameInput.value.toUpperCase();
@@ -263,12 +278,10 @@
   
     const finalName = v.toUpperCase();
   
-    // 🔒 Disable button instantly to stop double taps
     continueBtn.style.opacity = "0.4";
     continueBtn.style.pointerEvents = "none";
     continueBtn.textContent = "LOADING…";
   
-    // 🔒 Lock retake too while uploading
     retakeBtn.style.pointerEvents = "none";
     retakeBtn.style.opacity = "0.4";
   
@@ -284,12 +297,10 @@
         joinedAt: Date.now()
       });
   
-      // Save locally
       localStorage.setItem("fanCamName", finalName);
       localStorage.setItem("fanCamUserKey", userKey);
       localStorage.setItem("selfieBase64", selfieData);
   
-      // Redirect
       window.location.href = "index.html";
   
     } catch (err) {
