@@ -23,32 +23,33 @@
       overflow: hidden;
     }
 
-    /* MAIN PAGE LAYOUT */
+    /* MAIN PAGE LAYOUT — GRID WITH 3 ROWS */
     .wrapper {
       height: 100vh;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-rows: 1fr auto 1fr; /* top flexible, center auto, bottom flexible */
+      justify-items: center;
       align-items: center;
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
     }
 
-    /* FIXED AREA ABOVE VIEWFINDER */
+    /* AREA ABOVE VIEWFINDER */
     .topArea {
-      height: 50px; /* This creates consistent spacing above viewfinder */
+      grid-row: 1;
       display: flex;
       align-items: center;
       justify-content: center;
+      align-self: end;      /* hug the viewfinder side of the row */
+      margin-bottom: 12px;  /* distance ABOVE viewfinder */
     }
 
-    /* Selfie phase text */
     #topInstruction {
       font-size: 18px;
       font-weight: 900;
       color: var(--navy);
     }
 
-    /* Name phase input (same height, same location) */
     #nameInput {
       width: calc(100% - 70px);
       max-width: 360px;
@@ -69,16 +70,15 @@
       font-weight: 900;
     }
 
-    /* CENTER — viewfinder ALWAYS centered perfectly */
+    /* CENTER — VIEWFINDER ITSELF (ALWAYS MIDDLE ROW) */
     .centerColumn {
-      flex: 1;
+      grid-row: 2;
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
       width: 100%;
     }
 
-    /* VIEWFINDER BOX */
     #cameraBox {
       width: calc(100% - 70px);
       max-width: 360px;
@@ -113,17 +113,18 @@
       display: none;
     }
 
-    /* FIXED AREA BELOW VIEWFINDER */
+    /* AREA BELOW VIEWFINDER */
     .bottomArea {
-      height: 90px; /* consistent spacing below viewfinder */
+      grid-row: 3;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
+      align-self: start;     /* hug the viewfinder side of the row */
+      margin-top: 12px;      /* distance BELOW viewfinder */
       gap: 12px;
     }
 
-    /* SNAP BUTTON */
     #snapBtn {
       width: 80px;
       height: 80px;
@@ -135,7 +136,6 @@
     }
     #snapBtn:active { transform: scale(0.96); }
 
-    /* RETAKE + CONTINUE ROW */
     .actionRow {
       display: none;
       gap: 20px;
@@ -159,15 +159,14 @@
 
 <div class="wrapper">
 
-  <!-- TOP AREA -->
+  <!-- TOP (ABOVE VIEWFINDER) -->
   <div class="topArea">
     <div id="topInstruction">TAKE A SELFIE</div>
     <input id="nameInput" type="text" autocomplete="off" placeholder="GIVE YOURSELF A NAME HERE">
   </div>
 
-  <!-- PERFECTLY CENTERED VIEWFINDER -->
+  <!-- CENTER (VIEWFINDER) -->
   <div class="centerColumn">
-
     <div id="cameraBox">
       <video id="preview" autoplay playsinline></video>
       <canvas id="canvasOutput"></canvas>
@@ -176,10 +175,9 @@
         <div class="camera-overlay-text">TAP TO ENABLE CAMERA</div>
       </div>
     </div>
-
   </div>
 
-  <!-- BOTTOM AREA -->
+  <!-- BOTTOM (BELOW VIEWFINDER) -->
   <div class="bottomArea">
     <div id="snapBtn"></div>
 
