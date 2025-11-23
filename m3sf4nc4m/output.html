@@ -131,8 +131,8 @@
   const imgEl      = document.getElementById("liveImage");
   const emptyState = document.getElementById("emptyState");
 
-  // listen to /live/current
-  const currentRef = ref(db, "live/current");
+  // 🔁 listen to /live/activeUser instead of /live/current
+  const currentRef = ref(db, "live/activeUser");
   const frameRef   = ref(db, "live/frame");
 
   let activeUser = null;
@@ -159,7 +159,6 @@
     emptyState.style.display = "none";
   });
 </script>
-
 
 </body>
 </html>
