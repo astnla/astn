@@ -61,7 +61,7 @@
     #nameInput::placeholder {
       color: var(--navy);
       opacity: 0.35;
-      font-weight: 700;
+      font-weight: 900;
       transition: opacity 0.15s ease;
       letter-spacing: 1px;
     }
@@ -246,9 +246,9 @@
     /* SWITCH TO NAME PHASE */
     topInstruction.textContent = "";
     nameInput.style.display = "block";
+    nameInput.blur();           // 🔥 prevent keyboard opening on iPhone
     actionRow.style.display = "flex";
     snapBtn.style.display = "none";
-    nameInput.focus();
   });
 
   /* ENABLE CONTINUE WHEN NAME VALID */
