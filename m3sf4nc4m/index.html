@@ -204,11 +204,65 @@
   transform: translateY(-5%); /* adjust between -5% and -15% as needed */
 }
 
+/* Fullscreen red entry screen */
+#nameOverlay {
+  position: fixed;
+  inset: 0;
+  background: #DA1A32; /* Panthers/MES red */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 9999;
+  color: #00031F;
+  font-family: "Outfit", sans-serif;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Title text */
+#namePrompt {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+  color: #00031F;
+  cursor: text; /* shows they can tap to type */
+  margin-bottom: 12px;
+}
+
+#namePrompt #example {
+  font-size: 15px;
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+/* The invisible input field */
+#nameInput {
+  position: absolute;
+  opacity: 0;          /* completely hidden */
+  pointer-events: none;
+  height: 1px;
+  width: 1px;
+}
+
+    #namePrompt {
+  user-select: none;
+}
 
 
   </style>
 </head>
 <body>
+  <!-- FULLSCREEN NAME OVERLAY -->
+  <div id="nameOverlay">
+    <div id="namePrompt">
+      ENTER NAME<br>
+      <span id="example">(GONZALEZ, SECKORA, VASQUEZ)</span>
+    </div>
+    <input id="nameInput" type="text" autocomplete="off" />
+  </div>
+  
   <div class="contributor-page app-name-live">
 
     <div class="contributor-wrapper">
@@ -246,65 +300,98 @@
     </div>
   </div>
 
-  <script>
-    const shell = document.getElementById("cameraShell");
-    const video = document.getElementById("preview");
-    const overlay = document.getElementById("cameraOverlay");
+<script>
+  const shell = document.getElementById("cameraShell");
+  const video = document.getElementById("preview");
+  const overlay = document.getElementById("cameraOverlay");
 
-    async function enableCamera() {
-      try {
-        // --- STEP 1: initial permission request ---
-        const temp = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        });
+  async function enableCamera() {
+    try {
+      // --- STEP 1: initial permission request ---
+      const temp = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
 
-        // Stop this stream immediately
-        temp.getTracks().forEach(t => t.stop());
+      // Stop this stream immediately
+      temp.getTracks().forEach(t => t.stop());
 
-        // --- STEP 2: enumerate devices ---
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const cameras = devices.filter(d => d.kind === "videoinput");
+      // --- STEP 2: enumerate devices ---
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter(d => d.kind === "videoinput");
 
-        // Prefer main front camera (not ultra wide)
-        let preferred = cameras.find(c =>
-          /front/i.test(c.label) && !/ultra/i.test(c.label)
-        );
+      // Prefer main front camera (not ultra wide)
+      let preferred = cameras.find(c =>
+        /front/i.test(c.label) && !/ultra/i.test(c.label)
+      );
 
-        if (!preferred) {
-          preferred = cameras.find(c => /front/i.test(c.label));
-        }
+      if (!preferred) preferred = cameras.find(c => /front/i.test(c.label));
+      if (!preferred) preferred = cameras[0];
 
-        if (!preferred) {
-          preferred = cameras[0];
-        }
+      // --- STEP 3: request actual correct stream ---
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: { exact: preferred.deviceId },
+          width: { ideal: 1280 },
+          height: { ideal: 960 }, // 4:3
+          facingMode: "user"
+        },
+        audio: true
+      });
 
-        // --- STEP 3: request actual correct stream ---
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            deviceId: { exact: preferred.deviceId },
-            width: { ideal: 1280 },
-            height: { ideal: 960 },     // 4:3 ratio forces main lens
-            facingMode: "user"
-          },
-          audio: true
-        });
+      video.srcObject = stream;
+      shell.classList.add("active");
 
-        video.srcObject = stream;
-        shell.classList.add("active");
-
-      } catch (err) {
-        console.error("Error accessing camera/mic", err);
-        overlay.querySelector(".camera-overlay-text").textContent =
-          "UNABLE TO ACCESS CAMERA";
-      }
+    } catch (err) {
+      console.error("Error accessing camera/mic", err);
+      overlay.querySelector(".camera-overlay-text").textContent =
+        "UNABLE TO ACCESS CAMERA";
     }
+  }
 
-    shell.addEventListener("click", () => {
-      if (!shell.classList.contains("active")) {
-        enableCamera();
-      }
-    });
-  </script>
+  shell.addEventListener("click", () => {
+    if (!shell.classList.contains("active")) {
+      enableCamera();
+    }
+  });
+
+  // ---------- NAME OVERLAY LOGIC ----------
+  const nameOverlay = document.getElementById("nameOverlay");
+  const nameInput = document.getElementById("nameInput");
+  const namePrompt = document.getElementById("namePrompt");
+
+  let userName = null;
+
+  // Tap the text → focus hidden input
+  namePrompt.addEventListener("click", () => {
+    nameInput.focus();
+  });
+
+  nameInput.addEventListener("input", () => {
+    const value = nameInput.value.trim();
+    if (value.length > 0) finishName(value);
+  });
+
+  nameInput.addEventListener("keyup", (e) => {
+    if (e.key === "Enter") {
+      const value = nameInput.value.trim();
+      if (value.length > 0) finishName(value);
+    }
+  });
+
+  function finishName(value) {
+    userName = value;
+
+    nameOverlay.style.transition = "opacity 0.5s";
+    nameOverlay.style.opacity = "0";
+
+    setTimeout(() => {
+      nameOverlay.style.display = "none";
+    }, 500);
+
+    console.log("USER NAME:", userName);
+  }
+</script>
+
 </body>
 </html>
