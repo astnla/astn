@@ -242,22 +242,26 @@
   // TAKE SELFIE (SNAP)
   snapBtn.addEventListener("click", () => {
     if (snapBtn.classList.contains("disabled")) return; // guard
-
+  
     const ctx = canvas.getContext("2d");
     canvas.width = preview.videoWidth;
     canvas.height = preview.videoHeight;
-
-    // Draw normally; CSS handles mirroring for both
-    ctx.drawImage(preview, 0, 0, canvas.width, canvas.height);
-
+  
+    // FLIP the selfie before drawing it into the canvas (mirror horizontally)
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(preview, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+  
     preview.style.display = "none";
     canvas.style.display = "block";
-
+  
     if (stream) stream.getTracks().forEach(t => t.stop());
-
+  
     snapBtn.style.display = "none";
     actionRow.style.display = "flex";
   });
+
 
   // RETAKE SELFIE
   retakeBtn.addEventListener("click", () => {
