@@ -5,7 +5,6 @@
   <title>Panthers Fan Cam Clone</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <!-- Fonts similar to their setup -->
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
@@ -21,7 +20,7 @@
     html, body {
       height: 100%;
       background-color: var(--bg-red);
-      overflow: hidden;          /* <-- no vertical scrolling */
+      overflow: hidden;
     }
 
     body {
@@ -47,29 +46,40 @@
       align-items: center;
     }
 
-    .live-app-wrapper {
-      width: 100%;
-      max-width: 480px;
+    .fan-cam-content {
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
-      align-items: stretch;
-    }
-
-    .streaming-title-image {
-      display: flex;
-      justify-content: center;
       align-items: center;
-      margin-bottom: 8px;
-      padding: 0 24px;
+      justify-content: flex-start;
+      width: 100%;
+      max-width: 480px;
+      transform: translateY(-5%);
     }
 
-    .streaming-title-image img {
-      width: 100%;
-      max-width: 260px;
-      aspect-ratio: 3 / 1;
-      height: auto;
-      display: block;
+    .streaming-title-textblock {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 24px;
+      margin-bottom: 12px;
+    }
+
+    .manatee-logo {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      margin-bottom: 8px;
+      border-radius: 12px;
+    }
+
+    .manatee-fancam-title {
+      font-family: "Outfit", sans-serif;
+      font-weight: 900;
+      font-size: 22px;
+      color: var(--navy);
+      letter-spacing: 0.5px;
+      text-align: center;
     }
 
     #publishCameraPreview {
@@ -84,20 +94,17 @@
       background-color: var(--overlay);
       width: calc(100% - 70px);
       max-width: 360px;
-      height: calc(360px * 4 / 3); /* lock to 4:3 ratio */
+      height: calc(360px * 4 / 3);
       margin: 20px 35px 10px;
-      box-sizing: border-box;
       border-radius: 4px;
       overflow: hidden;
       position: relative;
     }
 
-
     .camera-shell {
       width: 100%;
       height: 100%;
       position: relative;
-      background: transparent;
     }
 
     #preview {
@@ -130,15 +137,8 @@
       color: var(--navy);
     }
 
-    .camera-shell.active .camera-overlay { display: none; }
-
-    .start-contributor-stream {
-      margin-top: 8px;
-      text-align: center;
-      font-family: "Outfit", sans-serif;
-      font-weight: 900;
-      font-size: 16px;
-      color: var(--navy);
+    .camera-shell.active .camera-overlay {
+      display: none;
     }
 
     .legal-text {
@@ -151,134 +151,71 @@
       line-height: 1.4;
     }
 
-    .legal-text a {
-      color: var(--highlight);
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .legal-text a:hover {
-      text-decoration: underline;
-    }
-
-        /* New Title Block */
-    .streaming-title-textblock {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 0 24px;
-    margin-bottom: 12px;
-    }
-
-    /* Marley Square Logo */
-    .manatee-logo {
-    width: 80px;             /* adjust if needed */
-    height: 80px;            /* stays a clean square */
-    object-fit: contain;
-    margin-bottom: 8px;
-    border-radius: 12px;     /* optional: remove if you want sharp edges */
-    }
-
-    /* Title Text: same font as TAP TO ENABLE CAMERA */
-    .manatee-fancam-title {
-    font-family: "Outfit", sans-serif;
-    font-weight: 900;        /* matches Panthers look */
-    font-size: 22px;         /* adjust if needed */
-    color: var(--navy);      /* same dark navy text */
-    letter-spacing: 0.5px;   /* gives it that clean uppercase feel */
-    text-align: center;
-    }
-
-    .fan-cam-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  
-  /* Key line: limit width just like Panthers */
-  width: 100%;
-  max-width: 480px;
-
-  /* This balances the layout */
-  transform: translateY(-5%); /* adjust between -5% and -15% as needed */
-}
-
   </style>
 </head>
 <body>
-  
-  <div class="contributor-page app-name-live">
 
-    <div class="contributor-wrapper">
-      <div class="fan-cam-content">
+<div class="contributor-page app-name-live">
+  <div class="contributor-wrapper">
+    <div class="fan-cam-content">
 
-        <!-- Title area (replaces their streaming-title-image) -->
-        <div class="streaming-title-textblock">
-        <img class="manatee-logo" src="assets\mestv.png" alt="Marley Logo">
+      <div class="streaming-title-textblock">
+        <img class="manatee-logo" src="assets/mestv.png" alt="Marley Logo">
+        <div class="manatee-fancam-title">MANATEE CAM</div>
+      </div>
 
-        <div class="manatee-fancam-title">
-            MANATEE CAM
-        </div>
-        </div>
+      <div id="publishCameraPreview">
+        <div id="publishCameraState">
+          <div class="camera-shell" id="cameraShell">
+            <video id="preview" autoplay playsinline muted></video>
 
-
-        <div id="publishCameraPreview">
-          <div id="publishCameraState">
-            <div class="camera-shell" id="cameraShell">
-              <video id="preview" autoplay playsinline muted></video>
-
-              <div class="camera-overlay" id="cameraOverlay">
-                <div class="camera-overlay-text">
-                  TAP TO ENABLE CAMERA
-                </div>
-              </div>
+            <div class="camera-overlay" id="cameraOverlay">
+              <div class="camera-overlay-text">TAP TO ENABLE CAMERA</div>
             </div>
           </div>
-
-          <p class="legal-text">
-            By submitting your video, you agree that it may be used on the live broadcast.
-          </p>
         </div>
 
+        <p class="legal-text">
+          By submitting your video, you agree that it may be used on the live broadcast.
+        </p>
       </div>
+
     </div>
   </div>
+</div>
 
-<script>
+
+<script type="module">
+  /* ----------------------------------------
+     CAMERA ENABLE
+  ---------------------------------------- */
   const shell = document.getElementById("cameraShell");
   const video = document.getElementById("preview");
   const overlay = document.getElementById("cameraOverlay");
 
+  let stream = null;
+
   async function enableCamera() {
     try {
-      // --- STEP 1: initial permission request ---
       const temp = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
       });
-
-      // Stop this stream immediately
       temp.getTracks().forEach(t => t.stop());
 
-      // --- STEP 2: enumerate devices ---
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const cameras = devices.filter(d => d.kind === "videoinput");
+      const cams = devices.filter(d => d.kind === "videoinput");
 
-      // Prefer main front camera (not ultra wide)
-      let preferred = cameras.find(c =>
-        /front/i.test(c.label) && !/ultra/i.test(c.label)
-      );
+      let preferred =
+        cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) ||
+        cams.find(c => /front/i.test(c.label)) ||
+        cams[0];
 
-      if (!preferred) preferred = cameras.find(c => /front/i.test(c.label));
-      if (!preferred) preferred = cameras[0];
-
-      // --- STEP 3: request actual correct stream ---
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: {
           deviceId: { exact: preferred.deviceId },
           width: { ideal: 1280 },
-          height: { ideal: 960 }, // 4:3
+          height: { ideal: 960 },
           facingMode: "user"
         },
         audio: true
@@ -287,8 +224,11 @@
       video.srcObject = stream;
       shell.classList.add("active");
 
+      // Start sending frames
+      startStreamingFrames();
+
     } catch (err) {
-      console.error("Error accessing camera/mic", err);
+      console.error("Error:", err);
       overlay.querySelector(".camera-overlay-text").textContent =
         "UNABLE TO ACCESS CAMERA";
     }
@@ -300,6 +240,61 @@
     }
   });
 
+
+  /* ----------------------------------------
+     FIREBASE LIVE STREAMING (8 FPS JPEG)
+  ---------------------------------------- */
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+    authDomain: "mes-fancam.firebaseapp.com",
+    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+    projectId: "mes-fancam",
+    storageBucket: "mes-fancam.firebasestorage.app",
+    messagingSenderId: "1091345682482",
+    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  const userName = localStorage.getItem("userName") || "unknown_user";
+
+  let currentlyLiveUser = null;
+
+  onValue(ref(db, "live/activeUser"), snap => {
+    currentlyLiveUser = snap.val();
+  });
+
+  let frameInterval = null;
+
+  function startStreamingFrames() {
+    if (frameInterval) return;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    frameInterval = setInterval(() => {
+      if (currentlyLiveUser !== userName) return;
+      if (!video || video.readyState < 2) return;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      const jpegData = canvas.toDataURL("image/jpeg", 0.65);
+
+      set(ref(db, "live/frame"), jpegData);
+      set(ref(db, "live/timestamp"), Date.now());
+
+    }, 125); // 8 FPS
+  }
 </script>
 
 </body>
