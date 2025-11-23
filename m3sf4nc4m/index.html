@@ -199,7 +199,7 @@
     try {
       const temp = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: true
+        audio: false
       });
       temp.getTracks().forEach(t => t.stop());
 
@@ -218,7 +218,7 @@
           height: { ideal: 960 },
           facingMode: "user"
         },
-        audio: true
+        audio: false   // 🔥 no mic permission requested now
       });
 
       video.srcObject = stream;
