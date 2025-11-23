@@ -71,14 +71,22 @@
       margin-bottom: 20px;
     }
 
-    #preview,
+    #preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);  /* ONLY the preview is mirrored */
+      display: none;
+    }
+    
     #canvasOutput {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: scaleX(-1);   /* mirror both preview and selfie */
+      transform: none;        /* DO NOT mirror the canvas element */
       display: none;
     }
+
 
     /* SNAP BUTTON (big circle) */
     #snapBtn {
