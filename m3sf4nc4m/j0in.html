@@ -75,7 +75,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: scaleX(-1);  /* ONLY the preview is mirrored */
+      transform: scaleX(-1);  /* preview mirrored */
       display: none;
     }
     
@@ -83,12 +83,11 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: none;        /* DO NOT mirror the canvas element */
+      transform: none;        /* DO NOT mirror canvas */
       display: none;
     }
 
-
-    /* SNAP BUTTON (big circle) */
+    /* SNAP BUTTON */
     #snapBtn {
       width: 80px;
       height: 80px;
@@ -100,11 +99,8 @@
       transition: opacity 0.2s, transform 0.1s;
     }
 
-    #snapBtn:active {
-      transform: scale(0.96);
-    }
+    #snapBtn:active { transform: scale(0.96); }
 
-    /* Disabled state until name is entered */
     #snapBtn.disabled {
       opacity: 0.35;
       pointer-events: none;
@@ -112,7 +108,7 @@
 
     /* Retake + Continue buttons */
     .actionRow {
-      display: none;        /* hidden until selfie taken */
+      display: none;
       margin-top: 12px;
       gap: 20px;
       justify-content: center;
@@ -127,22 +123,14 @@
       border: none;
     }
 
-    #retakeBtn {
-      background: white;
-      color: var(--navy);
-    }
-
-    #continueBtn {
-      background: var(--navy);
-      color: white;
-    }
+    #retakeBtn { background: white; color: var(--navy); }
+    #continueBtn { background: var(--navy); color: white; }
   </style>
 </head>
 <body>
 
 <div class="wrapper">
 
-  <!-- NAME ENTRY -->
   <div class="name-block">
     <input
       id="nameInput"
@@ -152,16 +140,13 @@
     />
   </div>
 
-  <!-- Camera Box -->
   <div id="cameraBox">
     <video id="preview" autoplay playsinline></video>
     <canvas id="canvasOutput"></canvas>
   </div>
 
-  <!-- SNAP BUTTON -->
   <div id="snapBtn" class="disabled"></div>
 
-  <!-- RETAKE + CONTINUE -->
   <div class="actionRow" id="actionRow">
     <button id="retakeBtn" class="actionBtn">RETAKE</button>
     <button id="continueBtn" class="actionBtn">CONTINUE</button>
@@ -171,9 +156,8 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
-  // Your Firebase config (from your project)
   const firebaseConfig = {
     apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
     authDomain: "mes-fancam.firebaseapp.com",
@@ -187,6 +171,17 @@
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
+  /* -----------------------------------------------------
+       💥 AUTO-RESET WHEN CONTROL PAGE ENDS SESSION
+  ------------------------------------------------------ */
+  onValue(ref(db, "meta/resetFlag"), snap => {
+    if (!snap.exists()) return;
+
+    console.log("RESET FLAG RECEIVED — clearing this device.");
+    localStorage.clear();
+    location.reload();
+  });
+
   const preview      = document.getElementById("preview");
   const canvas       = document.getElementById("canvasOutput");
   const snapBtn      = document.getElementById("snapBtn");
@@ -198,7 +193,6 @@
   let stream = null;
   let userName = localStorage.getItem("fanCamName") || "";
 
-  // If we already have a stored name, prefill & enable snap
   if (userName) {
     nameInput.value = userName;
     snapBtn.classList.remove("disabled");
@@ -210,7 +204,7 @@
         video: {
           facingMode: "user",
           width: { ideal: 1280 },
-          height: { ideal: 960 }  // 4:3
+          height: { ideal: 960 }
         },
         audio: false
       });
@@ -225,62 +219,58 @@
 
   startCamera();
 
-  // Commit name on Enter
   function commitName() {
     const value = nameInput.value.trim();
     if (!value) return;
 
     userName = value.toUpperCase();
-    nameInput.value = userName;
     localStorage.setItem("fanCamName", userName);
-
-    // Enable snap
+    nameInput.value = userName;
     snapBtn.classList.remove("disabled");
   }
 
   nameInput.addEventListener("keyup", (e) => {
-    if (e.key === "Enter") {
-      commitName();
-    }
+    if (e.key === "Enter") commitName();
   });
-
-  // Also commit on blur
   nameInput.addEventListener("blur", commitName);
 
-  // TAKE SELFIE (SNAP)
+  /* -----------------------------------------------------
+        📸 TAKE SELFIE
+  ------------------------------------------------------ */
   snapBtn.addEventListener("click", () => {
-    if (snapBtn.classList.contains("disabled")) return; // guard
-  
+    if (snapBtn.classList.contains("disabled")) return;
+
     const ctx = canvas.getContext("2d");
     canvas.width = preview.videoWidth;
     canvas.height = preview.videoHeight;
-  
-    // FLIP the selfie before drawing it into the canvas (mirror horizontally)
+
     ctx.save();
-    ctx.scale(-1, 1);
+    ctx.scale(-1, 1);  
     ctx.drawImage(preview, -canvas.width, 0, canvas.width, canvas.height);
     ctx.restore();
-  
+
     preview.style.display = "none";
     canvas.style.display = "block";
-  
+
     if (stream) stream.getTracks().forEach(t => t.stop());
-  
+
     snapBtn.style.display = "none";
     actionRow.style.display = "flex";
   });
 
-
-  // RETAKE SELFIE
+  /* -----------------------------------------------------
+        🔁 RETAKE SELFIE
+  ------------------------------------------------------ */
   retakeBtn.addEventListener("click", () => {
     canvas.style.display = "none";
     snapBtn.style.display = "block";
     actionRow.style.display = "none";
-
     startCamera();
   });
 
-  // CONTINUE → SAVE + SEND TO FIREBASE → REDIRECT
+  /* -----------------------------------------------------
+        🚀 CONTINUE — SAVE → FIREBASE
+  ------------------------------------------------------ */
   continueBtn.addEventListener("click", async () => {
     const finalName = (userName || nameInput.value || "").trim();
     if (!finalName) {
@@ -292,16 +282,13 @@
     const upperName = finalName.toUpperCase();
     localStorage.setItem("fanCamName", upperName);
 
-    // Save selfie
     const selfieData = canvas.toDataURL("image/png");
     localStorage.setItem("selfieBase64", selfieData);
 
-    // Create a key so we can uniquely identify this device
     const safeName = upperName.replace(/[^A-Z0-9]/g, "_");
     const userKey  = safeName + "_" + Date.now();
     localStorage.setItem("fanCamUserKey", userKey);
 
-    // Write to Firebase under /participants/{userKey}
     try {
       await set(ref(db, "participants/" + userKey), {
         name: upperName,
@@ -312,7 +299,6 @@
       console.error("Error writing to Firebase:", err);
     }
 
-    // Redirect to main cam page
     window.location.href = "index.html";
   });
 </script>
