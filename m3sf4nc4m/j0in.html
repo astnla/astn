@@ -241,13 +241,23 @@
   let stream = null;
   let cameraEnabled = false;
 
+  // Disable snap until camera enabled
   snapBtn.style.opacity = "0.35";
   snapBtn.style.pointerEvents = "none";
 
+
+  /* ------------------------------------------
+     UPDATED CAMERA START FUNCTION
+     WITH FULL ERROR HANDLING + RETRY MESSAGE
+  ------------------------------------------- */
   async function startCamera() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 }},
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 960 }
+        },
         audio: false
       });
 
@@ -258,18 +268,39 @@
       snapBtn.style.opacity = "1";
       snapBtn.style.pointerEvents = "auto";
 
+      overlay.style.display = "none";
+      cameraEnabled = true;
+
     } catch (e) {
-      overlay.querySelector(".camera-overlay-text").textContent = "CAMERA BLOCKED";
+      console.error("Camera Error:", e);
+
+      overlay.style.display = "flex";
+      let txt = overlay.querySelector(".camera-overlay-text");
+
+      if (e.name === "NotAllowedError" || e.name === "SecurityError") {
+        txt.textContent = "UNABLE TO ACCESS CAMERA";
+      } else {
+        txt.textContent = "CAMERA ERROR TAP TO RETRY";
+      }
+
+      cameraEnabled = false;
     }
   }
 
+
+  /* ------------------------------------------
+     OVERLAY TAP — ALWAYS TRY CAMERA AGAIN
+  ------------------------------------------- */
   overlay.addEventListener("click", async () => {
+    overlay.querySelector(".camera-overlay-text").textContent = "ENABLING CAMERA…";
+    overlay.style.display = "flex"; // ensure visible while trying
     await startCamera();
-    overlay.style.display = "none";
-    cameraEnabled = true;
   });
 
-  /* TAKE SELFIE */
+
+  /* ------------------------------------------
+     TAKE SELFIE
+  ------------------------------------------- */
   snapBtn.addEventListener("click", () => {
     if (!cameraEnabled) return;
 
@@ -278,7 +309,7 @@
     canvas.height = preview.videoHeight;
 
     ctx.save();
-    ctx.scale(-1, 1); /* MIRROR SAVED SELFIE */
+    ctx.scale(-1, 1);
     ctx.drawImage(preview, -canvas.width, 0, canvas.width, canvas.height);
     ctx.restore();
 
@@ -287,7 +318,6 @@
 
     if (stream) stream.getTracks().forEach(t => t.stop());
 
-    /* SWITCH TO NAME MODE */
     topInstruction.style.display = "none";
     nameInput.style.display = "block";
 
@@ -295,6 +325,10 @@
     snapBtn.style.display = "none";
   });
 
+
+  /* ------------------------------------------
+     NAME INPUT VALIDATION
+  ------------------------------------------- */
   nameInput.addEventListener("input", () => {
     const v = nameInput.value.toUpperCase().trim();
     nameInput.value = v;
@@ -304,6 +338,10 @@
     continueBtn.style.pointerEvents = valid ? "auto" : "none";
   });
 
+
+  /* ------------------------------------------
+     RETAKE
+  ------------------------------------------- */
   retakeBtn.addEventListener("click", () => {
     nameInput.style.display = "none";
     topInstruction.style.display = "block";
@@ -313,15 +351,18 @@
 
     canvas.style.display = "none";
 
-    if (cameraEnabled) {
-      overlay.style.display = "none";
-      startCamera();
-    } else {
-      overlay.style.display = "flex";
-      preview.style.display = "none";
-    }
+    // Try to restart the camera
+    overlay.style.display = "flex";
+    overlay.querySelector(".camera-overlay-text").textContent = "TAP TO ENABLE CAMERA";
+
+    cameraEnabled = false;
+    preview.style.display = "none";
   });
 
+
+  /* ------------------------------------------
+     CONTINUE → SAVE SELFIE
+  ------------------------------------------- */
   continueBtn.addEventListener("click", async () => {
     const v = nameInput.value.trim();
     if (!/[A-Z0-9]/.test(v)) return;
