@@ -23,21 +23,26 @@
       font-family: "Outfit", sans-serif;
     }
 
+    /* WRAPPER — centered camera always */
     .wrapper {
       height: 100vh;
+      width: 100%;
       display: flex;
       flex-direction: column;
-      align-items: center;
+
+      /* keeps camera centered */
       justify-content: center;
+
+      align-items: center;
       padding-top: env(safe-area-inset-top);
     }
 
-    /* Header */
+    /* Header above camera */
     #topInstruction {
       font-size: 18px;
       font-weight: 900;
       color: var(--navy);
-      margin-bottom: 12px;
+      margin-bottom: 20px;   /* unified spacing */
       text-align: center;
     }
 
@@ -55,7 +60,7 @@
       outline: none;
       padding: 0;
       display: none;
-      margin-bottom: 18px;
+      margin-bottom: 20px; /* unified spacing */
     }
 
     #nameInput::placeholder {
@@ -65,11 +70,9 @@
       transition: opacity 0.15s ease;
     }
 
-    #nameInput:focus::placeholder {
-      opacity: 0;
-    }
+    #nameInput:focus::placeholder { opacity: 0; }
 
-    /* Camera box */
+    /* Camera wrapper */
     #cameraBox {
       width: calc(100% - 70px);
       max-width: 360px;
@@ -78,24 +81,22 @@
       border-radius: 6px;
       overflow: hidden;
       position: relative;
-      margin-bottom: 20px;
+
+      /* removed bottom margin to keep perfect centering */
+      margin-bottom: 0; 
     }
 
-    /* Overlay text (same style as index page) */
+    /* Overlay (tap to enable) */
     .camera-overlay {
       position: absolute;
       inset: 0;
       display: flex;
       justify-content: center;
       align-items: center;
-      text-align: center;
       cursor: pointer;
-      padding: 8px;
-      background: transparent;
     }
 
     .camera-overlay-text {
-      font-family: "Outfit", sans-serif;
       font-weight: 900;
       font-size: 16px;
       color: var(--navy);
@@ -108,12 +109,11 @@
       transform: scaleX(-1);
       display: none;
     }
-    
+
     #canvasOutput {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: none;
       display: none;
     }
 
@@ -125,15 +125,16 @@
       border-radius: 50%;
       border: 6px solid #f2f2f2;
       cursor: pointer;
-      margin-top: 10px;
+      margin-top: 20px; /* unified spacing */
       transition: opacity 0.2s, transform 0.1s;
     }
 
     #snapBtn:active { transform: scale(0.96); }
 
+    /* Retake + Continue */
     .actionRow {
       display: none;
-      margin-top: 12px;
+      margin-top: 20px; /* unified spacing */
       gap: 20px;
       justify-content: center;
     }
@@ -149,7 +150,6 @@
 
     #retakeBtn { background: white; color: var(--navy); }
     #continueBtn { background: var(--navy); color: white; opacity: 0.4; pointer-events:none; }
-
   </style>
 </head>
 <body>
@@ -164,7 +164,7 @@
     <video id="preview" autoplay playsinline></video>
     <canvas id="canvasOutput"></canvas>
 
-    <!-- 🔥 TAP TO ENABLE CAMERA OVERLAY -->
+    <!-- TAP OVERLAY -->
     <div class="camera-overlay" id="cameraOverlay">
       <div class="camera-overlay-text">TAP TO ENABLE CAMERA</div>
     </div>
@@ -196,6 +196,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
+  /* RESET CLEARER */
   let alreadyReset = false;
 
   onValue(ref(db, "meta/resetFlag"), async snap => {
@@ -218,13 +219,12 @@
   const topInstruction = document.getElementById("topInstruction");
 
   let stream = null;
-  let cameraEnabled = false;   // 🔥 NEW FLAG
+  let cameraEnabled = false;
 
-  /* Disable snap until camera is enabled */
+  /* Disable shutter until camera enabled */
   snapBtn.style.opacity = "0.35";
   snapBtn.style.pointerEvents = "none";
 
-  /* CAMERA STARTER */
   async function startCamera() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -234,9 +234,7 @@
 
       preview.srcObject = stream;
       preview.style.display = "block";
-      canvas.style.display = "none";
 
-      // Enable snap button
       snapBtn.style.opacity = "1";
       snapBtn.style.pointerEvents = "auto";
 
@@ -245,16 +243,16 @@
     }
   }
 
-  /* TAP TO ENABLE CAMERA */
+  /* ENABLE CAMERA */
   overlay.addEventListener("click", async () => {
     await startCamera();
     overlay.style.display = "none";
-    cameraEnabled = true;   // 🔥 mark camera as fully activated once
+    cameraEnabled = true;
   });
 
   /* TAKE SELFIE */
   snapBtn.addEventListener("click", () => {
-    if (!cameraEnabled) return; // 🔥 prevents taking selfie without enabling camera
+    if (!cameraEnabled) return;
 
     const ctx = canvas.getContext("2d");
     canvas.width = preview.videoWidth;
@@ -277,10 +275,11 @@
     snapBtn.style.display = "none";
   });
 
-  /* NAME VALIDATION */
+  /* VALIDATION */
   nameInput.addEventListener("input", () => {
     const v = nameInput.value.toUpperCase().trim();
     nameInput.value = nameInput.value.toUpperCase();
+
     const valid = /[A-Z0-9]/.test(v);
 
     continueBtn.style.opacity = valid ? "1" : "0.4";
@@ -297,11 +296,9 @@
     canvas.style.display = "none";
 
     if (cameraEnabled) {
-      // 🔥 camera already allowed → immediately restart feed
       overlay.style.display = "none";
       startCamera();
     } else {
-      // 🔥 first-time user → show tap overlay
       overlay.style.display = "flex";
       preview.style.display = "none";
     }
@@ -348,7 +345,6 @@
     }
   });
 </script>
-
 
 </body>
 </html>
