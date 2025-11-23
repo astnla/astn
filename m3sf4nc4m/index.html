@@ -359,15 +359,29 @@
 const nameOverlay = document.getElementById("nameOverlay");
 const nameInput = document.getElementById("nameInput");
 const namePrompt = document.getElementById("namePrompt");
+const example = document.getElementById("example");
 
 let userName = null;
 
-// Tap the text → focus hidden input → open keyboard
+// Tap → focus hidden input
 namePrompt.addEventListener("click", () => {
   nameInput.focus();
 });
 
-// Only close overlay when user presses Enter/Done
+// Show typed characters live
+nameInput.addEventListener("input", () => {
+  const value = nameInput.value;
+
+  if (value.length === 0) {
+    // restore placeholder
+    namePrompt.innerHTML = `ENTER NAME<br><span id="example">(GONZALEZ, SECKORA, VASQUEZ)</span>`;
+  } else {
+    // show typed text
+    namePrompt.textContent = value;
+  }
+});
+
+// Only close overlay when Enter is pressed
 nameInput.addEventListener("keyup", (e) => {
   if (e.key === "Enter") {
     const value = nameInput.value.trim();
@@ -377,7 +391,6 @@ nameInput.addEventListener("keyup", (e) => {
   }
 });
 
-// Fade overlay out
 function finishName(value) {
   userName = value;
 
@@ -390,6 +403,7 @@ function finishName(value) {
 
   console.log("USER NAME:", userName);
 }
+
 
 </script>
 
