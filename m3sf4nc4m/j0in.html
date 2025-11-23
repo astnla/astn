@@ -140,7 +140,7 @@
       id="nameInput"
       type="text"
       autocomplete="off"
-      placeholder="ENTER TEACHER NAME"
+      placeholder="ENTER NAME (GONZALEZ, SECKORA, VASQUEZ)"
     />
   </div>
 
@@ -161,14 +161,31 @@
 
 </div>
 
-<script>
-  const preview = document.getElementById("preview");
-  const canvas = document.getElementById("canvasOutput");
-  const snapBtn = document.getElementById("snapBtn");
-  const retakeBtn = document.getElementById("retakeBtn");
-  const continueBtn = document.getElementById("continueBtn");
-  const actionRow = document.getElementById("actionRow");
-  const nameInput = document.getElementById("nameInput");
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+  // Your Firebase config (from your project)
+  const firebaseConfig = {
+    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+    authDomain: "mes-fancam.firebaseapp.com",
+    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+    projectId: "mes-fancam",
+    storageBucket: "mes-fancam.firebasestorage.app",
+    messagingSenderId: "1091345682482",
+    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  const preview      = document.getElementById("preview");
+  const canvas       = document.getElementById("canvasOutput");
+  const snapBtn      = document.getElementById("snapBtn");
+  const retakeBtn    = document.getElementById("retakeBtn");
+  const continueBtn  = document.getElementById("continueBtn");
+  const actionRow    = document.getElementById("actionRow");
+  const nameInput    = document.getElementById("nameInput");
 
   let stream = null;
   let userName = localStorage.getItem("fanCamName") || "";
@@ -219,7 +236,7 @@
     }
   });
 
-  // Also commit on blur (optional convenience)
+  // Also commit on blur
   nameInput.addEventListener("blur", commitName);
 
   // TAKE SELFIE (SNAP)
@@ -251,8 +268,8 @@
     startCamera();
   });
 
-  // CONTINUE → SAVE + REDIRECT
-  continueBtn.addEventListener("click", () => {
+  // CONTINUE → SAVE + SEND TO FIREBASE → REDIRECT
+  continueBtn.addEventListener("click", async () => {
     const finalName = (userName || nameInput.value || "").trim();
     if (!finalName) {
       alert("Please enter your name before continuing.");
@@ -267,7 +284,23 @@
     const selfieData = canvas.toDataURL("image/png");
     localStorage.setItem("selfieBase64", selfieData);
 
-    // Redirect to main camera page
+    // Create a key so we can uniquely identify this device
+    const safeName = upperName.replace(/[^A-Z0-9]/g, "_");
+    const userKey  = safeName + "_" + Date.now();
+    localStorage.setItem("fanCamUserKey", userKey);
+
+    // Write to Firebase under /participants/{userKey}
+    try {
+      await set(ref(db, "participants/" + userKey), {
+        name: upperName,
+        selfie: selfieData,
+        joinedAt: Date.now()
+      });
+    } catch (err) {
+      console.error("Error writing to Firebase:", err);
+    }
+
+    // Redirect to main cam page
     window.location.href = "index.html";
   });
 </script>
