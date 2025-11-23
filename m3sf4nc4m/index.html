@@ -82,13 +82,15 @@
     #publishCameraState {
       background-color: var(--overlay);
       width: calc(100% - 70px);
+      max-width: 360px;
+      height: calc(360px * 4 / 3); /* lock to 4:3 ratio */
       margin: 20px 35px 10px;
       box-sizing: border-box;
       border-radius: 4px;
       overflow: hidden;
       position: relative;
-      aspect-ratio: 3 / 4; /* taller, portrait */
     }
+
 
     .camera-shell {
       width: 100%;
