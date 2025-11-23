@@ -104,7 +104,7 @@
     <img id="liveImage">
 
     <div id="emptyState">
-      Scan to Join the Manatee Fan Cam!
+      SCAN QR TO JOIN MANATEE CAM!
       <img id="qrImage" src="assets/qr.png">
     </div>
   </div>
@@ -128,28 +128,28 @@
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
-  const imgEl = document.getElementById("liveImage");
+  const imgEl      = document.getElementById("liveImage");
   const emptyState = document.getElementById("emptyState");
 
-  const activeUserRef = ref(db, "live/activeUser");
-  const frameRef      = ref(db, "live/frame");
+  // listen to /live/current
+  const currentRef = ref(db, "live/current");
+  const frameRef   = ref(db, "live/frame");
 
-  let currentlyActive = null;
+  let activeUser = null;
 
-  // Watch who is live
-  onValue(activeUserRef, snap => {
-    currentlyActive = snap.val();
+  // step 1 — watch who is live
+  onValue(currentRef, snap => {
+    activeUser = snap.val();
 
-    if (!currentlyActive) {
-      // No one is live
+    if (!activeUser) {
       imgEl.style.display = "none";
       emptyState.style.display = "flex";
     }
   });
 
-  // Watch incoming frames
+  // step 2 — watch incoming JPEG frames
   onValue(frameRef, snap => {
-    if (!currentlyActive) return;
+    if (!activeUser) return;
 
     const jpeg = snap.val();
     if (!jpeg) return;
@@ -158,8 +158,8 @@
     imgEl.style.display = "block";
     emptyState.style.display = "none";
   });
-
 </script>
+
 
 </body>
 </html>
