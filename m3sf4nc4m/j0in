@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Join — Manatee Fan Cam</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-red: #DA1A32;
+      --navy:   #00031F;
+      --overlay: #00000022;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100vh;
+      background: var(--bg-red);
+      overflow: hidden;
+      font-family: "Outfit", sans-serif;
+    }
+
+    .wrapper {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-top: env(safe-area-inset-top);
+    }
+
+    /* Logo */
+    .logo {
+      width: 90px;
+      height: 90px;
+      object-fit: contain;
+      margin-bottom: 10px;
+    }
+
+    /* Title */
+    .title {
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--navy);
+      letter-spacing: 0.5px;
+      text-align: center;
+      margin-bottom: 16px;
+      user-select: none;
+    }
+
+    /* Camera box */
+    #cameraBox {
+      width: calc(100% - 70px);
+      max-width: 360px;
+      height: calc(360px * 4 / 3);
+      background: var(--overlay);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    #preview, #canvasOutput {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      display: none;
+    }
+
+    .overlayText {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 900;
+      font-size: 18px;
+      color: var(--navy);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* SNAP BUTTON (Option A) */
+    #snapBtn {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border-radius: 50%;
+      border: 6px solid #f2f2f2;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    /* Retake + Continue buttons */
+    .actionRow {
+      display: none;
+      margin-top: 12px;
+      gap: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .actionBtn {
+      padding: 10px 18px;
+      font-weight: 700;
+      border-radius: 6px;
+      font-size: 15px;
+      cursor: pointer;
+      border: none;
+    }
+
+    #retakeBtn {
+      background: white;
+      color: var(--navy);
+    }
+
+    #continueBtn {
+      background: var(--navy);
+      color: white;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- MES Logo -->
+  <img src="assets/mestv.png" class="logo">
+
+  <!-- Title -->
+  <div class="title">TAKE SELFIE</div>
+
+  <!-- Camera Box -->
+  <div id="cameraBox">
+    <video id="preview" autoplay playsinline></video>
+    <canvas id="canvasOutput"></canvas>
+
+    <div class="overlayText" id="overlayText">TAKE SELFIE</div>
+  </div>
+
+  <!-- SNAP BUTTON -->
+  <div id="snapBtn"></div>
+
+  <!-- RETAKE + CONTINUE -->
+  <div class="actionRow" id="actionRow">
+    <button id="retakeBtn" class="actionBtn">RETAKE</button>
+    <button id="continueBtn" class="actionBtn">CONTINUE</button>
+  </div>
+
+</div>
+
+
+<script>
+  const preview = document.getElementById("preview");
+  const canvas = document.getElementById("canvasOutput");
+  const snapBtn = document.getElementById("snapBtn");
+  const retakeBtn = document.getElementById("retakeBtn");
+  const continueBtn = document.getElementById("continueBtn");
+  const actionRow = document.getElementById("actionRow");
+  const overlayText = document.getElementById("overlayText");
+
+  let stream = null;
+
+  async function startCamera() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 960 }
+        },
+        audio: false
+      });
+
+      preview.srcObject = stream;
+      preview.style.display = "block";
+
+    } catch (err) {
+      console.error("Camera error:", err);
+    }
+  }
+
+  startCamera();
+
+  // TAKE SELFIE (SNAP)
+  snapBtn.addEventListener("click", () => {
+    const ctx = canvas.getContext("2d");
+    canvas.width = preview.videoWidth;
+    canvas.height = preview.videoHeight;
+
+    ctx.scale(-1, 1);
+    ctx.drawImage(preview, -canvas.width, 0, canvas.width, canvas.height);
+
+    preview.style.display = "none";
+    canvas.style.display = "block";
+    overlayText.style.display = "none";
+
+    if (stream) stream.getTracks().forEach(t => t.stop());
+
+    snapBtn.style.display = "none";
+    actionRow.style.display = "flex";
+  });
+
+  // RETAKE SELFIE
+  retakeBtn.addEventListener("click", () => {
+    canvas.style.display = "none";
+    snapBtn.style.display = "block";
+    actionRow.style.display = "none";
+    overlayText.style.display = "flex";
+
+    startCamera();
+  });
+
+  // CONTINUE → SAVE + REDIRECT
+  continueBtn.addEventListener("click", () => {
+    const selfieData = canvas.toDataURL("image/png");
+    localStorage.setItem("selfieBase64", selfieData);
+    window.location.href = "index.html";
+  });
+</script>
+
+</body>
+</html>
