@@ -218,26 +218,44 @@
   const topInstruction = document.getElementById("topInstruction");
 
   let stream = null;
+  let cameraEnabled = false;   // 🔥 NEW FLAG
 
-  /* ENABLE CAMERA ONLY AFTER TAP */
-  overlay.addEventListener("click", async () => {
+  /* Disable snap until camera is enabled */
+  snapBtn.style.opacity = "0.35";
+  snapBtn.style.pointerEvents = "none";
+
+  /* CAMERA STARTER */
+  async function startCamera() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 }},
         audio: false
       });
 
       preview.srcObject = stream;
       preview.style.display = "block";
-      overlay.style.display = "none";
+      canvas.style.display = "none";
+
+      // Enable snap button
+      snapBtn.style.opacity = "1";
+      snapBtn.style.pointerEvents = "auto";
 
     } catch (err) {
       overlay.querySelector(".camera-overlay-text").textContent = "CAMERA BLOCKED";
     }
+  }
+
+  /* TAP TO ENABLE CAMERA */
+  overlay.addEventListener("click", async () => {
+    await startCamera();
+    overlay.style.display = "none";
+    cameraEnabled = true;   // 🔥 mark camera as fully activated once
   });
 
   /* TAKE SELFIE */
   snapBtn.addEventListener("click", () => {
+    if (!cameraEnabled) return; // 🔥 prevents taking selfie without enabling camera
+
     const ctx = canvas.getContext("2d");
     canvas.width = preview.videoWidth;
     canvas.height = preview.videoHeight;
@@ -254,6 +272,7 @@
 
     topInstruction.textContent = "";
     nameInput.style.display = "block";
+    nameInput.blur();
     actionRow.style.display = "flex";
     snapBtn.style.display = "none";
   });
@@ -276,8 +295,16 @@
     topInstruction.textContent = "TAKE A SELFIE";
 
     canvas.style.display = "none";
-    preview.style.display = "none";
-    overlay.style.display = "flex"; // show overlay again
+
+    if (cameraEnabled) {
+      // 🔥 camera already allowed → immediately restart feed
+      overlay.style.display = "none";
+      startCamera();
+    } else {
+      // 🔥 first-time user → show tap overlay
+      overlay.style.display = "flex";
+      preview.style.display = "none";
+    }
   });
 
   /* CONTINUE */
@@ -320,8 +347,8 @@
       retakeBtn.style.pointerEvents = "auto";
     }
   });
-
 </script>
+
 
 </body>
 </html>
