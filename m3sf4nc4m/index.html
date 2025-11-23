@@ -264,8 +264,9 @@
 
   let currentlyLiveUser = null;
 
-  onValue(ref(db, "live/activeUser"), snap => {
-    currentlyLiveUser = snap.val();
+  onValue(ref(db, "live/current"), snap => {
+    const live = snap.val();
+    currentlyLiveUser = live ? live.id : null;
   });
 
   let frameInterval = null;
