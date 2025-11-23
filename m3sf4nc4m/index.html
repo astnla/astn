@@ -98,30 +98,36 @@
 
     /* Semi-transparent strip: #publishCameraState */
     #publishCameraState {
-      background-color: var(--overlay);
-      border-radius: 0;
-      /* inside here we mimic that calc(100% - 70px) width pattern */
-      padding-bottom: 10px;
+    background-color: var(--overlay);
+    /* make the strip itself the container */
+    width: calc(100% - 70px);
+    margin: 20px 35px 10px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    /* tweak this height to taste – this controls the aspect/shape */
+    height: 230px;
     }
 
     /* Wrapper for camera preview area + overlay */
     .camera-shell {
-    width: calc(100% - 70px);
-    margin: 20px 35px 10px;
+    /* now fills the whole strip */
+    width: 100%;
+    height: 100%;
+    margin: 0;
     box-sizing: border-box;
     position: relative;
-    aspect-ratio: 9 / 16;
-    background: transparent; /* ← Remove inner color, matches Panthers */
-    overflow: hidden;
-    border-radius: 4px;
+    background: transparent;
     }
 
-
+    /* Video fills the container and is mirrored */
     #preview {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: none; /* shown after permission */
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;          /* shown after permission */
+    transform: scaleX(-1);  /* mirror selfie view */
     }
 
     .camera-shell.active #preview {
