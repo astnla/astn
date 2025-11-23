@@ -23,56 +23,37 @@
       font-family: "Outfit", sans-serif;
     }
 
-    /* WRAPPER — centered camera always */
     .wrapper {
       height: 100vh;
-      width: 100%;
       display: flex;
       flex-direction: column;
-
-      /* keeps camera centered */
-      justify-content: center;
-
       align-items: center;
+      justify-content: space-between;
       padding-top: env(safe-area-inset-top);
+      padding-bottom: 20px;
     }
 
-    /* Header above camera */
+    /* TEXT ABOVE CAMERA (does not affect centering) */
     #topInstruction {
+      margin-top: 10px;
       font-size: 18px;
       font-weight: 900;
       color: var(--navy);
-      margin-bottom: 20px;   /* unified spacing */
       text-align: center;
+      height: 24px;          /* fixed height to avoid shifting */
     }
 
-    /* Name input (hidden until selfie taken) */
-    #nameInput {
-      width: calc(100% - 70px);
-      max-width: 360px;
-      border: none;
-      background: transparent;
-      color: var(--navy);
-      font-size: 22px;
-      font-weight: 900;
-      text-align: center;
-      text-transform: uppercase;
-      outline: none;
-      padding: 0;
-      display: none;
-      margin-bottom: 20px; /* unified spacing */
+    /* CENTER COLUMN — camera ALWAYS stays centered */
+    .centerColumn {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;   /* 🔥 ALWAYS centers the viewfinder */
     }
 
-    #nameInput::placeholder {
-      color: var(--navy);
-      opacity: 0.35;
-      font-weight: 900;
-      transition: opacity 0.15s ease;
-    }
-
-    #nameInput:focus::placeholder { opacity: 0; }
-
-    /* Camera wrapper */
+    /* VIEWFINDER BOX (camera or selfie) */
     #cameraBox {
       width: calc(100% - 70px);
       max-width: 360px;
@@ -81,19 +62,18 @@
       border-radius: 6px;
       overflow: hidden;
       position: relative;
-
-      /* removed bottom margin to keep perfect centering */
-      margin-bottom: 0; 
     }
 
-    /* Overlay (tap to enable) */
+    /* TAP TO ENABLE OVERLAY */
     .camera-overlay {
       position: absolute;
       inset: 0;
       display: flex;
       justify-content: center;
       align-items: center;
+      text-align: center;
       cursor: pointer;
+      padding: 8px;
     }
 
     .camera-overlay-text {
@@ -117,7 +97,30 @@
       display: none;
     }
 
-    /* Snap button */
+    /* NAME INPUT */
+    #nameInput {
+      width: calc(100% - 70px);
+      max-width: 360px;
+      border: none;
+      background: transparent;
+      color: var(--navy);
+      font-size: 22px;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+      outline: none;
+      padding: 0;
+      display: none;
+      margin-top: 16px;
+    }
+
+    #nameInput::placeholder {
+      color: var(--navy);
+      opacity: 0.35;
+      font-weight: 900;
+    }
+
+    /* SNAP BUTTON */
     #snapBtn {
       width: 80px;
       height: 80px;
@@ -125,17 +128,17 @@
       border-radius: 50%;
       border: 6px solid #f2f2f2;
       cursor: pointer;
-      margin-top: 20px; /* unified spacing */
       transition: opacity 0.2s, transform 0.1s;
+      margin-top: 16px;
     }
 
     #snapBtn:active { transform: scale(0.96); }
 
-    /* Retake + Continue */
+    /* RETAKE + CONTINUE */
     .actionRow {
       display: none;
-      margin-top: 20px; /* unified spacing */
-      gap: 20px;
+      margin-top: 16px;
+      gap: 24px;
       justify-content: center;
     }
 
@@ -143,33 +146,41 @@
       padding: 10px 18px;
       font-weight: 900;
       border-radius: 6px;
+      border: none;
       font-size: 15px;
       cursor: pointer;
-      border: none;
     }
 
     #retakeBtn { background: white; color: var(--navy); }
-    #continueBtn { background: var(--navy); color: white; opacity: 0.4; pointer-events:none; }
+    #continueBtn { background: var(--navy); color: white; opacity: 0.4; pointer-events: none; }
   </style>
 </head>
 <body>
 
 <div class="wrapper">
 
+  <!-- HEADER (does not affect center) -->
   <div id="topInstruction">TAKE A SELFIE</div>
 
-  <input id="nameInput" type="text" autocomplete="off" placeholder="GIVE YOURSELF A NAME HERE">
+  <!-- CENTERED CAMERA VIEWFINDER -->
+  <div class="centerColumn">
 
-  <div id="cameraBox">
-    <video id="preview" autoplay playsinline></video>
-    <canvas id="canvasOutput"></canvas>
+    <div id="cameraBox">
+      <video id="preview" autoplay playsinline></video>
+      <canvas id="canvasOutput"></canvas>
 
-    <!-- TAP OVERLAY -->
-    <div class="camera-overlay" id="cameraOverlay">
-      <div class="camera-overlay-text">TAP TO ENABLE CAMERA</div>
+      <!-- Tap to enable overlay -->
+      <div class="camera-overlay" id="cameraOverlay">
+        <div class="camera-overlay-text">TAP TO ENABLE CAMERA</div>
+      </div>
     </div>
+
+    <!-- NAME INPUT (below viewfinder but independent of centering) -->
+    <input id="nameInput" type="text" autocomplete="off" placeholder="GIVE YOURSELF A NAME HERE">
+
   </div>
 
+  <!-- CONTROLS -->
   <div id="snapBtn"></div>
 
   <div class="actionRow" id="actionRow">
@@ -196,7 +207,6 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  /* RESET CLEARER */
   let alreadyReset = false;
 
   onValue(ref(db, "meta/resetFlag"), async snap => {
@@ -221,7 +231,6 @@
   let stream = null;
   let cameraEnabled = false;
 
-  /* Disable shutter until camera enabled */
   snapBtn.style.opacity = "0.35";
   snapBtn.style.pointerEvents = "none";
 
@@ -234,23 +243,22 @@
 
       preview.srcObject = stream;
       preview.style.display = "block";
+      canvas.style.display = "none";
 
       snapBtn.style.opacity = "1";
       snapBtn.style.pointerEvents = "auto";
 
-    } catch (err) {
+    } catch (e) {
       overlay.querySelector(".camera-overlay-text").textContent = "CAMERA BLOCKED";
     }
   }
 
-  /* ENABLE CAMERA */
   overlay.addEventListener("click", async () => {
     await startCamera();
     overlay.style.display = "none";
     cameraEnabled = true;
   });
 
-  /* TAKE SELFIE */
   snapBtn.addEventListener("click", () => {
     if (!cameraEnabled) return;
 
@@ -275,10 +283,9 @@
     snapBtn.style.display = "none";
   });
 
-  /* VALIDATION */
   nameInput.addEventListener("input", () => {
     const v = nameInput.value.toUpperCase().trim();
-    nameInput.value = nameInput.value.toUpperCase();
+    nameInput.value = v;
 
     const valid = /[A-Z0-9]/.test(v);
 
@@ -286,7 +293,6 @@
     continueBtn.style.pointerEvents = valid ? "auto" : "none";
   });
 
-  /* RETAKE */
   retakeBtn.addEventListener("click", () => {
     nameInput.style.display = "none";
     actionRow.style.display = "none";
@@ -304,7 +310,6 @@
     }
   });
 
-  /* CONTINUE */
   continueBtn.addEventListener("click", async () => {
     const v = nameInput.value.trim();
     if (!/[A-Z0-9]/.test(v)) return;
@@ -335,8 +340,7 @@
       localStorage.setItem("selfieBase64", selfieData);
 
       window.location.href = "index.html";
-
-    } catch (err) {
+    } catch {
       continueBtn.textContent = "ERROR — TRY AGAIN";
       continueBtn.style.opacity = "1";
       continueBtn.style.pointerEvents = "auto";
