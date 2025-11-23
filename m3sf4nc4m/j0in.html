@@ -260,25 +260,46 @@
   continueBtn.addEventListener("click", async () => {
     const v = nameInput.value.trim();
     if (!/[A-Z0-9]/.test(v)) return;
-
+  
     const finalName = v.toUpperCase();
-
+  
+    // 🔒 Disable button instantly to stop double taps
+    continueBtn.style.opacity = "0.4";
+    continueBtn.style.pointerEvents = "none";
+    continueBtn.textContent = "LOADING…";
+  
+    // 🔒 Lock retake too while uploading
+    retakeBtn.style.pointerEvents = "none";
+    retakeBtn.style.opacity = "0.4";
+  
     const selfieData = canvas.toDataURL("image/png");
-
+  
     const safeName = finalName.replace(/[^A-Z0-9]/g, "_");
     const userKey = safeName + "_" + Date.now();
-
-    await set(ref(db, "participants/" + userKey), {
-      name: finalName,
-      selfie: selfieData,
-      joinedAt: Date.now()
-    });
-
-    localStorage.setItem("fanCamName", finalName);
-    localStorage.setItem("fanCamUserKey", userKey);
-    localStorage.setItem("selfieBase64", selfieData);
-
-    window.location.href = "index.html";
+  
+    try {
+      await set(ref(db, "participants/" + userKey), {
+        name: finalName,
+        selfie: selfieData,
+        joinedAt: Date.now()
+      });
+  
+      // Save locally
+      localStorage.setItem("fanCamName", finalName);
+      localStorage.setItem("fanCamUserKey", userKey);
+      localStorage.setItem("selfieBase64", selfieData);
+  
+      // Redirect
+      window.location.href = "index.html";
+  
+    } catch (err) {
+      console.error("Error writing to Firebase:", err);
+      continueBtn.textContent = "ERROR — TRY AGAIN";
+      continueBtn.style.opacity = "1";
+      continueBtn.style.pointerEvents = "auto";
+      retakeBtn.style.pointerEvents = "auto";
+      retakeBtn.style.opacity = "1";
+    }
   });
 
 </script>
