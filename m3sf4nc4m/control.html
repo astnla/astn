@@ -70,6 +70,23 @@
       font-size: 11px;
       opacity: 0.7;
     }
+
+    .goLiveBtn {
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: 900;
+      border-radius: 6px;
+      border: none;
+      background: #DA1A32;
+      color: white;
+      cursor: pointer;
+    }
+    
+    .goLiveBtn.live {
+      background: #00031F;
+      color: white;
+    }
+
   </style>
 </head>
 <body>
@@ -80,70 +97,126 @@
 
   <div id="grid" class="grid"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
-      authDomain: "mes-fancam.firebaseapp.com",
-      databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
-      projectId: "mes-fancam",
-      storageBucket: "mes-fancam.firebasestorage.app",
-      messagingSenderId: "1091345682482",
-      appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+    authDomain: "mes-fancam.firebaseapp.com",
+    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+    projectId: "mes-fancam",
+    storageBucket: "mes-fancam.firebasestorage.app",
+    messagingSenderId: "1091345682482",
+    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db  = getDatabase(app);
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
 
-    const grid = document.getElementById("grid");
+  const grid = document.getElementById("grid");
 
-    const participantsRef = ref(db, "participants");
+  const participantsRef = ref(db, "participants");
 
-    onValue(participantsRef, (snapshot) => {
-      grid.innerHTML = "";
+  onValue(participantsRef, (snapshot) => {
+    grid.innerHTML = "";
 
-      if (!snapshot.exists()) {
-        grid.innerHTML = "<div style='opacity:0.6;font-size:13px;'>No participants yet.</div>";
-        return;
+    if (!snapshot.exists()) {
+      grid.innerHTML = "<div style='opacity:0.6;font-size:13px;'>No participants yet.</div>";
+      return;
+    }
+
+    const data = snapshot.val();
+    const entries = Object.entries(data).sort(
+      (a, b) => (b[1].joinedAt || 0) - (a[1].joinedAt || 0)
+    );
+
+    for (const [key, p] of entries) {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const img = document.createElement("img");
+      img.className = "thumb";
+      img.src = p.selfie;
+      img.alt = p.name || "selfie";
+
+      const nameDiv = document.createElement("div");
+      nameDiv.className = "name";
+      nameDiv.textContent = p.name || key;
+
+      const timeDiv = document.createElement("div");
+      timeDiv.className = "joined";
+      if (p.joinedAt) {
+        const d = new Date(p.joinedAt);
+        timeDiv.textContent = "Joined: " + d.toLocaleTimeString();
+      } else {
+        timeDiv.textContent = "Joined";
       }
 
-      const data = snapshot.val();
-      // We want newest first
-      const entries = Object.entries(data).sort(
-        (a, b) => (b[1].joinedAt || 0) - (a[1].joinedAt || 0)
-      );
+      /* -------------------------------
+         ⭐ INSERTING GO LIVE BUTTONS ⭐
+         ------------------------------- */
+      const liveBtn = document.createElement("button");
+      liveBtn.className = "goLiveBtn";
+      liveBtn.textContent = "GO LIVE";
+      liveBtn.onclick = () => setLiveUser(key);
 
-      for (const [key, p] of entries) {
-        const card = document.createElement("div");
-        card.className = "card";
+      card.appendChild(img);
+      card.appendChild(nameDiv);
+      card.appendChild(timeDiv);
+      card.appendChild(liveBtn);
 
-        const img = document.createElement("img");
-        img.className = "thumb";
-        img.src = p.selfie;
-        img.alt = p.name || "selfie";
+      grid.appendChild(card);
+    }
+  });
 
-        const nameDiv = document.createElement("div");
-        nameDiv.className = "name";
-        nameDiv.textContent = p.name || key;
+  /* ======================================================
+     ⭐ STEP 3 — FUNCTION THAT SETS THE LIVE USER IN FIREBASE ⭐
+     ====================================================== */
+  async function setLiveUser(id) {
+    const userRef = ref(db, "participants/" + id);
+    const snapshot = await get(userRef);
 
-        const timeDiv = document.createElement("div");
-        timeDiv.className = "joined";
-        if (p.joinedAt) {
-          const d = new Date(p.joinedAt);
-          timeDiv.textContent = "Joined: " + d.toLocaleTimeString();
-        } else {
-          timeDiv.textContent = "Joined";
-        }
+    if (!snapshot.exists()) return;
 
-        card.appendChild(img);
-        card.appendChild(nameDiv);
-        card.appendChild(timeDiv);
+    const user = snapshot.val();
 
-        grid.appendChild(card);
-      }
+    // Write to /live/current
+    await set(ref(db, "live/current"), {
+      id: id,
+      name: user.name,
+      selfie: user.selfie,
+      timestamp: Date.now()
     });
-  </script>
+
+    console.log("Now live:", user.name);
+  }
+
+  /* ======================================================
+     ⭐ STEP 4 — WATCH LIVE USER AND UPDATE BUTTONS ⭐
+     ====================================================== */
+  const liveRef = ref(db, "live/current");
+  onValue(liveRef, (snapshot) => {
+    const live = snapshot.val();
+
+    document.querySelectorAll(".goLiveBtn").forEach((btn) => {
+      btn.classList.remove("live");
+      btn.textContent = "GO LIVE";
+    });
+
+    if (!live) return;
+
+    // Highlight active button
+    const activeBtn = [...document.querySelectorAll(".goLiveBtn")].find(
+      (btn) => btn.onclick.toString().includes(`setLiveUser("${live.id}")`)
+    );
+
+    if (activeBtn) {
+      activeBtn.classList.add("live");
+      activeBtn.textContent = "LIVE";
+    }
+  });
+</script>
+
 </body>
 </html>
