@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manatee Fan Cam — Output</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-red: #DA1A32;
+      --navy:   #00031F;
+      --overlay:#00000022;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-red);
+      font-family: "Outfit", sans-serif;
+      color: var(--navy);
+    }
+
+    .wrapper {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transform: translateY(-5%);
+    }
+
+    /* Title block */
+    .manatee-logo {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      margin-bottom: 8px;
+      border-radius: 12px;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    /* Camera / Display box */
+    #displayBox {
+      background: var(--overlay);
+      width: calc(100% - 70px);
+      max-width: 360px;
+      height: calc(360px * 4/3);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    #liveImage {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      display: none;
+    }
+
+    /* Empty state */
+    #emptyState {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 16px;
+      color: var(--navy);
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.3px;
+    }
+
+    #qrImage {
+      width: 140px;
+      height: 140px;
+      margin-top: 12px;
+      object-fit: contain;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- Logo -->
+  <img src="assets/mestv.png" class="manatee-logo">
+
+  <!-- Title -->
+  <div class="title">MANATEE CAM</div>
+
+  <!-- Display Area -->
+  <div id="displayBox">
+    <img id="liveImage">
+    
+    <div id="emptyState">
+      Scan to Join the Manatee Fan Cam!
+      <img id="qrImage" src="assets/qr.png">
+    </div>
+  </div>
+
+</div>
+
+
+<!-- Firebase logic -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+    authDomain: "mes-fancam.firebaseapp.com",
+    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+    projectId: "mes-fancam",
+    storageBucket: "mes-fancam.firebasestorage.app",
+    messagingSenderId: "1091345682482",
+    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  const liveImage = document.getElementById("liveImage");
+  const emptyState = document.getElementById("emptyState");
+
+  const liveRef = ref(db, "live/current");
+
+  onValue(liveRef, (snapshot) => {
+    const live = snapshot.val();
+
+    if (!live) {
+      // No live user → Show QR + text
+      emptyState.style.display = "flex";
+      liveImage.style.display = "none";
+      liveImage.src = "";
+      return;
+    }
+
+    // User is live → Show selfie
+    liveImage.src = live.selfie;
+    liveImage.style.display = "block";
+    emptyState.style.display = "none";
+  });
+</script>
+
+</body>
+</html>
