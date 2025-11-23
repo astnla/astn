@@ -174,15 +174,21 @@
        🔥 FIXED RESET FLAG LISTENER (NO INFINITE LOOP)
   ------------------------------------------------------ */
   let alreadyReset = false;
-
-  onValue(ref(db, "meta/resetFlag"), snap => {
+  
+  onValue(ref(db, "meta/resetFlag"), async snap => {
     if (!snap.exists()) return;
-
-    if (alreadyReset) return;   // stop infinite reload
+  
+    if (alreadyReset) return;
     alreadyReset = true;
-
+  
     console.log("RESET FLAG RECEIVED — clearing this device.");
+  
+    // Clear this device
     localStorage.clear();
+  
+    // ❗ VERY IMPORTANT: Clear the reset flag in Firebase
+    await set(ref(db, "meta/resetFlag"), null);
+  
     location.reload();
   });
 
