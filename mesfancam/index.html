@@ -359,11 +359,11 @@
   ---------------------------------------- */
   const triviaQuestionBar = document.getElementById("triviaQuestionBar");
   const triviaAnswerBox   = document.getElementById("triviaAnswerBox");
-  const triviaInput       = document.getElementById("triviaAnswerInput");
+  const triviaAnswerInput = document.getElementById("triviaAnswerInput");
   const triviaSubmitBtn   = document.getElementById("triviaSubmitBtn");
   const triviaSubmittedMsg = document.getElementById("triviaSubmittedMsg");
 
-  // Listen for Trivia Mode On/Off
+  // Trivia mode toggle on/off
   onValue(ref(db, "trivia/mode"), snap => {
     const enabled = snap.val() === true;
 
@@ -374,24 +374,33 @@
     }
   });
 
-  // Listen for question
+  // Listen for question — BUT do NOT show the question text anymore
   onValue(ref(db, "trivia/question"), snap => {
     const data = snap.val() || {};
+    const questionVisible = data.show === true && data.text;
 
-    if (data.show && data.text) {
-      triviaQuestionBar.textContent = data.text;
-      triviaQuestionBar.style.display = "block";
+    if (questionVisible) {
+      // DO NOT show question text at all anymore
+      triviaQuestionBar.style.display = "none";
+
+      // Reset UI so user can answer
       triviaAnswerBox.style.display = "flex";
       triviaSubmittedMsg.style.display = "none";
+
     } else {
+      // RESET happened → hide EVERYTHING
       triviaQuestionBar.style.display = "none";
       triviaAnswerBox.style.display = "none";
+      triviaSubmittedMsg.style.display = "none";
+
+      // Clear input for next question
+      triviaAnswerInput.value = "";
     }
   });
 
   // Submit answer
   triviaSubmitBtn.addEventListener("click", () => {
-    const answer = triviaInput.value.trim();
+    const answer = triviaAnswerInput.value.trim();
     if (!answer || !userKey) return;
 
     const answerRef = ref(db, `trivia/answers/${userKey}`);
@@ -405,5 +414,6 @@
   });
 
 </script>
+
 </body>
 </html>
