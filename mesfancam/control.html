@@ -57,9 +57,9 @@
       margin-top: 95px;
       margin-bottom: 15px;
       width: 100%;
-      max-width: 900px;
+      max-width: 500px;
       padding: 15px;
-      background: white;
+      background: #fe3048;
       border-radius: 10px;
       color: var(--navy);
       display: none;
@@ -216,7 +216,7 @@
     }
 
     /* Disabled reveal/hide */
-    .revealAnswerBtn.disabled {
+    .disabled {
       opacity: 0.35;
       pointer-events: none;
     }
@@ -238,18 +238,20 @@
 
 <!-- TRIVIA PANEL -->
 <div id="triviaPanel">
-  <h2>Trivia Controls</h2>
+  <h2>TRIVIA CONTROLS</h2>
 
+  <!-- QUESTION -->
   <div class="inputRow">
-    <input id="questionInput" placeholder="Type the question...">
-    <button id="sendQuestionBtn">SEND</button>
-    <button id="hideQuestionBtn">HIDE</button>
+    <input id="questionInput" placeholder="QUESTION">
+    <button id="sendQuestionBtn">SHOW</button>
+    <button id="resetTriviaBtn">RESET</button>
   </div>
 
+  <!-- CORRECT ANSWER -->
   <div class="inputRow">
-    <input id="correctInput" placeholder="Correct answer...">
-    <button id="revealCorrectBtn">REVEAL</button>
-    <button id="hideCorrectBtn">HIDE</button>
+    <input id="correctInput" placeholder="ANSWER">
+    <button id="okCorrectBtn">ENTER</button>
+    <button id="revealCorrectBtn">SHOW</button>
   </div>
 </div>
 
@@ -286,10 +288,12 @@
 
   const questionInput     = document.getElementById("questionInput");
   const correctInput      = document.getElementById("correctInput");
+
   const sendQuestionBtn   = document.getElementById("sendQuestionBtn");
-  const hideQuestionBtn   = document.getElementById("hideQuestionBtn");
+  const resetTriviaBtn    = document.getElementById("resetTriviaBtn");
+
+  const okCorrectBtn      = document.getElementById("okCorrectBtn");
   const revealCorrectBtn  = document.getElementById("revealCorrectBtn");
-  const hideCorrectBtn    = document.getElementById("hideCorrectBtn");
 
   const participantsRef = ref(db, "participants");
   const liveUserRef     = ref(db, "live/activeUser");
@@ -297,10 +301,12 @@
   const triviaRef     = ref(db, "trivia");
   const answersRef    = ref(db, "trivia/answers");
   const correctRef    = ref(db, "trivia/correct");
+  const revealRef     = ref(db, "trivia/reveal");
   const modeRef       = ref(db, "trivia/mode");
 
   let triviaOn = false;
   let answers = {};
+  let questionActive = false;
   let correctAnswer = "";
 
   /* Trivia Mode Toggle */
@@ -315,25 +321,54 @@
     update(triviaRef, { mode: triviaToggle.checked });
   });
 
-  /* Trivia Send/Hide */
+  /* SEND QUESTION */
   sendQuestionBtn.addEventListener("click", () => {
+    const q = questionInput.value.trim();
+    if (!q) return;
+
+    questionActive = true;
+
     update(triviaRef, {
-      question: { text: questionInput.value.trim(), show: true }
+      question: { text: q, show: true }
+    });
+
+    // Allow users to reveal answers after they submit
+    buildGrid();
+  });
+
+  /* RESET TRIVIA */
+  resetTriviaBtn.addEventListener("click", async () => {
+
+    // Clear everything in DB
+    await update(triviaRef, {
+      question: { text: "", show: false },
+      correct: { text: "", show: false },
+      answers: null
+    });
+
+    await set(revealRef, null);
+
+    // Clear input boxes visually
+    questionInput.value = "";
+    correctInput.value  = "";
+
+    questionActive = false;
+
+    buildGrid();
+  });
+
+  /* CORRECT ANSWER — OK (lock but hide) */
+  okCorrectBtn.addEventListener("click", () => {
+    update(triviaRef, {
+      correct: { text: correctInput.value.trim(), show: false }
     });
   });
 
-  hideQuestionBtn.addEventListener("click", () => {
-    update(triviaRef, { question: { show: false } });
-  });
-
+  /* CORRECT ANSWER — REVEAL (permanent) */
   revealCorrectBtn.addEventListener("click", () => {
     update(triviaRef, {
       correct: { text: correctInput.value.trim(), show: true }
     });
-  });
-
-  hideCorrectBtn.addEventListener("click", () => {
-    update(triviaRef, { correct: { show: false } });
   });
 
   /* Answer Updates */
@@ -345,6 +380,12 @@
   onValue(correctRef, snap => {
     const d = snap.val() || {};
     correctAnswer = d.text ? d.text.toLowerCase().trim() : "";
+    buildGrid();
+  });
+
+  onValue(ref(db, "trivia/question"), snap => {
+    const q = snap.val();
+    questionActive = q && q.show === true && q.text?.length > 0;
     buildGrid();
   });
 
@@ -437,37 +478,38 @@
       card.appendChild(timeDiv);
       card.appendChild(liveBtn);
 
-      /* Reveal Button */
+      /* Reveal + Hide Buttons (Option 1) */
       const revealBtn = document.createElement("button");
       revealBtn.className = "revealAnswerBtn";
       revealBtn.textContent = "REVEAL ANSWER";
 
-      /* Hide Button */
       const hideBtn = document.createElement("button");
       hideBtn.className = "revealAnswerBtn";
       hideBtn.textContent = "HIDE";
 
-      if (triviaOn) {
-        revealBtn.style.display = "block";
-        hideBtn.style.display = "block";
-
-        if (hasAnswer) {
-          revealBtn.classList.remove("disabled");
-          hideBtn.classList.remove("disabled");
-
-          revealBtn.onclick = () =>
-            update(ref(db, `trivia/reveal/${key}`), { show: true });
-
-          hideBtn.onclick = () =>
-            update(ref(db, `trivia/reveal/${key}`), { show: false });
-
-        } else {
-          revealBtn.classList.add("disabled");
-          hideBtn.classList.add("disabled");
-        }
+      if (!questionActive || !hasAnswer) {
+        revealBtn.classList.add("disabled");
+        hideBtn.classList.add("disabled");
       } else {
-        revealBtn.style.display = "none";
-        hideBtn.style.display = "none";
+
+        // Listen for reveal state
+        onValue(ref(db, `trivia/reveal/${key}`), snap => {
+          const revealed = snap.val() && snap.val().show === true;
+
+          if (revealed) {
+            revealBtn.classList.add("disabled");
+            hideBtn.classList.remove("disabled");
+          } else {
+            revealBtn.classList.remove("disabled");
+            hideBtn.classList.add("disabled");
+          }
+        });
+
+        revealBtn.onclick = () =>
+          update(ref(db, `trivia/reveal/${key}`), { show: true });
+
+        hideBtn.onclick = () =>
+          update(ref(db, `trivia/reveal/${key}`), { show: false });
       }
 
       card.appendChild(revealBtn);
@@ -497,7 +539,6 @@
   }
 
 </script>
-
 
 </body>
 </html>
