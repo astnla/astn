@@ -309,8 +309,28 @@
   let questionActive = false;
   let correctAnswer = "";
 
-  /* 🔥 NEW: Track Current Live User */
+  /* 🔥 Track Current Live User */
   let currentLiveUser = null;
+
+  /* ⭐ Disable SHOW button initially */
+  disableShowBtn();
+
+  function disableShowBtn() {
+    sendQuestionBtn.disabled = true;
+    sendQuestionBtn.style.opacity = "0.35";
+    sendQuestionBtn.style.pointerEvents = "none";
+  }
+
+  function enableShowBtn() {
+    sendQuestionBtn.disabled = false;
+    sendQuestionBtn.style.opacity = "1";
+    sendQuestionBtn.style.pointerEvents = "auto";
+  }
+
+  /* Any time the teacher edits the answer, disable SHOW until they press ENTER again */
+  correctInput.addEventListener("input", () => {
+    disableShowBtn();
+  });
 
   /* Trivia Mode Toggle */
   onValue(modeRef, snap => {
@@ -318,13 +338,14 @@
     triviaToggle.checked = triviaOn;
     triviaPanel.style.display = triviaOn ? "block" : "none";
     buildGrid();
+    highlightLive(currentLiveUser);
   });
 
   triviaToggle.addEventListener("change", () => {
     update(triviaRef, { mode: triviaToggle.checked });
   });
 
-  /* SEND QUESTION */
+  /* SEND QUESTION (SHOW) */
   sendQuestionBtn.addEventListener("click", () => {
     const q = questionInput.value.trim();
     if (!q) return;
@@ -336,7 +357,7 @@
     });
 
     buildGrid();
-    highlightLive(currentLiveUser); // Prevent button reset
+    highlightLive(currentLiveUser);
   });
 
   /* RESET TRIVIA */
@@ -352,18 +373,26 @@
 
     questionInput.value = "";
     correctInput.value  = "";
-
     questionActive = false;
+
+    /* After resetting, SHOW must be disabled again */
+    disableShowBtn();
 
     buildGrid();
     highlightLive(currentLiveUser);
   });
 
-  /* CORRECT ANSWER — OK */
+  /* CORRECT ANSWER — OK (lock in but hide) */
   okCorrectBtn.addEventListener("click", () => {
+    const answer = correctInput.value.trim();
+    if (!answer) return;
+
     update(triviaRef, {
-      correct: { text: correctInput.value.trim(), show: false }
+      correct: { text: answer, show: false }
     });
+
+    /* ✔ Teacher confirmed answer — now SHOW button is allowed */
+    enableShowBtn();
   });
 
   /* CORRECT ANSWER — REVEAL */
@@ -407,7 +436,7 @@
     highlightLive(currentLiveUser);
   });
 
-  /* LIVE USER TRACKER — FIXES LIVE BUTTON BUG */
+  /* LIVE USER TRACKER FIX */
   onValue(liveUserRef, snap => {
     currentLiveUser = snap.val();
     highlightLive(currentLiveUser);
@@ -535,7 +564,7 @@
     }
   }
 
-  /* Highlight Live User — FIXED */
+  /* Highlight Live User */
   function highlightLive(liveId) {
     document.querySelectorAll(".goLiveBtn").forEach(btn => {
       btn.classList.remove("live");
