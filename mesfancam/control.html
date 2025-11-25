@@ -62,7 +62,7 @@
       background: white;
       border-radius: 10px;
       color: var(--navy);
-      display: none; /* hidden unless toggle ON */
+      display: none;
     }
 
     #triviaPanel h2 {
@@ -157,11 +157,22 @@
       align-items: center;
       gap: 8px;
       color: var(--navy);
+      transition: 0.2s;
+    }
+
+    .card.answeredCorrect {
+      background: #d9ffd9;
+      border: 2px solid #6bcc6b;
+    }
+
+    .card.answeredWrong {
+      background: #fff4c2;
+      border: 2px solid #e8c045;
     }
 
     .thumb {
       width: 100%;
-      aspect-ratio: 3/4;
+      aspect-ratio: 3 / 4;
       object-fit: cover;
       border-radius: 8px;
     }
@@ -177,7 +188,16 @@
       opacity: 0.7;
     }
 
-    .goLiveBtn, .revealAnswerBtn {
+    .submittedAnswer {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      text-align: center;
+      margin-top: -4px;
+    }
+
+    .goLiveBtn,
+    .revealAnswerBtn {
       padding: 8px 12px;
       font-size: 14px;
       font-weight: 900;
@@ -187,6 +207,7 @@
       color: white;
       cursor: pointer;
       width: 100%;
+      transition: 0.2s;
     }
 
     .goLiveBtn.live {
@@ -194,14 +215,20 @@
       color: white;
     }
 
+    /* Disabled reveal/hide */
+    .revealAnswerBtn.disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
   </style>
 </head>
+
 <body>
 
 <header>CONTROL ROOM</header>
 <div id="memberCount" class="member-count">0 MEMBERS CONNECTED</div>
 
-<!-- ⭐ TRIVIA MODE TOGGLE -->
+<!-- TRIVIA MODE TOGGLE -->
 <div style="margin-top:80px;">
   <label style="font-weight:900; font-size:16px;">
     <input type="checkbox" id="triviaToggle" style="transform:scale(1.3); margin-right:6px;">
@@ -209,25 +236,21 @@
   </label>
 </div>
 
-<!-- ⭐ TRIVIA PANEL (hidden unless toggle on) -->
+<!-- TRIVIA PANEL -->
 <div id="triviaPanel">
-
   <h2>Trivia Controls</h2>
 
-  <!-- QUESTION -->
   <div class="inputRow">
     <input id="questionInput" placeholder="Type the question...">
     <button id="sendQuestionBtn">SEND</button>
     <button id="hideQuestionBtn">HIDE</button>
   </div>
 
-  <!-- CORRECT ANSWER -->
   <div class="inputRow">
     <input id="correctInput" placeholder="Correct answer...">
     <button id="revealCorrectBtn">REVEAL</button>
     <button id="hideCorrectBtn">HIDE</button>
   </div>
-
 </div>
 
 <div class="middle-wrapper">
@@ -239,7 +262,6 @@
 <footer>
   <button id="endSessionBtn">END SESSION</button>
 </footer>
-
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -258,6 +280,7 @@
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
+  /* Elements */
   const triviaToggle = document.getElementById("triviaToggle");
   const triviaPanel  = document.getElementById("triviaPanel");
 
@@ -270,90 +293,116 @@
 
   const participantsRef = ref(db, "participants");
   const liveUserRef     = ref(db, "live/activeUser");
-  const triviaRef       = ref(db, "trivia");
 
-  triviaToggle.addEventListener("change", () => {
-    const enabled = triviaToggle.checked;
-    triviaPanel.style.display = enabled ? "block" : "none";
+  const triviaRef     = ref(db, "trivia");
+  const answersRef    = ref(db, "trivia/answers");
+  const correctRef    = ref(db, "trivia/correct");
+  const modeRef       = ref(db, "trivia/mode");
 
-    update(triviaRef, { mode: enabled });
+  let triviaOn = false;
+  let answers = {};
+  let correctAnswer = "";
+
+  /* Trivia Mode Toggle */
+  onValue(modeRef, snap => {
+    triviaOn = snap.val() === true;
+    triviaToggle.checked = triviaOn;
+    triviaPanel.style.display = triviaOn ? "block" : "none";
+    buildGrid();
   });
 
+  triviaToggle.addEventListener("change", () => {
+    update(triviaRef, { mode: triviaToggle.checked });
+  });
+
+  /* Trivia Send/Hide */
   sendQuestionBtn.addEventListener("click", () => {
     update(triviaRef, {
-      question: {
-        text: questionInput.value.trim(),
-        show: true
-      }
+      question: { text: questionInput.value.trim(), show: true }
     });
   });
 
   hideQuestionBtn.addEventListener("click", () => {
-    update(triviaRef, {
-      question: { show: false }
-    });
+    update(triviaRef, { question: { show: false } });
   });
 
   revealCorrectBtn.addEventListener("click", () => {
     update(triviaRef, {
-      correct: {
-        text: correctInput.value.trim(),
-        show: true
-      }
+      correct: { text: correctInput.value.trim(), show: true }
     });
   });
 
   hideCorrectBtn.addEventListener("click", () => {
-    update(triviaRef, {
-      correct: { show: false }
-    });
+    update(triviaRef, { correct: { show: false } });
   });
 
-  /* ----------------------------------------- 
-     EXISTING FAN CAM LOGIC BELOW THIS POINT
-  ------------------------------------------ */
+  /* Answer Updates */
+  onValue(answersRef, snap => {
+    answers = snap.val() || {};
+    buildGrid();
+  });
 
+  onValue(correctRef, snap => {
+    const d = snap.val() || {};
+    correctAnswer = d.text ? d.text.toLowerCase().trim() : "";
+    buildGrid();
+  });
+
+  /* Participants */
   const grid = document.getElementById("grid");
-  const endSessionBtn = document.getElementById("endSessionBtn");
   const memberCount = document.getElementById("memberCount");
+  const endSessionBtn = document.getElementById("endSessionBtn");
 
-  const resetFlagRef = ref(db, "meta/resetFlag");
+  let participantsSnapshot = {};
+
+  onValue(participantsRef, snap => {
+    participantsSnapshot = snap.val() || {};
+    buildGrid();
+  });
 
   endSessionBtn.addEventListener("click", async () => {
-    const confirmEnd = confirm("End session and clear all participants?");
-    if (!confirmEnd) return;
-
-    try {
+    if (confirm("End session and clear all participants?")) {
       await set(participantsRef, null);
       await set(liveUserRef, null);
-      await set(resetFlagRef, Date.now());
       alert("Session cleared.");
-    } catch (err) {
-      console.error("Error clearing session:", err);
     }
   });
 
-  onValue(participantsRef, (snapshot) => {
+  /* Build Grid */
+  function buildGrid() {
     grid.innerHTML = "";
 
-    if (!snapshot.exists()) {
-      grid.innerHTML = "<div style='opacity:1;font-size:13px;color:white;'>NO PARTICIPANTS YET.</div>";
-      endSessionBtn.style.display = "none";
+    const participants = participantsSnapshot;
+    const keys = Object.keys(participants);
+
+    if (keys.length === 0) {
       memberCount.textContent = "0 MEMBERS CONNECTED";
+      endSessionBtn.style.display = "none";
+      grid.innerHTML = "<div style='font-size:13px;color:white;'>NO PARTICIPANTS YET.</div>";
       return;
     }
 
-    const data = snapshot.val();
-    const entries = Object.entries(data).sort(
-      (a, b) => (b[1].joinedAt || 0) - (a[1].joinedAt || 0)
-    );
-
-    memberCount.textContent = entries.length + " MEMBERS CONNECTED";
     endSessionBtn.style.display = "inline-block";
+    memberCount.textContent = keys.length + " MEMBERS CONNECTED";
 
-    for (const [key, p] of entries) {
+    const sorted = Object.entries(participants).sort((a, b) => {
+      const aAns = answers[a[0]] ? 1 : 0;
+      const bAns = answers[b[0]] ? 1 : 0;
+      if (aAns !== bAns) return bAns - aAns;
+      return (b[1].joinedAt || 0) - (a[1].joinedAt || 0);
+    });
+
+    for (const [key, p] of sorted) {
       const card = document.createElement("div");
       card.className = "card";
+
+      const hasAnswer = answers[key] && answers[key].answer;
+      const userAns = hasAnswer ? answers[key].answer.toLowerCase().trim() : "";
+      const isCorrect = hasAnswer && correctAnswer && userAns === correctAnswer;
+
+      if (hasAnswer) {
+        card.classList.add(isCorrect ? "answeredCorrect" : "answeredWrong");
+      }
 
       const img = document.createElement("img");
       img.className = "thumb";
@@ -370,36 +419,72 @@
         timeDiv.textContent = "Joined: " + d.toLocaleTimeString();
       }
 
-      /* GO LIVE BUTTON (existing) */
+      if (hasAnswer) {
+        const ans = document.createElement("div");
+        ans.className = "submittedAnswer";
+        ans.textContent = "Answer: " + answers[key].answer;
+        card.appendChild(ans);
+      }
+
       const liveBtn = document.createElement("button");
       liveBtn.className = "goLiveBtn";
       liveBtn.textContent = "GO LIVE";
       liveBtn.dataset.uid = key;
       liveBtn.onclick = () => set(liveUserRef, key);
 
-      /* NEW: REVEAL ANSWER BUTTON */
-      const revealBtn = document.createElement("button");
-      revealBtn.className = "revealAnswerBtn";
-      revealBtn.textContent = "REVEAL ANSWER";
-      revealBtn.onclick = () => {
-        update(ref(db, `trivia/reveal/${key}`), {
-          show: true
-        });
-      };
-
       card.appendChild(img);
       card.appendChild(nameDiv);
       card.appendChild(timeDiv);
       card.appendChild(liveBtn);
+
+      /* Reveal Button */
+      const revealBtn = document.createElement("button");
+      revealBtn.className = "revealAnswerBtn";
+      revealBtn.textContent = "REVEAL ANSWER";
+
+      /* Hide Button */
+      const hideBtn = document.createElement("button");
+      hideBtn.className = "revealAnswerBtn";
+      hideBtn.textContent = "HIDE";
+
+      if (triviaOn) {
+        revealBtn.style.display = "block";
+        hideBtn.style.display = "block";
+
+        if (hasAnswer) {
+          revealBtn.classList.remove("disabled");
+          hideBtn.classList.remove("disabled");
+
+          revealBtn.onclick = () =>
+            update(ref(db, `trivia/reveal/${key}`), { show: true });
+
+          hideBtn.onclick = () =>
+            update(ref(db, `trivia/reveal/${key}`), { show: false });
+
+        } else {
+          revealBtn.classList.add("disabled");
+          hideBtn.classList.add("disabled");
+        }
+      } else {
+        revealBtn.style.display = "none";
+        hideBtn.style.display = "none";
+      }
+
       card.appendChild(revealBtn);
+      card.appendChild(hideBtn);
 
       grid.appendChild(card);
     }
+
+    highlightLive();
+  }
+
+  /* Highlight Live User */
+  onValue(liveUserRef, snap => {
+    highlightLive(snap.val());
   });
 
-  onValue(liveUserRef, (snap) => {
-    const liveId = snap.val();
-
+  function highlightLive(liveId) {
     document.querySelectorAll(".goLiveBtn").forEach(btn => {
       btn.classList.remove("live");
       btn.textContent = "GO LIVE";
@@ -409,8 +494,10 @@
         btn.textContent = "LIVE";
       }
     });
-  });
+  }
+
 </script>
+
 
 </body>
 </html>
