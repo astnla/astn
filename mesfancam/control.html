@@ -346,7 +346,8 @@
       answers: null
     });
 
-    await set(revealRef, null);
+    await set(revealRef, { __reset: Date.now() });
+
 
     // Clear input boxes visually
     questionInput.value = "";
@@ -494,8 +495,14 @@
 
         // Listen for reveal state
         onValue(ref(db, `trivia/reveal/${key}`), snap => {
-          const revealed = snap.val() && snap.val().show === true;
-
+          const val = snap.val();
+        
+          const revealed =
+            val &&
+            typeof val === "object" &&
+            "show" in val &&
+            val.show === true;
+        
           if (revealed) {
             revealBtn.classList.add("disabled");
             hideBtn.classList.remove("disabled");
