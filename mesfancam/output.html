@@ -12,6 +12,8 @@
       --bg-red: #DA1A32;
       --navy:   #00031F;
       --overlay:#00000022;
+      --panel-bg: rgba(0,0,0,0.45);
+      --panel-text: #ffffff;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -64,10 +66,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: none;    /* <-- IMPORTANT */
       display: none;
     }
-
 
     #emptyState {
       position: absolute;
@@ -81,7 +81,6 @@
       color: var(--navy);
       font-weight: 700;
       font-size: 16px;
-      letter-spacing: 0.3px;
     }
 
     #qrImage {
@@ -89,6 +88,39 @@
       height: 140px;
       margin-top: 12px;
       object-fit: contain;
+    }
+
+    /* -----------------------------
+       ✨ TRIVIA OVERLAYS
+    ------------------------------*/
+
+    .overlayBox {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 320px;
+      background: var(--panel-bg);
+      color: var(--panel-text);
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 900;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #questionOverlay {
+      top: 10px;
+    }
+
+    #correctOverlay {
+      bottom: 10px;
+    }
+
+    #classAnswerOverlay {
+      bottom: 65px;
     }
 
   </style>
@@ -102,15 +134,24 @@
   <div class="title">MANATEE CAM</div>
 
   <div id="displayBox">
+
+    <!-- LIVE FEED -->
     <img id="liveImage">
 
+    <!-- EMPTY STATE -->
     <div id="emptyState">
       SCAN QR TO JOIN MANATEE CAM!
       <img id="qrImage" src="assets/qr.png">
     </div>
-  </div>
 
+    <!-- ✨ TRIVIA OVERLAYS -->
+    <div id="questionOverlay" class="overlayBox"></div>
+    <div id="correctOverlay" class="overlayBox"></div>
+    <div id="classAnswerOverlay" class="overlayBox"></div>
+
+  </div>
 </div>
+
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -132,14 +173,24 @@
   const imgEl      = document.getElementById("liveImage");
   const emptyState = document.getElementById("emptyState");
 
-  // 🔁 listen to /live/activeUser instead of /live/current
-  const currentRef = ref(db, "live/activeUser");
-  const frameRef   = ref(db, "live/frame");
+  const questionOverlay = document.getElementById("questionOverlay");
+  const correctOverlay  = document.getElementById("correctOverlay");
+  const classOverlay    = document.getElementById("classAnswerOverlay");
+
+  const activeUserRef  = ref(db, "live/activeUser");
+  const frameRef       = ref(db, "live/frame");
+  const triviaModeRef  = ref(db, "trivia/mode");
+  const triviaQRef     = ref(db, "trivia/question");
+  const triviaCRef     = ref(db, "trivia/correct");
+  const revealRef      = ref(db, "trivia/reveal");
 
   let activeUser = null;
+  let triviaMode = false;
 
-  // step 1 — watch who is live
-  onValue(currentRef, snap => {
+  /* ---------------------------------------------
+     📡 FAN CAM — WHO IS LIVE?
+  ----------------------------------------------*/
+  onValue(activeUserRef, snap => {
     activeUser = snap.val();
 
     if (!activeUser) {
@@ -148,10 +199,11 @@
     }
   });
 
-  // step 2 — watch incoming JPEG frames
+  /* ---------------------------------------------
+     📡 FAN CAM — FRAME STREAM
+  ----------------------------------------------*/
   onValue(frameRef, snap => {
     if (!activeUser) return;
-
     const jpeg = snap.val();
     if (!jpeg) return;
 
@@ -159,6 +211,84 @@
     imgEl.style.display = "block";
     emptyState.style.display = "none";
   });
+
+  /* ---------------------------------------------
+     🎯 TRIVIA MODE
+  ----------------------------------------------*/
+  onValue(triviaModeRef, snap => {
+    triviaMode = snap.val() === true;
+
+    if (!triviaMode) {
+      questionOverlay.style.display = "none";
+      correctOverlay.style.display = "none";
+      classOverlay.style.display = "none";
+    }
+  });
+
+  /* ---------------------------------------------
+     ❓ GLOBAL QUESTION OVERLAY
+  ----------------------------------------------*/
+  onValue(triviaQRef, snap => {
+    const data = snap.val() || {};
+
+    if (!triviaMode || !data.show) {
+      questionOverlay.style.display = "none";
+      return;
+    }
+
+    questionOverlay.textContent = data.text || "";
+    questionOverlay.style.display = "block";
+  });
+
+  /* ---------------------------------------------
+     ✅ CORRECT ANSWER OVERLAY
+  ----------------------------------------------*/
+  onValue(triviaCRef, snap => {
+    const data = snap.val() || {};
+
+    if (!triviaMode || !data.show) {
+      correctOverlay.style.display = "none";
+      return;
+    }
+
+    correctOverlay.textContent = "Correct Answer: " + (data.text || "");
+    correctOverlay.style.display = "block";
+  });
+
+  /* ---------------------------------------------
+     📝 REVEAL CLASS ANSWER
+  ----------------------------------------------*/
+  onValue(revealRef, snap => {
+    if (!triviaMode || !snap.exists()) {
+      classOverlay.style.display = "none";
+      return;
+    }
+
+    const revealData = snap.val();
+    const keys = Object.keys(revealData);
+
+    let revealedKey = keys.find(k => revealData[k].show === true);
+
+    if (!revealedKey) {
+      classOverlay.style.display = "none";
+      return;
+    }
+
+    // Fetch their answer
+    const answerPath = ref(db, `trivia/answers/${revealedKey}`);
+    onValue(answerPath, answerSnap => {
+      const answerData = answerSnap.val() || {};
+      if (!answerData.answer) {
+        classOverlay.style.display = "none";
+        return;
+      }
+
+      classOverlay.textContent = "Their Answer: " + answerData.answer;
+      classOverlay.style.display = "block";
+    });
+
+  });
+
 </script>
 
 </body>
