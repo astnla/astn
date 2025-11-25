@@ -228,13 +228,21 @@
 <header>CONTROL ROOM</header>
 <div id="memberCount" class="member-count">0 MEMBERS CONNECTED</div>
 
-<!-- TRIVIA MODE TOGGLE -->
-<div style="margin-top:80px;">
+<!-- AUTO LIVE + TRIVIA MODE TOGGLES -->
+<div style="margin-top:80px; display:flex; gap:40px; justify-content:center; align-items:center;">
+
+  <label style="font-weight:900; font-size:16px;">
+    <input type="checkbox" id="autoLiveToggle" style="transform:scale(1.3); margin-right:6px;">
+    AUTO LIVE
+  </label>
+
   <label style="font-weight:900; font-size:16px;">
     <input type="checkbox" id="triviaToggle" style="transform:scale(1.3); margin-right:6px;">
     TRIVIA MODE
   </label>
+
 </div>
+
 
 <!-- TRIVIA PANEL -->
 <div id="triviaPanel">
@@ -282,57 +290,123 @@
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
-  /* Elements */
-  const triviaToggle = document.getElementById("triviaToggle");
-  const triviaPanel  = document.getElementById("triviaPanel");
+  /* ELEMENTS */
+  const autoLiveToggle   = document.getElementById("autoLiveToggle");
+  const triviaToggle     = document.getElementById("triviaToggle");
+  const triviaPanel      = document.getElementById("triviaPanel");
 
-  const questionInput     = document.getElementById("questionInput");
-  const correctInput      = document.getElementById("correctInput");
+  const questionInput    = document.getElementById("questionInput");
+  const correctInput     = document.getElementById("correctInput");
 
-  const sendQuestionBtn   = document.getElementById("sendQuestionBtn");
-  const resetTriviaBtn    = document.getElementById("resetTriviaBtn");
+  const sendQuestionBtn  = document.getElementById("sendQuestionBtn");
+  const resetTriviaBtn   = document.getElementById("resetTriviaBtn");
 
-  const okCorrectBtn      = document.getElementById("okCorrectBtn");
-  const revealCorrectBtn  = document.getElementById("revealCorrectBtn");
+  const okCorrectBtn     = document.getElementById("okCorrectBtn");
+  const revealCorrectBtn = document.getElementById("revealCorrectBtn");
 
   const participantsRef = ref(db, "participants");
   const liveUserRef     = ref(db, "live/activeUser");
 
-  const triviaRef     = ref(db, "trivia");
-  const answersRef    = ref(db, "trivia/answers");
-  const correctRef    = ref(db, "trivia/correct");
-  const revealRef     = ref(db, "trivia/reveal");
-  const modeRef       = ref(db, "trivia/mode");
+  const triviaRef   = ref(db, "trivia");
+  const answersRef  = ref(db, "trivia/answers");
+  const correctRef  = ref(db, "trivia/correct");
+  const revealRef   = ref(db, "trivia/reveal");
+  const modeRef     = ref(db, "trivia/mode");
 
   let triviaOn = false;
   let answers = {};
   let questionActive = false;
   let correctAnswer = "";
-
-  /* 🔥 Track Current Live User */
   let currentLiveUser = null;
 
-  /* ⭐ Disable SHOW button initially */
-  disableShowBtn();
+  /* ===============================
+        AUTO LIVE SYSTEM
+     =============================== */
 
+  let autoLiveEnabled = false;
+  let autoLiveInterval = null;
+  let autoCycle = [];        // Current cycle order
+  let autoIndex = 0;         // Index within cycle
+  let lastLive = null;
+
+  /* Shuffle helper */
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function rebuildCycle() {
+    const users = Object.keys(participantsSnapshot);
+    autoCycle = shuffle([...users]);
+    autoIndex = 0;
+  }
+
+  function startAutoLive() {
+    if (autoLiveInterval) clearInterval(autoLiveInterval);
+
+    autoLiveEnabled = true;
+
+    if (autoCycle.length === 0) rebuildCycle();
+
+    autoLiveInterval = setInterval(() => {
+      const users = Object.keys(participantsSnapshot);
+
+      if (users.length === 0) return;
+
+      if (autoIndex >= autoCycle.length) rebuildCycle();
+
+      const nextUser = autoCycle[autoIndex];
+      autoIndex++;
+
+      lastLive = nextUser;
+      set(liveUserRef, nextUser);
+
+    }, 5000); // 5 seconds
+  }
+
+  function stopAutoLive() {
+    autoLiveEnabled = false;
+    if (autoLiveInterval) clearInterval(autoLiveInterval);
+    autoLiveInterval = null;
+
+    // Leave whoever was last live
+    if (lastLive) {
+      set(liveUserRef, lastLive);
+    }
+  }
+
+  /* Toggle listener */
+  autoLiveToggle.addEventListener("change", () => {
+    if (autoLiveToggle.checked) {
+      rebuildCycle();
+      startAutoLive();
+    } else {
+      stopAutoLive();
+    }
+  });
+
+  /* ===============================
+        SHOW BUTTON DISABLE LOGIC
+     =============================== */
+  disableShowBtn();
   function disableShowBtn() {
     sendQuestionBtn.disabled = true;
     sendQuestionBtn.style.opacity = "0.35";
     sendQuestionBtn.style.pointerEvents = "none";
   }
-
   function enableShowBtn() {
     sendQuestionBtn.disabled = false;
     sendQuestionBtn.style.opacity = "1";
     sendQuestionBtn.style.pointerEvents = "auto";
   }
+  correctInput.addEventListener("input", () => disableShowBtn());
 
-  /* Any time the teacher edits the answer, disable SHOW until they press ENTER again */
-  correctInput.addEventListener("input", () => {
-    disableShowBtn();
-  });
-
-  /* Trivia Mode Toggle */
+  /* ===============================
+        TRIVIA MODE
+     =============================== */
   onValue(modeRef, snap => {
     triviaOn = snap.val() === true;
     triviaToggle.checked = triviaOn;
@@ -345,7 +419,7 @@
     update(triviaRef, { mode: triviaToggle.checked });
   });
 
-  /* SEND QUESTION (SHOW) */
+  /* SEND QUESTION */
   sendQuestionBtn.addEventListener("click", () => {
     const q = questionInput.value.trim();
     if (!q) return;
@@ -362,7 +436,6 @@
 
   /* RESET TRIVIA */
   resetTriviaBtn.addEventListener("click", async () => {
-
     await update(triviaRef, {
       question: { text: "", show: false },
       correct: { text: "", show: false },
@@ -374,15 +447,13 @@
     questionInput.value = "";
     correctInput.value  = "";
     questionActive = false;
-
-    /* After resetting, SHOW must be disabled again */
     disableShowBtn();
 
     buildGrid();
     highlightLive(currentLiveUser);
   });
 
-  /* CORRECT ANSWER — OK (lock in but hide) */
+  /* OK correct answer */
   okCorrectBtn.addEventListener("click", () => {
     const answer = correctInput.value.trim();
     if (!answer) return;
@@ -391,18 +462,17 @@
       correct: { text: answer, show: false }
     });
 
-    /* ✔ Teacher confirmed answer — now SHOW button is allowed */
     enableShowBtn();
   });
 
-  /* CORRECT ANSWER — REVEAL */
+  /* Reveal correct answer */
   revealCorrectBtn.addEventListener("click", () => {
     update(triviaRef, {
       correct: { text: correctInput.value.trim(), show: true }
     });
   });
 
-  /* Answer Updates */
+  /* ANSWERS UPDATE */
   onValue(answersRef, snap => {
     answers = snap.val() || {};
     buildGrid();
@@ -423,7 +493,9 @@
     highlightLive(currentLiveUser);
   });
 
-  /* Participants */
+  /* ===============================
+        PARTICIPANTS + GRID
+     =============================== */
   const grid = document.getElementById("grid");
   const memberCount = document.getElementById("memberCount");
   const endSessionBtn = document.getElementById("endSessionBtn");
@@ -432,54 +504,53 @@
 
   onValue(participantsRef, snap => {
     participantsSnapshot = snap.val() || {};
+
+    if (autoLiveEnabled) rebuildCycle();
+
     buildGrid();
     highlightLive(currentLiveUser);
   });
 
-  /* LIVE USER TRACKER FIX */
+  /* LIVE USER TRACKER */
   onValue(liveUserRef, snap => {
     currentLiveUser = snap.val();
     highlightLive(currentLiveUser);
   });
 
+  /* END SESSION resets EVERYTHING */
   endSessionBtn.addEventListener("click", async () => {
     if (confirm("End the entire session and reset everything?")) {
-  
-      // 🌐 1. Remove all participants
+
+      stopAutoLive();
+      autoLiveToggle.checked = false;
+
       await set(participantsRef, null);
-  
-      // 🎥 2. Clear active live user
       await set(liveUserRef, null);
-  
-      // ❓ 3. Full trivia reset
+
       await update(triviaRef, {
-        mode: false,  // turn trivia mode OFF
+        mode: false,
         question: { text: "", show: false },
         correct:  { text: "", show: false },
         answers: null
       });
-  
-      // 🧽 4. Clear reveal keys
+
       await set(revealRef, { __reset: Date.now() });
-  
-      // 📺 5. Reset camera page UI
-      // (Camera page listens to trivia/question + mode,
-      // so this automatically hides the bars and input boxes.)
-  
-      // 🎛️ 6. Reset control panel UI
+
       questionInput.value = "";
       correctInput.value = "";
       questionActive = false;
+
       disableShowBtn();
       triviaToggle.checked = false;
       triviaPanel.style.display = "none";
-  
+
       alert("Session fully reset.");
     }
   });
 
-
-  /* Build Grid */
+  /* ===============================
+        BUILD GRID
+     =============================== */
   function buildGrid() {
     grid.innerHTML = "";
 
@@ -511,9 +582,7 @@
       const userAns = hasAnswer ? answers[key].answer.toLowerCase().trim() : "";
       const isCorrect = hasAnswer && correctAnswer && userAns === correctAnswer;
 
-      if (hasAnswer) {
-        card.classList.add(isCorrect ? "answeredCorrect" : "answeredWrong");
-      }
+      if (hasAnswer) card.classList.add(isCorrect ? "answeredCorrect" : "answeredWrong");
 
       const img = document.createElement("img");
       img.className = "thumb";
@@ -548,7 +617,7 @@
       card.appendChild(timeDiv);
       card.appendChild(liveBtn);
 
-      /* Reveal + Hide Buttons */
+      /* Reveal / Hide */
       const revealBtn = document.createElement("button");
       revealBtn.className = "revealAnswerBtn";
       revealBtn.textContent = "REVEAL ANSWER";
@@ -561,14 +630,9 @@
         revealBtn.classList.add("disabled");
         hideBtn.classList.add("disabled");
       } else {
-
         onValue(ref(db, `trivia/reveal/${key}`), snap => {
           const val = snap.val();
-          const revealed =
-            val &&
-            typeof val === "object" &&
-            "show" in val &&
-            val.show === true;
+          const revealed = val && typeof val === "object" && val.show === true;
 
           if (revealed) {
             revealBtn.classList.add("disabled");
@@ -593,7 +657,9 @@
     }
   }
 
-  /* Highlight Live User */
+  /* ===============================
+        HIGHLIGHT LIVE BUTTON
+     =============================== */
   function highlightLive(liveId) {
     document.querySelectorAll(".goLiveBtn").forEach(btn => {
       btn.classList.remove("live");
@@ -607,6 +673,7 @@
   }
 
 </script>
+
 
 
 </body>
