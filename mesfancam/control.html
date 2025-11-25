@@ -309,6 +309,9 @@
   let questionActive = false;
   let correctAnswer = "";
 
+  /* 🔥 NEW: Track Current Live User */
+  let currentLiveUser = null;
+
   /* Trivia Mode Toggle */
   onValue(modeRef, snap => {
     triviaOn = snap.val() === true;
@@ -332,14 +335,13 @@
       question: { text: q, show: true }
     });
 
-    // Allow users to reveal answers after they submit
     buildGrid();
+    highlightLive(currentLiveUser); // Prevent button reset
   });
 
   /* RESET TRIVIA */
   resetTriviaBtn.addEventListener("click", async () => {
 
-    // Clear everything in DB
     await update(triviaRef, {
       question: { text: "", show: false },
       correct: { text: "", show: false },
@@ -348,24 +350,23 @@
 
     await set(revealRef, { __reset: Date.now() });
 
-
-    // Clear input boxes visually
     questionInput.value = "";
     correctInput.value  = "";
 
     questionActive = false;
 
     buildGrid();
+    highlightLive(currentLiveUser);
   });
 
-  /* CORRECT ANSWER — OK (lock but hide) */
+  /* CORRECT ANSWER — OK */
   okCorrectBtn.addEventListener("click", () => {
     update(triviaRef, {
       correct: { text: correctInput.value.trim(), show: false }
     });
   });
 
-  /* CORRECT ANSWER — REVEAL (permanent) */
+  /* CORRECT ANSWER — REVEAL */
   revealCorrectBtn.addEventListener("click", () => {
     update(triviaRef, {
       correct: { text: correctInput.value.trim(), show: true }
@@ -376,18 +377,21 @@
   onValue(answersRef, snap => {
     answers = snap.val() || {};
     buildGrid();
+    highlightLive(currentLiveUser);
   });
 
   onValue(correctRef, snap => {
     const d = snap.val() || {};
     correctAnswer = d.text ? d.text.toLowerCase().trim() : "";
     buildGrid();
+    highlightLive(currentLiveUser);
   });
 
   onValue(ref(db, "trivia/question"), snap => {
     const q = snap.val();
     questionActive = q && q.show === true && q.text?.length > 0;
     buildGrid();
+    highlightLive(currentLiveUser);
   });
 
   /* Participants */
@@ -400,6 +404,13 @@
   onValue(participantsRef, snap => {
     participantsSnapshot = snap.val() || {};
     buildGrid();
+    highlightLive(currentLiveUser);
+  });
+
+  /* LIVE USER TRACKER — FIXES LIVE BUTTON BUG */
+  onValue(liveUserRef, snap => {
+    currentLiveUser = snap.val();
+    highlightLive(currentLiveUser);
   });
 
   endSessionBtn.addEventListener("click", async () => {
@@ -479,7 +490,7 @@
       card.appendChild(timeDiv);
       card.appendChild(liveBtn);
 
-      /* Reveal + Hide Buttons (Option 1) */
+      /* Reveal + Hide Buttons */
       const revealBtn = document.createElement("button");
       revealBtn.className = "revealAnswerBtn";
       revealBtn.textContent = "REVEAL ANSWER";
@@ -493,16 +504,14 @@
         hideBtn.classList.add("disabled");
       } else {
 
-        // Listen for reveal state
         onValue(ref(db, `trivia/reveal/${key}`), snap => {
           const val = snap.val();
-        
           const revealed =
             val &&
             typeof val === "object" &&
             "show" in val &&
             val.show === true;
-        
+
           if (revealed) {
             revealBtn.classList.add("disabled");
             hideBtn.classList.remove("disabled");
@@ -524,21 +533,15 @@
 
       grid.appendChild(card);
     }
-
-    highlightLive();
   }
 
-  /* Highlight Live User */
-  onValue(liveUserRef, snap => {
-    highlightLive(snap.val());
-  });
-
+  /* Highlight Live User — FIXED */
   function highlightLive(liveId) {
     document.querySelectorAll(".goLiveBtn").forEach(btn => {
       btn.classList.remove("live");
       btn.textContent = "GO LIVE";
 
-      if (btn.dataset.uid === liveId) {
+      if (liveId && btn.dataset.uid === liveId) {
         btn.classList.add("live");
         btn.textContent = "LIVE";
       }
@@ -546,6 +549,7 @@
   }
 
 </script>
+
 
 </body>
 </html>
