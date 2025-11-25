@@ -155,7 +155,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+  import { getDatabase, ref, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
@@ -186,6 +186,9 @@
 
   let activeUser = null;
   let triviaMode = false;
+
+  /* Track last active listener */
+  let lastAnswerListenerRef = null;
 
   /* ---------------------------------------------
      📡 FAN CAM — WHO IS LIVE?
@@ -222,6 +225,12 @@
       questionOverlay.style.display = "none";
       correctOverlay.style.display = "none";
       classOverlay.style.display = "none";
+
+      // Stop listening to any previous student's answer
+      if (lastAnswerListenerRef) {
+        off(lastAnswerListenerRef);
+        lastAnswerListenerRef = null;
+      }
     }
   });
 
@@ -259,25 +268,59 @@
      📝 REVEAL CLASS ANSWER
   ----------------------------------------------*/
   onValue(revealRef, snap => {
-    if (!triviaMode || !snap.exists()) {
+
+    // RESET or NO trivia → hide everything
+    if (
+        !triviaMode ||
+        !snap.exists() ||
+        Object.keys(snap.val()).length === 0
+    ) {
       classOverlay.style.display = "none";
+
+      // stop the old listener
+      if (lastAnswerListenerRef) {
+        off(lastAnswerListenerRef);
+        lastAnswerListenerRef = null;
+      }
+
       return;
     }
 
     const revealData = snap.val();
     const keys = Object.keys(revealData);
 
-    let revealedKey = keys.find(k => revealData[k].show === true);
+    // Look for { show: true }
+    const revealedKey = keys.find(k =>
+      revealData[k] &&
+      typeof revealData[k] === "object" &&
+      revealData[k].show === true
+    );
 
+    // No user revealed → hide
     if (!revealedKey) {
       classOverlay.style.display = "none";
+
+      if (lastAnswerListenerRef) {
+        off(lastAnswerListenerRef);
+        lastAnswerListenerRef = null;
+      }
+
       return;
     }
 
-    // Fetch their answer
+    // Cancel previous student's listener
+    if (lastAnswerListenerRef) {
+      off(lastAnswerListenerRef);
+      lastAnswerListenerRef = null;
+    }
+
+    // Listen ONLY to this user's answer
     const answerPath = ref(db, `trivia/answers/${revealedKey}`);
+    lastAnswerListenerRef = answerPath;
+
     onValue(answerPath, answerSnap => {
       const answerData = answerSnap.val() || {};
+
       if (!answerData.answer) {
         classOverlay.style.display = "none";
         return;
@@ -290,6 +333,7 @@
   });
 
 </script>
+
 
 </body>
 </html>
