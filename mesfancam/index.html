@@ -12,6 +12,7 @@
       --bg-red: #DA1A32;
       --navy:   #00031F;
       --overlay: #00000022;
+      --highlight: #DA1A32;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -24,17 +25,21 @@
 
     body {
       min-height: 100vh;
+      background-color: var(--bg-red);
       font-family: "Outfit", sans-serif;
       color: var(--navy);
       overflow-x: hidden;
     }
 
     .contributor-page {
+      position: relative;
       height: 100vh;
       width: 100%;
     }
-
+    
     .contributor-wrapper {
+      position: relative;
+      z-index: 1;
       height: 100vh;
       display: flex;
       justify-content: center;
@@ -45,22 +50,44 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: flex-start;
       width: 100%;
       max-width: 480px;
       transform: translateY(-5%);
     }
 
+    .streaming-title-textblock {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 24px;
+      margin-bottom: 12px;
+    }
+
     .manatee-logo {
       width: 80px;
+      height: 80px;
+      object-fit: contain;
       margin-bottom: 8px;
       border-radius: 12px;
     }
 
     .manatee-fancam-title {
+      font-family: "Outfit", sans-serif;
       font-weight: 900;
       font-size: 22px;
       color: var(--navy);
+      letter-spacing: 0.5px;
       text-align: center;
+    }
+
+    #publishCameraPreview {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      font-family: "Outfit", sans-serif;
     }
 
     #publishCameraState {
@@ -99,11 +126,13 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      text-align: center;
       cursor: pointer;
       padding: 8px;
     }
 
     .camera-overlay-text {
+      font-family: "Outfit", sans-serif;
       font-weight: 900;
       font-size: 16px;
       color: var(--navy);
@@ -114,13 +143,32 @@
     }
 
     .legal-text {
+      margin-top: 8px;
       text-align: center;
+      font-family: "Inter", sans-serif;
       font-size: 10px;
       color: var(--navy);
       padding: 0 24px;
+      line-height: 1.4;
     }
 
-    /* TRIVIA ANSWER ONLY */
+    /* -------------------------------
+       TRIVIA MODE UI
+    ------------------------------- */
+    #triviaQuestionBar {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      background: white;
+      color: var(--navy);
+      padding: 10px;
+      font-size: 16px;
+      font-weight: 900;
+      text-align: center;
+      border-radius: 6px;
+      display: none;
+    }
+
     #triviaAnswerBox {
       width: 100%;
       max-width: 480px;
@@ -136,6 +184,7 @@
       border: none;
       font-size: 16px;
       font-weight: 700;
+      width: 100%;
     }
 
     #triviaSubmitBtn {
@@ -146,12 +195,14 @@
       border: none;
       font-size: 16px;
       font-weight: 900;
+      cursor: pointer;
+      width: 100%;
     }
 
     #triviaSubmittedMsg {
       width: 100%;
       max-width: 480px;
-      margin-top: 10px;
+      margin: 10px auto 0;
       text-align: center;
       font-size: 16px;
       font-weight: 900;
@@ -160,17 +211,21 @@
     }
   </style>
 </head>
-
 <body>
 
-<div class="contributor-page">
+<div class="contributor-page app-name-live">
   <div class="contributor-wrapper">
     <div class="fan-cam-content">
 
-      <img class="manatee-logo" src="assets/mestv.png">
-      <div class="manatee-fancam-title">MANATEE CAM</div>
+      <div class="streaming-title-textblock">
+        <img class="manatee-logo" src="assets/mestv.png" alt="Marley Logo">
+        <div class="manatee-fancam-title">MANATEE CAM</div>
+      </div>
 
-      <!-- CAMERA -->
+      <!-- ⭐ TRIVIA QUESTION BAR -->
+      <div id="triviaQuestionBar"></div>
+
+      <!-- ⭐ CAMERA -->
       <div id="publishCameraPreview">
         <div id="publishCameraState">
           <div class="camera-shell" id="cameraShell">
@@ -181,25 +236,31 @@
           </div>
         </div>
 
-        <!-- ANSWER INPUT ONLY -->
+        <!-- ⭐ TRIVIA ANSWER INPUT -->
         <div id="triviaAnswerBox">
           <input id="triviaAnswerInput" placeholder="Type your answer..." />
           <button id="triviaSubmitBtn">SUBMIT</button>
         </div>
 
+        <!-- After submitting -->
         <div id="triviaSubmittedMsg">ANSWER SUBMITTED!</div>
 
-        <p class="legal-text">By submitting your video, you agree it may be used on the broadcast.</p>
+        <p class="legal-text">
+          By submitting your video, you agree that it may be used on the live broadcast.
+        </p>
       </div>
 
     </div>
   </div>
 </div>
 
+
 <script type="module">
-  /* CAMERA ENABLE */
-  const shell = document.getElementById("cameraShell");
-  const video = document.getElementById("preview");
+  /* ----------------------------------------
+     CAMERA ENABLE (same as before)
+  ---------------------------------------- */
+  const shell   = document.getElementById("cameraShell");
+  const video   = document.getElementById("preview");
   const overlay = document.getElementById("cameraOverlay");
 
   async function enableCamera() {
@@ -209,19 +270,27 @@
 
       const devices = await navigator.mediaDevices.enumerateDevices();
       const cams = devices.filter(d => d.kind === "videoinput");
+
       let preferred =
         cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) ||
         cams.find(c => /front/i.test(c.label)) ||
         cams[0];
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: preferred.deviceId } }
+        video: {
+          deviceId: { exact: preferred.deviceId },
+          width: { ideal: 1280 },
+          height: { ideal: 960 },
+          facingMode: "user"
+        }
       });
 
       video.srcObject = stream;
       shell.classList.add("active");
       startStreamingFrames();
+
     } catch (err) {
+      console.error(err);
       overlay.querySelector(".camera-overlay-text").textContent = "CAMERA ERROR";
     }
   }
@@ -230,56 +299,92 @@
     if (!shell.classList.contains("active")) enableCamera();
   });
 
-
-  /* FIREBASE SETUP */
+  /* ----------------------------------------
+     FIREBASE STREAMING
+  ---------------------------------------- */
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
   import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
-  const firebaseConfig = { /* your config */ };
+  const firebaseConfig = {
+    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+    authDomain: "mes-fancam.firebaseapp.com",
+    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+    projectId: "mes-fancam",
+    storageBucket: "mes-fancam.firebasestorage.app",
+    messagingSenderId: "1091345682482",
+    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+  };
+
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
   const userKey = localStorage.getItem("fanCamUserKey");
 
-  /* STREAMING FRAMES */
+  let currentlyLiveUser = null;
+
+  onValue(ref(db, "live/activeUser"), snap => {
+    currentlyLiveUser = snap.val() || null;
+  });
+
   let interval = null;
+
   function startStreamingFrames() {
     if (interval) return;
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    onValue(ref(db, "live/activeUser"), s => currentlyLiveUser = s.val() || null);
-
     interval = setInterval(() => {
       if (!userKey || currentlyLiveUser !== userKey) return;
-      if (video.readyState < 2) return;
+      if (!video || video.readyState < 2) return;
 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+
       ctx.save();
       ctx.scale(-1, 1);
       ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
       ctx.restore();
 
-      set(ref(db, "live/frame"), canvas.toDataURL("image/jpeg", 0.62));
+      const jpeg = canvas.toDataURL("image/jpeg", 0.62);
+
+      set(ref(db, "live/frame"), jpeg);
+      set(ref(db, "live/timestamp"), Date.now());
+
     }, 125);
   }
 
-  /* TRIVIA UI — ANSWER ONLY */
-  const triviaAnswerBox = document.getElementById("triviaAnswerBox");
-  const triviaInput     = document.getElementById("triviaAnswerInput");
-  const triviaSubmitBtn = document.getElementById("triviaSubmitBtn");
+  /* ----------------------------------------
+     TRIVIA MODE LISTENERS
+  ---------------------------------------- */
+  const triviaQuestionBar = document.getElementById("triviaQuestionBar");
+  const triviaAnswerBox   = document.getElementById("triviaAnswerBox");
+  const triviaInput       = document.getElementById("triviaAnswerInput");
+  const triviaSubmitBtn   = document.getElementById("triviaSubmitBtn");
   const triviaSubmittedMsg = document.getElementById("triviaSubmittedMsg");
 
-  // Listen for trivia mode & question visibility
-  onValue(ref(db, "trivia/question"), snap => {
-    const q = snap.val() || {};
+  // Listen for Trivia Mode On/Off
+  onValue(ref(db, "trivia/mode"), snap => {
+    const enabled = snap.val() === true;
 
-    if (q.show) {
+    if (!enabled) {
+      triviaQuestionBar.style.display = "none";
+      triviaAnswerBox.style.display = "none";
+      triviaSubmittedMsg.style.display = "none";
+    }
+  });
+
+  // Listen for question
+  onValue(ref(db, "trivia/question"), snap => {
+    const data = snap.val() || {};
+
+    if (data.show && data.text) {
+      triviaQuestionBar.textContent = data.text;
+      triviaQuestionBar.style.display = "block";
       triviaAnswerBox.style.display = "flex";
       triviaSubmittedMsg.style.display = "none";
     } else {
+      triviaQuestionBar.style.display = "none";
       triviaAnswerBox.style.display = "none";
     }
   });
@@ -289,7 +394,8 @@
     const answer = triviaInput.value.trim();
     if (!answer || !userKey) return;
 
-    update(ref(db, `trivia/answers/${userKey}`), {
+    const answerRef = ref(db, `trivia/answers/${userKey}`);
+    update(answerRef, {
       answer,
       timestamp: Date.now()
     });
@@ -299,6 +405,5 @@
   });
 
 </script>
-
 </body>
 </html>
