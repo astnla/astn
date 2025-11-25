@@ -443,12 +443,41 @@
   });
 
   endSessionBtn.addEventListener("click", async () => {
-    if (confirm("End session and clear all participants?")) {
+    if (confirm("End the entire session and reset everything?")) {
+  
+      // 🌐 1. Remove all participants
       await set(participantsRef, null);
+  
+      // 🎥 2. Clear active live user
       await set(liveUserRef, null);
-      alert("Session cleared.");
+  
+      // ❓ 3. Full trivia reset
+      await update(triviaRef, {
+        mode: false,  // turn trivia mode OFF
+        question: { text: "", show: false },
+        correct:  { text: "", show: false },
+        answers: null
+      });
+  
+      // 🧽 4. Clear reveal keys
+      await set(revealRef, { __reset: Date.now() });
+  
+      // 📺 5. Reset camera page UI
+      // (Camera page listens to trivia/question + mode,
+      // so this automatically hides the bars and input boxes.)
+  
+      // 🎛️ 6. Reset control panel UI
+      questionInput.value = "";
+      correctInput.value = "";
+      questionActive = false;
+      disableShowBtn();
+      triviaToggle.checked = false;
+      triviaPanel.style.display = "none";
+  
+      alert("Session fully reset.");
     }
   });
+
 
   /* Build Grid */
   function buildGrid() {
