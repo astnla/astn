@@ -254,8 +254,8 @@
   </div>
 </div>
 
+
 <script type="module">
-<<<<<<< HEAD
   /* ----------------------------------------
      CAMERA ENABLE (same as before)
   ---------------------------------------- */
@@ -292,133 +292,9 @@
     } catch (err) {
       console.error(err);
       overlay.querySelector(".camera-overlay-text").textContent = "CAMERA ERROR";
-=======
-/* ----------------------------------------
-   CAMERA ENABLE
----------------------------------------- */
-const shell   = document.getElementById("cameraShell");
-const video   = document.getElementById("preview");
-const overlay = document.getElementById("cameraOverlay");
-
-async function enableCamera() {
-  try {
-    const test = await navigator.mediaDevices.getUserMedia({ video: true });
-    test.getTracks().forEach(t => t.stop());
-
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const cams = devices.filter(d => d.kind === "videoinput");
-
-    let preferred =
-      cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) ||
-      cams.find(c => /front/i.test(c.label)) ||
-      cams[0];
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        deviceId: { exact: preferred.deviceId },
-        width: { ideal: 1280 },
-        height: { ideal: 960 },
-        facingMode: "user"
-      }
-    });
-
-    video.srcObject = stream;
-    shell.classList.add("active");
-    startStreamingFrames();
-
-  } catch (err) {
-    console.error(err);
-    overlay.querySelector(".camera-overlay-text").textContent = "CAMERA ERROR";
-  }
-}
-
-shell.addEventListener("click", () => {
-  if (!shell.classList.contains("active")) enableCamera();
-});
-
-/* ----------------------------------------
-   FIREBASE INITIALIZATION
----------------------------------------- */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
-  authDomain: "mes-fancam.firebaseapp.com",
-  databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
-  projectId: "mes-fancam",
-  storageBucket: "mes-fancam.firebasestorage.app",
-  messagingSenderId: "1091345682482",
-  appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
-};
-
-const app = initializeApp(firebaseConfig);
-const db  = getDatabase(app);
-
-/* ----------------------------------------
-   USER + GENERATION TRACKING
----------------------------------------- */
-const userKey = localStorage.getItem("fanCamUserKey");
-
-let currentLiveUser = null;
-let currentGeneration = null;
-
-/* Listen for active user changes */
-onValue(ref(db, "live/activeUser"), snap => {
-  currentLiveUser = snap.val() || null;
-});
-
-/* Listen for generation number */
-onValue(ref(db, "live/generation"), snap => {
-  currentGeneration = snap.val() || null;
-});
-
-/* ----------------------------------------
-   STREAMING — SAFE VERSION WITH UPLOAD GUARD
----------------------------------------- */
-let interval = null;
-let sendingFrame = false; // prevents frame queue buildup
-
-function startStreamingFrames() {
-  if (interval) return;
-
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-
-  interval = setInterval(async () => {
-    // Only send if live + correct generation exists
-    if (!userKey || currentLiveUser !== userKey || !currentGeneration) return;
-    if (!video || video.readyState < 2) return;
-
-    // Prevent sending if still uploading last frame
-    if (sendingFrame) return;
-
-    sendingFrame = true;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-    ctx.restore();
-
-    try {
-      const jpeg = canvas.toDataURL("image/jpeg", 0.62);
-
-      // Upload frame WITH generation stamp
-      await update(ref(db, "live/frame"), {
-        jpeg,
-        gen: currentGeneration,
-        ts: Date.now()
-      });
-
-    } catch (err) {
-      console.error("Frame upload error:", err);
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
     }
+  }
 
-<<<<<<< HEAD
   shell.addEventListener("click", () => {
     if (!shell.classList.contains("active")) enableCamera();
   });
@@ -477,64 +353,6 @@ function startStreamingFrames() {
 
     }, 125);
   }
-=======
-    sendingFrame = false;
-
-  }, 130); // ~7.5 FPS
-}
-
-/* ----------------------------------------
-   TRIVIA UI (unchanged)
----------------------------------------- */
-const triviaQuestionBar = document.getElementById("triviaQuestionBar");
-const triviaAnswerBox   = document.getElementById("triviaAnswerBox");
-const triviaAnswerInput = document.getElementById("triviaAnswerInput");
-const triviaSubmitBtn   = document.getElementById("triviaSubmitBtn");
-const triviaSubmittedMsg = document.getElementById("triviaSubmittedMsg");
-
-onValue(ref(db, "trivia/mode"), snap => {
-  const enabled = snap.val() === true;
-  if (!enabled) {
-    triviaQuestionBar.style.display = "none";
-    triviaAnswerBox.style.display = "none";
-    triviaSubmittedMsg.style.display = "none";
-  }
-});
-
-// Hide question text, just enable answer UI
-onValue(ref(db, "trivia/question"), snap => {
-  const data = snap.val() || {};
-  const questionVisible = data.show === true && data.text;
-
-  if (questionVisible) {
-    triviaQuestionBar.style.display = "none";
-    triviaAnswerBox.style.display = "flex";
-    triviaSubmittedMsg.style.display = "none";
-  } else {
-    triviaQuestionBar.style.display = "none";
-    triviaAnswerBox.style.display = "none";
-    triviaSubmittedMsg.style.display = "none";
-    triviaAnswerInput.value = "";
-  }
-});
-
-// Submit answer
-triviaSubmitBtn.addEventListener("click", () => {
-  const answer = triviaAnswerInput.value.trim();
-  if (!answer || !userKey) return;
-
-  const answerRef = ref(db, `trivia/answers/${userKey}`);
-  update(answerRef, {
-    answer,
-    timestamp: Date.now()
-  });
-
-  triviaAnswerBox.style.display = "none";
-  triviaSubmittedMsg.style.display = "block";
-});
-
-</script>
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
 
   /* ----------------------------------------
      TRIVIA MODE LISTENERS
