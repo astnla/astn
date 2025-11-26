@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>404 — Page Not Found</title>
+
+  <link rel="icon" type="image/svg+xml" href="/assets/images/astn.svg">
+  <link rel="apple-touch-icon" href="/assets/images/astn.png">
+  <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #000000;
+      --accent: #000000;
+      --fade: #888;
+    }
+
+    body.dark-mode {
+      --bg: #000000;
+      --text: #ffffff;
+      --accent: #ffffff;
+      --fade: #aaaaaa;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Questrial", sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .wrapper {
+      max-width: 400px;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 400;
+      color: var(--accent);
+      text-decoration: none;
+      display: inline-block;
+      margin-bottom: 30px;
+    }
+
+    .code {
+      font-size: 35px;
+      font-weight: 400;
+      margin-bottom: 8px;
+    }
+
+    .message {
+      font-size: 18px;
+      color: var(--fade);
+      margin-bottom: 28px;
+
+    }
+
+    a.home-btn {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 16px;
+      padding-bottom: 2px;
+      transition: opacity 0.2s;
+    }
+
+    a.home-btn:hover {
+      opacity: 0.6;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="wrapper">
+
+    <div class="code">oops...</div>
+    <div class="message">these aren't the pages you're looking for.</div>
+
+    <a href="/" class="home-btn">BACK TO HOME</a>
+  </div>
+
+  <script>
+    // Auto-apply dark mode if enabled on your site
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") {
+      document.body.classList.add("dark-mode");
+    }
+  </script>
+
+</body>
+</html>
