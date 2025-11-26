@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Panthers Fan Cam Clone</title>
+  <title>CAMERA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
@@ -101,6 +101,7 @@
       position: relative;
     }
 
+    /* CAMERA */
     .camera-shell {
       width: 100%;
       height: 100%;
@@ -151,6 +152,63 @@
       line-height: 1.4;
     }
 
+    /* -------------------------------
+       TRIVIA MODE UI
+    ------------------------------- */
+    #triviaQuestionBar {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      background: white;
+      color: var(--navy);
+      padding: 10px;
+      font-size: 16px;
+      font-weight: 900;
+      text-align: center;
+      border-radius: 6px;
+      display: none;
+    }
+
+    #triviaAnswerBox {
+      width: 100%;
+      max-width: 480px;
+      margin: 10px auto 0;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #triviaAnswerInput {
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+      font-weight: 700;
+      width: 100%;
+    }
+
+    #triviaSubmitBtn {
+      padding: 10px;
+      background: var(--navy);
+      color: white;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    #triviaSubmittedMsg {
+      width: 100%;
+      max-width: 480px;
+      margin: 10px auto 0;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 900;
+      color: white;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -164,16 +222,28 @@
         <div class="manatee-fancam-title">MANATEE CAM</div>
       </div>
 
+      <!-- ⭐ TRIVIA QUESTION BAR -->
+      <div id="triviaQuestionBar"></div>
+
+      <!-- ⭐ CAMERA -->
       <div id="publishCameraPreview">
         <div id="publishCameraState">
           <div class="camera-shell" id="cameraShell">
             <video id="preview" autoplay playsinline muted></video>
-
             <div class="camera-overlay" id="cameraOverlay">
               <div class="camera-overlay-text">TAP TO ENABLE CAMERA</div>
             </div>
           </div>
         </div>
+
+        <!-- ⭐ TRIVIA ANSWER INPUT -->
+        <div id="triviaAnswerBox">
+          <input id="triviaAnswerInput" placeholder="Type your answer..." />
+          <button id="triviaSubmitBtn">SUBMIT</button>
+        </div>
+
+        <!-- After submitting -->
+        <div id="triviaSubmittedMsg">ANSWER SUBMITTED!</div>
 
         <p class="legal-text">
           By submitting your video, you agree that it may be used on the live broadcast.
@@ -187,21 +257,16 @@
 
 <script type="module">
   /* ----------------------------------------
-     CAMERA ENABLE (unchanged)
+     CAMERA ENABLE (same as before)
   ---------------------------------------- */
   const shell   = document.getElementById("cameraShell");
   const video   = document.getElementById("preview");
   const overlay = document.getElementById("cameraOverlay");
 
-  let stream = null;
-
   async function enableCamera() {
     try {
-      const temp = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false
-      });
-      temp.getTracks().forEach(t => t.stop());
+      const test = await navigator.mediaDevices.getUserMedia({ video: true });
+      test.getTracks().forEach(t => t.stop());
 
       const devices = await navigator.mediaDevices.enumerateDevices();
       const cams = devices.filter(d => d.kind === "videoinput");
@@ -211,41 +276,34 @@
         cams.find(c => /front/i.test(c.label)) ||
         cams[0];
 
-      stream = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           deviceId: { exact: preferred.deviceId },
           width: { ideal: 1280 },
           height: { ideal: 960 },
           facingMode: "user"
-        },
-        audio: false   // 🔥 no mic permission requested now
+        }
       });
 
       video.srcObject = stream;
       shell.classList.add("active");
-
-      // Start sending frames
       startStreamingFrames();
 
     } catch (err) {
-      console.error("Error:", err);
-      overlay.querySelector(".camera-overlay-text").textContent =
-        "UNABLE TO ACCESS CAMERA";
+      console.error(err);
+      overlay.querySelector(".camera-overlay-text").textContent = "CAMERA ERROR";
     }
   }
 
   shell.addEventListener("click", () => {
-    if (!shell.classList.contains("active")) {
-      enableCamera();
-    }
+    if (!shell.classList.contains("active")) enableCamera();
   });
 
-
   /* ----------------------------------------
-     FIREBASE LIVE STREAMING (8 FPS JPEG)
+     FIREBASE STREAMING
   ---------------------------------------- */
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
@@ -260,26 +318,23 @@
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
-  // 🔑 this device's unique key from j0in.html
-  const userKey = localStorage.getItem("fanCamUserKey") || null;
+  const userKey = localStorage.getItem("fanCamUserKey");
 
   let currentlyLiveUser = null;
 
-  // 👀 watch /live/activeUser (string key)
   onValue(ref(db, "live/activeUser"), snap => {
     currentlyLiveUser = snap.val() || null;
   });
 
-  let frameInterval = null;
+  let interval = null;
 
   function startStreamingFrames() {
-    if (frameInterval) return;
+    if (interval) return;
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    frameInterval = setInterval(() => {
-      // Only stream if THIS device is the currently live one
+    interval = setInterval(() => {
       if (!userKey || currentlyLiveUser !== userKey) return;
       if (!video || video.readyState < 2) return;
 
@@ -291,15 +346,74 @@
       ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
       ctx.restore();
 
-      const jpegData = canvas.toDataURL("image/jpeg", 0.65);
+      const jpeg = canvas.toDataURL("image/jpeg", 0.62);
 
-      set(ref(db, "live/frame"), jpegData);
+      set(ref(db, "live/frame"), jpeg);
       set(ref(db, "live/timestamp"), Date.now());
 
-    }, 125); // 8 FPS
+    }, 125);
   }
-</script>
 
+  /* ----------------------------------------
+     TRIVIA MODE LISTENERS
+  ---------------------------------------- */
+  const triviaQuestionBar = document.getElementById("triviaQuestionBar");
+  const triviaAnswerBox   = document.getElementById("triviaAnswerBox");
+  const triviaAnswerInput = document.getElementById("triviaAnswerInput");
+  const triviaSubmitBtn   = document.getElementById("triviaSubmitBtn");
+  const triviaSubmittedMsg = document.getElementById("triviaSubmittedMsg");
+
+  // Trivia mode toggle on/off
+  onValue(ref(db, "trivia/mode"), snap => {
+    const enabled = snap.val() === true;
+
+    if (!enabled) {
+      triviaQuestionBar.style.display = "none";
+      triviaAnswerBox.style.display = "none";
+      triviaSubmittedMsg.style.display = "none";
+    }
+  });
+
+  // Listen for question — BUT do NOT show the question text anymore
+  onValue(ref(db, "trivia/question"), snap => {
+    const data = snap.val() || {};
+    const questionVisible = data.show === true && data.text;
+
+    if (questionVisible) {
+      // DO NOT show question text at all anymore
+      triviaQuestionBar.style.display = "none";
+
+      // Reset UI so user can answer
+      triviaAnswerBox.style.display = "flex";
+      triviaSubmittedMsg.style.display = "none";
+
+    } else {
+      // RESET happened → hide EVERYTHING
+      triviaQuestionBar.style.display = "none";
+      triviaAnswerBox.style.display = "none";
+      triviaSubmittedMsg.style.display = "none";
+
+      // Clear input for next question
+      triviaAnswerInput.value = "";
+    }
+  });
+
+  // Submit answer
+  triviaSubmitBtn.addEventListener("click", () => {
+    const answer = triviaAnswerInput.value.trim();
+    if (!answer || !userKey) return;
+
+    const answerRef = ref(db, `trivia/answers/${userKey}`);
+    update(answerRef, {
+      answer,
+      timestamp: Date.now()
+    });
+
+    triviaAnswerBox.style.display = "none";
+    triviaSubmittedMsg.style.display = "block";
+  });
+
+</script>
 
 </body>
 </html>
