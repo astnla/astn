@@ -1250,12 +1250,91 @@ body:not(.dark-mode) h1 a {
             nextArrow.style.display = currentIndex === currentVideos.length - 1 ? "none" : "block";
         }
 
-        function openModal(i) {
-            currentIndex = i;
-            modalPlayer.src = currentVideos[i].url;
-            modal.style.display = "flex";
-            updateArrows();
-        }
+/* ------------------ iOS SAFE SCROLL LOCK ------------------ */
+
+let scrollPosition = 0;
+
+function lockScroll() {
+    scrollPosition = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollPosition}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+}
+
+function unlockScroll() {
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    document.body.style.overflow = "";
+    window.scrollTo(0, scrollPosition);
+}
+
+
+/* ------------------ OPEN MODAL ------------------ */
+
+function openModal(i) {
+    currentIndex = i;
+    modalPlayer.src = currentVideos[i].url;
+
+    modal.style.display = "flex";
+    setTimeout(() => modal.classList.add("show"), 10);
+
+    updateArrows();
+    lockScroll();
+}
+
+
+/* ------------------ CLOSE MODAL ------------------ */
+
+function closeModal() {
+    modal.classList.remove("show");
+    modal.classList.add("hide");
+
+    setTimeout(() => {
+        modal.style.display = "none";
+        modal.classList.remove("hide");
+
+        modalPlayer.src = "";  // stop video
+        unlockScroll();        // restore page position
+    }, 300);
+}
+
+
+/* ------------------ ARROWS ------------------ */
+
+prevArrow.addEventListener("click", () => {
+    if (currentIndex > 0) navigate(-1);
+});
+
+nextArrow.addEventListener("click", () => {
+    if (currentIndex < currentVideos.length - 1) navigate(1);
+});
+
+
+/* ------------------ CLOSE BUTTON ------------------ */
+closeBtn.addEventListener("click", closeModal);
+
+
+/* ------------------ CLICK OUTSIDE TO CLOSE ------------------ */
+modal.addEventListener("click", e => {
+    if (e.target === modal) closeModal();
+});
+
+
+/* ------------------ ESC KEY SUPPORT ------------------ */
+document.addEventListener("keydown", e => {
+    if (modal.style.display !== "flex") return;
+
+    if (e.key === "ArrowLeft" && currentIndex > 0) navigate(-1);
+    if (e.key === "ArrowRight" && currentIndex < currentVideos.length - 1) navigate(1);
+    if (e.key === "Escape") closeModal();
+});
+
 
         function navigate(dir) {
             currentIndex += dir;
@@ -1265,11 +1344,6 @@ body:not(.dark-mode) h1 a {
 
         prevArrow.addEventListener("click", () => navigate(-1));
         nextArrow.addEventListener("click", () => navigate(1));
-
-        closeBtn.addEventListener("click", () => {
-            modal.style.display = "none";
-            modalPlayer.src = "";
-        });
 
         modal.addEventListener("click", e => {
             if (e.target === modal) {
