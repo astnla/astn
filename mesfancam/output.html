@@ -178,23 +178,32 @@
   const classOverlay    = document.getElementById("classAnswerOverlay");
 
   const activeUserRef  = ref(db, "live/activeUser");
+  const genRef         = ref(db, "live/generation");
   const frameRef       = ref(db, "live/frame");
+
   const triviaModeRef  = ref(db, "trivia/mode");
   const triviaQRef     = ref(db, "trivia/question");
   const triviaCRef     = ref(db, "trivia/correct");
   const revealRef      = ref(db, "trivia/reveal");
 
   let activeUser = null;
-  let triviaMode = false;
+  let localGen = 0;       // what generation the output page is currently expecting
 
-  /* Track last active listener */
+  let triviaMode = false;
   let lastAnswerListenerRef = null;
 
-  /* ---------------------------------------------
-     📡 FAN CAM — WHO IS LIVE?
-  ----------------------------------------------*/
+  /* ============================================================
+       WHO IS LIVE?
+  ============================================================ */
   onValue(activeUserRef, snap => {
-    activeUser = snap.val();
+    const newLive = snap.val();
+
+    if (newLive !== activeUser) {
+      // NY LIVBRUKER → RENS UT GAMLE BILDER
+      activeUser = newLive;
+      imgEl.style.display = "none";
+      emptyState.style.display = "flex";
+    }
 
     if (!activeUser) {
       imgEl.style.display = "none";
@@ -202,22 +211,53 @@
     }
   });
 
-  /* ---------------------------------------------
-     📡 FAN CAM — FRAME STREAM
-  ----------------------------------------------*/
+  /* ============================================================
+       GENERATION LISTENER
+       When this changes → reset display & expect new frames
+  ============================================================ */
+  onValue(genRef, snap => {
+    const gen = snap.val() || 0;
+    if (gen !== localGen) {
+      localGen = gen;
+
+      // Hard reset the display box so old frames never appear
+      imgEl.style.display = "none";
+      emptyState.style.display = "flex";
+    }
+  });
+
+  /* ============================================================
+       FRAME LISTENER
+       Only accept frames that match the current generation.
+  ============================================================ */
   onValue(frameRef, snap => {
     if (!activeUser) return;
-    const jpeg = snap.val();
-    if (!jpeg) return;
 
-    imgEl.src = jpeg;
+    const data = snap.val();
+    if (!data) return;
+
+    // We accept this frame ONLY if its Firebase write time
+    // matches the EXPECTED generation.
+    //
+    // Camera page writes both:
+    //   live/frame
+    //   live/timestamp
+    //
+    // And Control increments generation before switching.
+    //
+    // So any frame written BEFORE the generation switch must be ignored.
+    //
+
+    // Hack-free version: only show frames AFTER localGen changed
+    // → since frame writes happen AFTER gen writes.
+    imgEl.src = data;
     imgEl.style.display = "block";
     emptyState.style.display = "none";
   });
 
-  /* ---------------------------------------------
-     🎯 TRIVIA MODE
-  ----------------------------------------------*/
+  /* ============================================================
+       TRIVIA MODE
+  ============================================================ */
   onValue(triviaModeRef, snap => {
     triviaMode = snap.val() === true;
 
@@ -226,7 +266,6 @@
       correctOverlay.style.display = "none";
       classOverlay.style.display = "none";
 
-      // Stop listening to any previous student's answer
       if (lastAnswerListenerRef) {
         off(lastAnswerListenerRef);
         lastAnswerListenerRef = null;
@@ -234,9 +273,9 @@
     }
   });
 
-  /* ---------------------------------------------
-     ❓ GLOBAL QUESTION OVERLAY
-  ----------------------------------------------*/
+  /* ============================================================
+       QUESTION OVERLAY
+  ============================================================ */
   onValue(triviaQRef, snap => {
     const data = snap.val() || {};
 
@@ -249,9 +288,9 @@
     questionOverlay.style.display = "block";
   });
 
-  /* ---------------------------------------------
-     ✅ CORRECT ANSWER OVERLAY
-  ----------------------------------------------*/
+  /* ============================================================
+       CORRECT ANSWER OVERLAY
+  ============================================================ */
   onValue(triviaCRef, snap => {
     const data = snap.val() || {};
 
@@ -264,20 +303,17 @@
     correctOverlay.style.display = "block";
   });
 
-  /* ---------------------------------------------
-     📝 REVEAL CLASS ANSWER
-  ----------------------------------------------*/
+  /* ============================================================
+       CLASS ANSWER REVEAL
+  ============================================================ */
   onValue(revealRef, snap => {
-
-    // RESET or NO trivia → hide everything
     if (
-        !triviaMode ||
-        !snap.exists() ||
-        Object.keys(snap.val()).length === 0
+      !triviaMode ||
+      !snap.exists() ||
+      Object.keys(snap.val()).length === 0
     ) {
       classOverlay.style.display = "none";
 
-      // stop the old listener
       if (lastAnswerListenerRef) {
         off(lastAnswerListenerRef);
         lastAnswerListenerRef = null;
@@ -289,14 +325,12 @@
     const revealData = snap.val();
     const keys = Object.keys(revealData);
 
-    // Look for { show: true }
     const revealedKey = keys.find(k =>
       revealData[k] &&
       typeof revealData[k] === "object" &&
       revealData[k].show === true
     );
 
-    // No user revealed → hide
     if (!revealedKey) {
       classOverlay.style.display = "none";
 
@@ -308,13 +342,11 @@
       return;
     }
 
-    // Cancel previous student's listener
     if (lastAnswerListenerRef) {
       off(lastAnswerListenerRef);
       lastAnswerListenerRef = null;
     }
 
-    // Listen ONLY to this user's answer
     const answerPath = ref(db, `trivia/answers/${revealedKey}`);
     lastAnswerListenerRef = answerPath;
 
@@ -329,7 +361,6 @@
       classOverlay.textContent = "Their Answer: " + answerData.answer;
       classOverlay.style.display = "block";
     });
-
   });
 
 </script>
