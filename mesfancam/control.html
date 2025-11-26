@@ -306,6 +306,8 @@
 
   const participantsRef = ref(db, "participants");
   const liveUserRef     = ref(db, "live/activeUser");
+  const genRef = ref(db, "live/generation");
+
 
   const triviaRef   = ref(db, "trivia");
   const answersRef  = ref(db, "trivia/answers");
@@ -363,6 +365,8 @@
 
       lastLive = nextUser;
       set(liveUserRef, nextUser);
+      set(genRef, Date.now());
+
 
     }, 3000); // 3 seconds
   }
@@ -526,6 +530,7 @@
 
       await set(participantsRef, null);
       await set(liveUserRef, null);
+      await set(genRef, 0);
 
       await update(triviaRef, {
         mode: false,
@@ -610,7 +615,11 @@
       liveBtn.className = "goLiveBtn";
       liveBtn.textContent = "GO LIVE";
       liveBtn.dataset.uid = key;
-      liveBtn.onclick = () => set(liveUserRef, key);
+      liveBtn.onclick = () => {
+        set(liveUserRef, key);
+        set(genRef, Date.now());
+      };
+
 
       card.appendChild(img);
       card.appendChild(nameDiv);
