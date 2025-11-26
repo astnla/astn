@@ -178,20 +178,13 @@
   const classOverlay    = document.getElementById("classAnswerOverlay");
 
   const activeUserRef  = ref(db, "live/activeUser");
-<<<<<<< HEAD
   const frameRef       = ref(db, "live/frame");
-=======
-  const genRef         = ref(db, "live/generation");
-  const frameRef       = ref(db, "live/frame");
-
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
   const triviaModeRef  = ref(db, "trivia/mode");
   const triviaQRef     = ref(db, "trivia/question");
   const triviaCRef     = ref(db, "trivia/correct");
   const revealRef      = ref(db, "trivia/reveal");
 
   let activeUser = null;
-<<<<<<< HEAD
   let triviaMode = false;
 
   /* Track last active listener */
@@ -202,25 +195,6 @@
   ----------------------------------------------*/
   onValue(activeUserRef, snap => {
     activeUser = snap.val();
-=======
-  let localGen = 0;       // what generation the output page is currently expecting
-
-  let triviaMode = false;
-  let lastAnswerListenerRef = null;
-
-  /* ============================================================
-       WHO IS LIVE?
-  ============================================================ */
-  onValue(activeUserRef, snap => {
-    const newLive = snap.val();
-
-    if (newLive !== activeUser) {
-      // NY LIVBRUKER → RENS UT GAMLE BILDER
-      activeUser = newLive;
-      imgEl.style.display = "none";
-      emptyState.style.display = "flex";
-    }
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
 
     if (!activeUser) {
       imgEl.style.display = "none";
@@ -228,7 +202,6 @@
     }
   });
 
-<<<<<<< HEAD
   /* ---------------------------------------------
      📡 FAN CAM — FRAME STREAM
   ----------------------------------------------*/
@@ -236,61 +209,15 @@
     if (!activeUser) return;
     const jpeg = snap.val();
     if (!jpeg) return;
-=======
-  /* ============================================================
-       GENERATION LISTENER
-       When this changes → reset display & expect new frames
-  ============================================================ */
-  onValue(genRef, snap => {
-    const gen = snap.val() || 0;
-    if (gen !== localGen) {
-      localGen = gen;
 
-      // Hard reset the display box so old frames never appear
-      imgEl.style.display = "none";
-      emptyState.style.display = "flex";
-    }
-  });
-
-  /* ============================================================
-       FRAME LISTENER
-       Only accept frames that match the current generation.
-  ============================================================ */
-  onValue(frameRef, snap => {
-    if (!activeUser) return;
-
-    const data = snap.val();
-    if (!data) return;
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
-
-    // We accept this frame ONLY if its Firebase write time
-    // matches the EXPECTED generation.
-    //
-    // Camera page writes both:
-    //   live/frame
-    //   live/timestamp
-    //
-    // And Control increments generation before switching.
-    //
-    // So any frame written BEFORE the generation switch must be ignored.
-    //
-
-    // Hack-free version: only show frames AFTER localGen changed
-    // → since frame writes happen AFTER gen writes.
-    imgEl.src = data;
+    imgEl.src = jpeg;
     imgEl.style.display = "block";
     emptyState.style.display = "none";
   });
 
-<<<<<<< HEAD
   /* ---------------------------------------------
      🎯 TRIVIA MODE
   ----------------------------------------------*/
-=======
-  /* ============================================================
-       TRIVIA MODE
-  ============================================================ */
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
   onValue(triviaModeRef, snap => {
     triviaMode = snap.val() === true;
 
@@ -299,10 +226,7 @@
       correctOverlay.style.display = "none";
       classOverlay.style.display = "none";
 
-<<<<<<< HEAD
       // Stop listening to any previous student's answer
-=======
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
       if (lastAnswerListenerRef) {
         off(lastAnswerListenerRef);
         lastAnswerListenerRef = null;
@@ -310,15 +234,9 @@
     }
   });
 
-<<<<<<< HEAD
   /* ---------------------------------------------
      ❓ GLOBAL QUESTION OVERLAY
   ----------------------------------------------*/
-=======
-  /* ============================================================
-       QUESTION OVERLAY
-  ============================================================ */
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
   onValue(triviaQRef, snap => {
     const data = snap.val() || {};
 
@@ -331,15 +249,9 @@
     questionOverlay.style.display = "block";
   });
 
-<<<<<<< HEAD
   /* ---------------------------------------------
      ✅ CORRECT ANSWER OVERLAY
   ----------------------------------------------*/
-=======
-  /* ============================================================
-       CORRECT ANSWER OVERLAY
-  ============================================================ */
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
   onValue(triviaCRef, snap => {
     const data = snap.val() || {};
 
@@ -352,7 +264,6 @@
     correctOverlay.style.display = "block";
   });
 
-<<<<<<< HEAD
   /* ---------------------------------------------
      📝 REVEAL CLASS ANSWER
   ----------------------------------------------*/
@@ -367,19 +278,6 @@
       classOverlay.style.display = "none";
 
       // stop the old listener
-=======
-  /* ============================================================
-       CLASS ANSWER REVEAL
-  ============================================================ */
-  onValue(revealRef, snap => {
-    if (
-      !triviaMode ||
-      !snap.exists() ||
-      Object.keys(snap.val()).length === 0
-    ) {
-      classOverlay.style.display = "none";
-
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
       if (lastAnswerListenerRef) {
         off(lastAnswerListenerRef);
         lastAnswerListenerRef = null;
@@ -391,20 +289,14 @@
     const revealData = snap.val();
     const keys = Object.keys(revealData);
 
-<<<<<<< HEAD
     // Look for { show: true }
-=======
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
     const revealedKey = keys.find(k =>
       revealData[k] &&
       typeof revealData[k] === "object" &&
       revealData[k].show === true
     );
 
-<<<<<<< HEAD
     // No user revealed → hide
-=======
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
     if (!revealedKey) {
       classOverlay.style.display = "none";
 
@@ -416,19 +308,13 @@
       return;
     }
 
-<<<<<<< HEAD
     // Cancel previous student's listener
-=======
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
     if (lastAnswerListenerRef) {
       off(lastAnswerListenerRef);
       lastAnswerListenerRef = null;
     }
 
-<<<<<<< HEAD
     // Listen ONLY to this user's answer
-=======
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
     const answerPath = ref(db, `trivia/answers/${revealedKey}`);
     lastAnswerListenerRef = answerPath;
 
@@ -443,10 +329,7 @@
       classOverlay.textContent = "Their Answer: " + answerData.answer;
       classOverlay.style.display = "block";
     });
-<<<<<<< HEAD
 
-=======
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
   });
 
 </script>

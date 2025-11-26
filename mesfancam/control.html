@@ -306,7 +306,6 @@
 
   const participantsRef = ref(db, "participants");
   const liveUserRef     = ref(db, "live/activeUser");
-<<<<<<< HEAD
 
   const triviaRef   = ref(db, "trivia");
   const answersRef  = ref(db, "trivia/answers");
@@ -320,23 +319,6 @@
   let correctAnswer = "";
   let currentLiveUser = null;
 
-=======
-  const genRef = ref(db, "live/generation");
-
-
-  const triviaRef   = ref(db, "trivia");
-  const answersRef  = ref(db, "trivia/answers");
-  const correctRef  = ref(db, "trivia/correct");
-  const revealRef   = ref(db, "trivia/reveal");
-  const modeRef     = ref(db, "trivia/mode");
-
-  let triviaOn = false;
-  let answers = {};
-  let questionActive = false;
-  let correctAnswer = "";
-  let currentLiveUser = null;
-
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
   /* ===============================
         AUTO LIVE SYSTEM
      =============================== */
@@ -381,11 +363,6 @@
 
       lastLive = nextUser;
       set(liveUserRef, nextUser);
-<<<<<<< HEAD
-=======
-      set(genRef, Date.now());
-
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
 
     }, 3000); // 3 seconds
   }
@@ -549,10 +526,6 @@
 
       await set(participantsRef, null);
       await set(liveUserRef, null);
-<<<<<<< HEAD
-=======
-      await set(genRef, 0);
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
 
       await update(triviaRef, {
         mode: false,
@@ -637,15 +610,7 @@
       liveBtn.className = "goLiveBtn";
       liveBtn.textContent = "GO LIVE";
       liveBtn.dataset.uid = key;
-<<<<<<< HEAD
       liveBtn.onclick = () => set(liveUserRef, key);
-=======
-      liveBtn.onclick = () => {
-        set(liveUserRef, key);
-        set(genRef, Date.now());
-      };
-
->>>>>>> 6ee9306449d4ec51e5381aa664dec4fb5eba29ca
 
       card.appendChild(img);
       card.appendChild(nameDiv);
