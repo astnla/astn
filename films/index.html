@@ -270,7 +270,7 @@ main {
   flex: 1 0 auto; /* Prevents it from shrinking */
   display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
+    gap: 7px;
     width: 100%;
     max-width: 100%;
     justify-items: stretch;
@@ -600,20 +600,20 @@ main {
     opacity: 0.6;
 }
 
-        /* ========== MOBILE STYLES ========== */
+/* ========== MOBILE STYLES ========== */
 
-        @media (max-width: 1200px) {
-            /* Desktop Arrow Positioning */
-            .modal-arrow {
-                position: absolute;
-                /* top: 727px; */
-                transform: translateY(-50%);
-                cursor: pointer;
-                z-index: 1000;
-                position: absolute;
-                top: calc(100% - 200px); /* positions arrows responsively near bottom */
-                transform: translateY(0);
-            }
+    @media (max-width: 1200px) {
+     /* Desktop Arrow Positioning */
+    .modal-arrow {
+        position: absolute;
+        /* top: 727px; */
+        transform: translateY(-50%);
+        cursor: pointer;
+        z-index: 1000;
+        position: absolute;
+        top: calc(100% - 200px); /* positions arrows responsively near bottom */
+        transform: translateY(0);
+    }
 
             .modal-arrow.prev {
                 left: 50px;
@@ -628,33 +628,44 @@ main {
             }
         }
 
-        @media (max-width: 1366px) {
-            /* Hide desktop header */
-            header {
+    @media (max-width: 1366px) {
+           /* Hide desktop header */
+        header {
                 display: none;
-            }
+         }
             
-            main {
+        main {
             margin-left: 0;           
             width: 100vw;             
             padding: 100px 20px 20px;  /* 100px top padding pushes content down, 20px on sides and bottom */
             transition: transform 0.3s ease-in-out;
         }
 
-
         /* Shift main content when mobile menu is open */
         main.shift {
             transform: translateX(75vw); /* Moves content over */
         }
 
-            /* Video grid stacks thumbnails vertically */
-            .video-grid {
+        /* Video grid stacks thumbnails vertically */
+        .video-grid {
             grid-template-columns: repeat(2, 1fr);
-            justify-items: center;
+            gap: 3px;
             width: 100%;
         }
 
-            
+        .video-item {
+            aspect-ratio: 16 / 9;
+            width: 100%;  /* ensures no floating */
+        }
+
+        .sort-container {
+            display: flex !important;
+            justify-content: center !important;
+            align-self: center !important;   /* THIS is what was missing */
+            width: 100%;                      /* ensures proper centering */
+            margin: 10px 0 !important;
+        }
+        
         /* Mobile header styling */
         .mobile-header {
             position: fixed;
@@ -671,12 +682,10 @@ main {
             transition: transform 0.3s ease-in-out, background-color 0.5s ease, color 0.5s ease;
         }
 
-
-            
-            /* Dark mode for mobile header */
-            .dark-mode .mobile-header {
-                background: black;
-            }
+        /* Dark mode for mobile header */
+        .dark-mode .mobile-header {
+            background: black;
+        }
             
         /* Remove fixed positioning from children */
         .mobile-logo {
@@ -716,88 +725,88 @@ main {
         transform: translateY(-4px) rotate(-45deg);
         }
     
-    /* Mobile slide-in menu */
-    .mobile-menu {
-        position: fixed;
-        top: 50px; /* Moves menu below the header */
-        left: -75vw; /* Hidden by default */
-        width: 75vw; /* Takes up 75% of the viewport width */
-        height: 100%;
-        background-color: rgba(255, 255, 255, 0.97); /* Light mode background */
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        justify-content: flex-start;
-        padding: 80px 20px;
-        transition: left 0.3s ease-in-out, background-color 0.5s ease, color 0.5s ease;
-        z-index: 1500;
-    }
-    
-    /* When menu is open */
-    .mobile-menu.open {
-        left: 0;
-    }
-    
-    /* Mobile menu link styling */
-    .mobile-menu a {
-        font-size: 14px; /* Increased font size */
-        text-decoration: none;
-        color: #000;
-        text-transform: uppercase;
-        font-weight: 400;
-        transition: opacity 0.3s;
-        margin-left: 25px;
-    }
-    
-    /* Dark mode mobile menu text */
-    .dark-mode .mobile-menu a {
-        color: white !important;
-    }
-    
-    /* Space between mobile nav items */
-    .mobile-menu nav ul li {
-        margin-bottom: 20px;
-    }
-    
-    /* Dark mode toggle in mobile menu */
-    .theme-toggle-mobile {
-        position: relative;
-        margin-top: auto;         /* Push toggle to bottom */
-        padding-bottom: 40px;      /* Spacing from bottom */
-        padding-left: 20px;        /* Aligns with text */
-        display: flex;
-        align-items: center;
-        gap: 10px;               /* Space between slider and text */
-        width: 100%;
-    }
-    
-    .theme-toggle-mobile .toggle-label {
-        display: none;           /* Hide toggle label if desired */
-    }
+        /* Mobile slide-in menu */
+        .mobile-menu {
+            position: fixed;
+            top: 50px; /* Moves menu below the header */
+            left: -75vw; /* Hidden by default */
+            width: 75vw; /* Takes up 75% of the viewport width */
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.97); /* Light mode background */
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 80px 20px;
+            transition: left 0.3s ease-in-out, background-color 0.5s ease, color 0.5s ease;
+            z-index: 1500;
+        }
+        
+        /* When menu is open */
+        .mobile-menu.open {
+            left: 0;
+        }
+        
+        /* Mobile menu link styling */
+        .mobile-menu a {
+            font-size: 14px; /* Increased font size */
+            text-decoration: none;
+            color: #000;
+            text-transform: uppercase;
+            font-weight: 400;
+            transition: opacity 0.3s;
+            margin-left: 25px;
+        }
+        
+        /* Dark mode mobile menu text */
+        .dark-mode .mobile-menu a {
+            color: white !important;
+        }
+        
+        /* Space between mobile nav items */
+        .mobile-menu nav ul li {
+            margin-bottom: 20px;
+        }
+        
+        /* Dark mode toggle in mobile menu */
+        .theme-toggle-mobile {
+            position: relative;
+            margin-top: auto;         /* Push toggle to bottom */
+            padding-bottom: 40px;      /* Spacing from bottom */
+            padding-left: 20px;        /* Aligns with text */
+            display: flex;
+            align-items: center;
+            gap: 10px;               /* Space between slider and text */
+            width: 100%;
+        }
+        
+        .theme-toggle-mobile .toggle-label {
+            display: none;           /* Hide toggle label if desired */
+        }
 
-    /* Desktop Arrow Positioning */
-    .modal-arrow {
-        position: absolute;
-        /* top: 727px; */
-        transform: translateY(-50%);
-        cursor: pointer;
-        z-index: 1000;
-        position: absolute;
-        transform: translateY(0);
-    }
+        /* Desktop Arrow Positioning */
+        .modal-arrow {
+            position: absolute;
+            /* top: 727px; */
+            transform: translateY(-50%);
+            cursor: pointer;
+            z-index: 1000;
+            position: absolute;
+            transform: translateY(0);
+        }
 
-    .modal-arrow.prev {
-        left: 50px;
-    }
+        .modal-arrow.prev {
+            left: 50px;
+        }
 
-    .modal-arrow.next {
-        right: 50px;
-    }
+        .modal-arrow.next {
+            right: 50px;
+        }
 
-    .modal-arrow:hover {
-        opacity: 0.6;
+        .modal-arrow:hover {
+            opacity: 0.6;
+        }
     }
-}
 
 
 /* 🔹 Move Dark Mode Toggle to Bottom with Proper Spacing */
@@ -930,35 +939,35 @@ body:not(.dark-mode) h1 a {
     </div>
     
 
-<!-- Desktop Header (Unchanged) -->
-<header>
-    <h1><a href="/" class="logo text">astn</a></h1>
-    <nav>
-        <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="/stills/">Stills</a></li>
-            <li><a href="/films/">Films</a></li>
-            <li><a href="/about/">About</a></li>
-            <li><a href="/contact/">Contact</a></li>
-        </ul>
-    </nav>
+    <!-- Desktop Header (Unchanged) -->
+    <header>
+        <h1><a href="/" class="logo text">astn</a></h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/stills/">Stills</a></li>
+                <li><a href="/films/">Films</a></li>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/contact/">Contact</a></li>
+            </ul>
+        </nav>
 
-    <div class="theme-toggle">
-        <span class="toggle-label">Dark Mode</span>
-        <label class="switch">
-            <input type="checkbox" id="themeToggle">
-            <span class="slider"></span>
-        </label>
-    </div>
+        <div class="theme-toggle">
+            <span class="toggle-label">Dark Mode</span>
+            <label class="switch">
+                <input type="checkbox" id="themeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
 
-    <div id="social">
-        <ul>
-            <li><a href="http://twitter.com/MrLaraMES" target="_blank">Twitter</a></li>
-            <li><a href="http://instagram.com/astnla" target="_blank">Instagram</a></li>
-        </ul>
-    </div>
-    <div class="post_text">© 2025</div>
-</header>
+        <div id="social">
+            <ul>
+                <li><a href="http://twitter.com/MrLaraMES" target="_blank">Twitter</a></li>
+                <li><a href="http://instagram.com/astnla" target="_blank">Instagram</a></li>
+            </ul>
+        </div>
+        <div class="post_text">© 2025</div>
+    </header>
 
 
     <main>
@@ -968,22 +977,20 @@ body:not(.dark-mode) h1 a {
           
         <div class="sort-container">
             <span class="filter-label active" data-filter="all">All</span>
-            <span class="filter-label" data-filter="top5">Top 5</span>
+            <span class="filter-label" data-filter="az">A–Z</span>
+            <span class="filter-label" data-filter="top5">ESSENTIALS</span>
             <span class="filter-label" data-year="2025">2025</span>
             <span class="filter-label" data-year="2024">2024</span>
             <span class="filter-label" data-year="2023">2023</span>
             <span class="filter-label" data-year="2022">2022</span>
         </div>
-        
-          
-          
 
         <div class="video-grid" id="videoGrid">
             <!-- Video thumbnails will be inserted here dynamically -->
         </div>
     </main>
 
-        <!-- Video Modal -->
+    <!-- Video Modal -->
     <div id="videoModal" class="modal">
         <div class="modal-content">
             <span class="close">BACK</span>
@@ -994,618 +1001,304 @@ body:not(.dark-mode) h1 a {
         </div>
     </div>
 
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const body = document.body;
+        const toggleDesktop = document.getElementById("themeToggle");
+        const toggleMobile = document.getElementById("themeToggleMobile");
 
-   <!-- <script>
+        function applyDark(isDark) {
+            body.classList.toggle("dark-mode", isDark);
 
-        
+            // Save preference
+            localStorage.setItem("theme", isDark ? "dark" : "light");
 
-document.addEventListener("DOMContentLoaded", function () {
-  // ... your other code ...
+            // Sync toggles
+            if (toggleDesktop) toggleDesktop.checked = isDark;
+            if (toggleMobile) toggleMobile.checked = isDark;
+        }
 
-  // Set up the sort toggle
-  const sortContainer = document.querySelector('.sort-container');
-  if (sortContainer) {
-    const filterLabel = sortContainer.querySelector('.filter-label');
-    // Toggle only when clicking on the "sort" label
-    filterLabel.addEventListener('click', function(e) {
-      sortContainer.classList.toggle('expanded');
-      e.stopPropagation(); // Prevent the event from bubbling up
+        // Load saved preference
+        const saved = localStorage.getItem("theme") === "dark";
+        applyDark(saved);
 
-      
-    });
-  }
-
-  
-
-  // ... rest of your code (video filtering, modal, etc.)
-});
-
-        /* ==================== THEME TOGGLE (DARK/LIGHT MODE) ==================== */
-        
-        document.addEventListener("DOMContentLoaded", function () {
-            const body = document.body;
-            const themeToggle = document.getElementById("themeToggle");
-            const themeToggleMobile = document.getElementById("themeToggleMobile");
-        
-            function applyDarkMode(isDark) {
-                if (isDark) {
-                    body.classList.add("dark-mode");
-                    localStorage.setItem("theme", "dark");
-                } else {
-                    body.classList.remove("dark-mode");
-                    localStorage.setItem("theme", "light");
-                }
-                
-                // Sync toggle switches
-                if (themeToggle) themeToggle.checked = isDark;
-                if (themeToggleMobile) themeToggleMobile.checked = isDark;
-            }
-        
-            function toggleTheme(event) {
-                applyDarkMode(event.target.checked);
-            }
-        
-            // Get stored theme preference
-            let storedTheme = localStorage.getItem("theme") || "light";
-            applyDarkMode(storedTheme === "dark");
-        
-            // Attach event listeners
-            if (themeToggle) themeToggle.addEventListener("change", toggleTheme);
-            if (themeToggleMobile) themeToggleMobile.addEventListener("change", toggleTheme);
-        });
-        
-        /* ==================== MOBILE HEADER HIDE/SHOW ON SCROLL ==================== */
-        document.addEventListener("DOMContentLoaded", function () {
-            let lastScrollTop = 0;
-            const mobileHeader = document.querySelector(".mobile-header");
-        
-            window.addEventListener("scroll", function () {
-                let currentScroll = window.scrollY;
-                if (currentScroll > lastScrollTop && currentScroll > 50) {
-                    mobileHeader.style.transform = "translateY(-100%)";
-                    mobileHeader.style.opacity = "0";
-                } else {
-                    mobileHeader.style.transform = "translateY(0)";
-                    mobileHeader.style.opacity = "1";
-                }
-                lastScrollTop = Math.max(0, currentScroll); // Prevent negative values
+        // Listen for changes
+        if (toggleDesktop) {
+            toggleDesktop.addEventListener("change", e => {
+                applyDark(e.target.checked);
             });
-        });
-        
-        /* ==================== MOBILE MENU (SLIDE-IN NAV) ==================== */
-        document.addEventListener("DOMContentLoaded", function () {
-            const hamburger = document.querySelector(".hamburger");
-            const mobileMenu = document.querySelector(".mobile-menu");
-            const mainContent = document.querySelector("main");
-            const overlay = document.createElement("div");
-        
-            overlay.classList.add("overlay");
-            document.body.appendChild(overlay);
-        
-            // Toggle menu & overlay on hamburger click
-            hamburger.addEventListener("click", function (event) {
-    event.stopPropagation();
-    mobileMenu.classList.toggle("open");
-    mainContent.classList.toggle("shift");
-    overlay.classList.toggle("active");
-    hamburger.classList.toggle("open");  // Toggle the class for animation
-});
+        }
+        if (toggleMobile) {
+            toggleMobile.addEventListener("change", e => {
+                applyDark(e.target.checked);
+            });
+        }
 
-document.addEventListener("click", function (event) {
-    if (!mobileMenu.contains(event.target) && !hamburger.contains(event.target)) {
+    const hamburger = document.querySelector(".hamburger");
+    const mobileMenu = document.querySelector(".mobile-menu");
+    const mainContent = document.querySelector("main");
+
+    // Create overlay if missing
+    let overlay = document.querySelector(".overlay");
+    if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.classList.add("overlay");
+        document.body.appendChild(overlay);
+    }
+
+    function closeMenu() {
         mobileMenu.classList.remove("open");
         mainContent.classList.remove("shift");
         overlay.classList.remove("active");
-        hamburger.classList.remove("open"); // Reset hamburger icon
+        hamburger.classList.remove("open");
     }
-});
 
-        
-            // Close menu when clicking outside
-            document.addEventListener("click", function (event) {
-                if (!mobileMenu.contains(event.target) && !hamburger.contains(event.target)) {
-                    mobileMenu.classList.remove("open");
-                    mainContent.classList.remove("shift");
-                    overlay.classList.remove("active");
-                }
-            });
-        
-            // Prevent menu from closing when clicking inside
-            mobileMenu.addEventListener("click", function (event) {
-                event.stopPropagation();
-            });
-        });
-        
-        /* ==================== VIDEO PORTFOLIO (FILTER & MODAL) ==================== */
-        document.addEventListener("DOMContentLoaded", function () {
-            /* 🔹 Variables */
-            const videoGrid = document.getElementById("videoGrid");
-            const sortOptions = document.querySelectorAll(".sort-option[data-year]");
-            const clearFilter = document.getElementById("clear-filter");
-            const videoModal = document.getElementById("videoModal");
-            const modalVideoPlayer = document.getElementById("modal-video-player");
-            const closeModal = document.querySelector(".close");
-            
-            sortOptions.forEach(option => {
-    option.addEventListener("click", function() {
-        const selectedYear = this.getAttribute("data-year");
-        renderVideos(selectedYear);
+    hamburger.addEventListener("click", (e) => {
+        e.stopPropagation();
+        mobileMenu.classList.toggle("open");
+        mainContent.classList.toggle("shift");
+        overlay.classList.toggle("active");
+        hamburger.classList.toggle("open");
+    });
+
+    // Clicking outside should close menu
+    document.addEventListener("click", (e) => {
+        if (
+            !mobileMenu.contains(e.target) &&
+            !hamburger.contains(e.target)
+        ) {
+            closeMenu();
+        }
+    });
+
+    // Prevent click inside menu from closing it
+    mobileMenu.addEventListener("click", (e) => {
+        e.stopPropagation();
     });
 });
 
-clearFilter.addEventListener("click", function() {
-    renderVideos("all");
-});
 
 
-            // Create navigation arrows dynamically
-            const prevArrow = document.createElement("span");
-            const nextArrow = document.createElement("span");
-        
-            /* 🔹 Video List */
-            const videos = [
+
+    document.addEventListener("DOMContentLoaded", () => {
+
+        /* --------------------- VIDEO DATA --------------------- */
+
+        const videos = [
+            { title: "Heritage Day '26", year: "2025", thumbnail: "images/thumb/heritage26.webp", url: "https://www.youtube.com/embed/VPXtw-GZWbE" },
+            { title: "Trunk or Treat '26", year: "2025", thumbnail: "images/thumb/trunk26.webp", url: "https://www.youtube.com/embed/IWL6uJBPT4s" },
+            { title: "Camila", year: "2025", thumbnail: "images/thumb/camila.webp", url: "https://www.youtube.com/embed/ze_ysiWAZHc" },
+            { title: "Heroes Walk", year: "2025", thumbnail: "images/thumb/heroes.webp", url: "https://www.youtube.com/embed/PBqokzEvDc0" },
+            { title: "Rating our First Day '26", year: "2025", thumbnail: "images/thumb/firstday26.webp", url: "https://www.youtube.com/embed/r12z4qQ7Ovk" },
+            { title: "Meet the Teacher '26", year: "2025", thumbnail: "images/thumb/meetteacher26.webp", url: "https://www.youtube.com/embed/pTXPXnkBCdg" },
+            { title: "Buddy Banners", year: "2025", thumbnail: "images/thumb/budbanners2.webp", url: "https://www.youtube.com/embed/N-gK2kr_Uvg" },
+            { title: "Leadership Day '25", year: "2025", thumbnail: "images/thumb/leadership25.webp", url: "https://www.youtube.com/embed/tGLHguf7Xzw" },
+            { title: "Family Picnic '25", year: "2025", thumbnail: "images/thumb/fampic25.webp", url: "https://www.youtube.com/embed/MQ6y430HpaI" },
             { title: "Field Day '25", year: "2025", thumbnail: "images/thumb/field25.webp", url: "https://www.youtube.com/embed/mT77HGdVI2Y" },
-                { title: "Friendship Bracelets", year: "2025", thumbnail: "images/thumb/bracelets.webp", url: "https://www.youtube.com/embed/vu6PTSjqj3k" },
-                { title: "Hurricanes Volleyball '25", year: "2024", thumbnail: "images/thumb/hurricanes.webp", url: "https://www.youtube.com/embed/yeZkcxd3Nr8" },
-                { title: "Trunk or Treat '25", year: "2024", thumbnail: "images/thumb/trunk25.webp", url: "https://www.youtube.com/embed/xhU3j1VueGc" },
-                { title: "Marley-Palooza", year: "2024", thumbnail: "images/thumb/palooza.webp", url: "https://www.youtube.com/embed/9cy2ae1UL4o" },
-                { title: "Hispanic Heritage Month '25", year: "2024", thumbnail: "images/thumb/hispanic.webp", url: "https://www.youtube.com/embed/ZGkC4-htSqM" },
-                { title: "Rating Our First Day", year: "2024", thumbnail: "images/thumb/firstday.webp", url: "https://www.youtube.com/embed/ye3UjIz9jxY" },
-                { title: "Make Us Proud", year: "2024", thumbnail: "images/thumb/proud.webp", url: "https://www.youtube.com/embed/IAfNfhlod5Y" },
-                { title: "Yearbooks", year: "2024", thumbnail: "images/thumb/yearbooks.webp", url: "https://www.youtube.com/embed/npAAAWfkdzs" },
-                { title: "Lighthouse Celebration", year: "2024", thumbnail: "images/thumb/lighthouse.webp", url: "https://www.youtube.com/embed/W2AyRdgaVG8" },
-                { title: "Thank You, Ms. Papworth.", year: "2024", thumbnail: "images/thumb/papworth.webp", url: "https://www.youtube.com/embed/rXlTcxSXH4k" },
-                { title: "Family Picnic '24", year: "2024", thumbnail: "images/thumb/fampic24.webp", url: "https://www.youtube.com/embed/YE1GqrZ4YsA" },
-                { title: "Field Day '24", year: "2024", thumbnail: "images/thumb/field24.webp", url: "https://www.youtube.com/embed/56LniJRap90" },
-                { title: "Walkathon", year: "2023", thumbnail: "images/thumb/walkathon.webp", url: "https://www.youtube.com/embed/5aTqg0Cn0bM" },
-                { title: "Trunk or Treat '24", year: "2023", thumbnail: "images/thumb/trunk24.webp", url: "https://www.youtube.com/embed/Rrjpt12fQYI" },
-                { title: "Aracely & Brett", year: "2023", thumbnail: "images/thumb/aracelybrett.webp", url: "https://www.youtube.com/embed/cKci-BdFoKo" },
-                { title: "Jackie's XV", year: "2023", thumbnail: "images/thumb/jackie.webp", url: "https://www.youtube.com/embed/CwHzBi4DV7M" },
-                { title: "This is MES", year: "2023", thumbnail: "images/thumb/mes.webp", url: "https://www.youtube.com/embed/sbD0hp_ZSJs0" },
-                { title: "Field Day '23", year: "2023", thumbnail: "images/thumb/field23.webp", url: "https://www.youtube.com/embed/VtP1P_Bu1tU" },
-                { title: "Family Picnic '23", year: "2023", thumbnail: "images/thumb/fampic23.webp", url: "https://www.youtube.com/embed/qMbTH5UfQWE" },
-                { title: "Student Leaders", year: "2022", thumbnail: "images/thumb/studlead.webp", url: "https://www.youtube.com/embed/hRF-zRr2mXA" },
-                { title: "Blue Zone Celebration", year: "2022", thumbnail: "images/thumb/bluecel.webp", url: "https://www.youtube.com/embed/_BKLjwGGky4" },
-                { title: "What is Blue Zone?", year: "2022", thumbnail: "images/thumb/whatblue.webp", url: "https://www.youtube.com/embed/kf4qxxGVlnc" },
-                { title: "Homerun Celebration", year: "2022", thumbnail: "images/thumb/homerun.webp", url: "https://www.youtube.com/embed/jFQUsTIB--I" },
-                { title: "Identity Crisis", year: "2022", thumbnail: "images/thumb/crisis.webp", url: "https://www.youtube.com/embed/MwMFABhzNxk" },
-                { title: "Manatee A-ssembly", year: "2022", thumbnail: "images/thumb/assembly.webp", url: "https://www.youtube.com/embed/A-6e53W0LJw" },
-                { title: "Crystal & Marco", year: "2022", thumbnail: "images/thumb/crystalmarc.webp", url: "https://www.youtube.com/embed/MSR59bpwfJQ" },
-                { title: "Field Day '22", year: "2022", thumbnail: "images/thumb/field22.webp", url: "https://www.youtube.com/embed/tLcdKXZBzVI" },
-            ];
-        
-            let currentVideos = [...videos]; // Default: All videos
-            let currentIndex = 0; // Track video in modal
-        
-            /* 🔹 Create Modal Arrows */
-            prevArrow.innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
-            nextArrow.innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
-        
-            prevArrow.classList.add("modal-arrow", "prev");
-            nextArrow.classList.add("modal-arrow", "next");
-        
-            const arrowContainer = document.createElement("div");
-            arrowContainer.classList.add("modal-arrows-container");
-            arrowContainer.appendChild(prevArrow);
-            arrowContainer.appendChild(nextArrow);
-            document.querySelector(".modal-content").appendChild(arrowContainer);
-        
-            /* ==================== VIDEO FILTERING ==================== */
+            { title: "Friendship Bracelets", year: "2025", thumbnail: "images/thumb/bracelets.webp", url: "https://www.youtube.com/embed/vu6PTSjqj3k" },
+            { title: "Hurricanes Volleyball '25", year: "2024", thumbnail: "images/thumb/hurricanes.webp", url: "https://www.youtube.com/embed/yeZkcxd3Nr8" },
+            { title: "Trunk or Treat '25", year: "2024", thumbnail: "images/thumb/trunk25.webp", url: "https://www.youtube.com/embed/xhU3j1VueGc" },
+            { title: "Marley-Palooza", year: "2024", thumbnail: "images/thumb/palooza.webp", url: "https://www.youtube.com/embed/9cy2ae1UL4o" },
+            { title: "Hispanic Heritage Month '25", year: "2024", thumbnail: "images/thumb/hispanic.webp", url: "https://www.youtube.com/embed/ZGkC4-htSqM" },
+            { title: "Rating Our First Day '25", year: "2024", thumbnail: "images/thumb/firstday.webp", url: "https://www.youtube.com/embed/ye3UjIz9jxY" },
+            { title: "Make Us Proud", year: "2024", thumbnail: "images/thumb/proud.webp", url: "https://www.youtube.com/embed/IAfNfhlod5Y" },
+            { title: "Yearbooks", year: "2024", thumbnail: "images/thumb/yearbooks.webp", url: "https://www.youtube.com/embed/npAAAWfkdzs" },
+            { title: "Lighthouse Celebration", year: "2024", thumbnail: "images/thumb/lighthouse.webp", url: "https://www.youtube.com/embed/W2AyRdgaVG8" },
+            { title: "Thank You, Ms. Papworth.", year: "2024", thumbnail: "images/thumb/papworth.webp", url: "https://www.youtube.com/embed/rXlTcxSXH4k" },
+            { title: "Family Picnic '24", year: "2024", thumbnail: "images/thumb/fampic24.webp", url: "https://www.youtube.com/embed/YE1GqrZ4YsA" },
+            { title: "Field Day '24", year: "2024", thumbnail: "images/thumb/field24.webp", url: "https://www.youtube.com/embed/56LniJRap90" },
+            { title: "Walkathon", year: "2023", thumbnail: "images/thumb/walkathon.webp", url: "https://www.youtube.com/embed/5aTqg0Cn0bM" },
+            { title: "Trunk or Treat '24", year: "2023", thumbnail: "images/thumb/trunk24.webp", url: "https://www.youtube.com/embed/Rrjpt12fQYI" },
+            { title: "Araceli & Brett", year: "2023", thumbnail: "images/thumb/aracelybrett.webp", url: "https://www.youtube.com/embed/cKci-BdFoKo" },
+            { title: "Jackie's XV", year: "2023", thumbnail: "images/thumb/jackie.webp", url: "https://www.youtube.com/embed/CwHzBi4DV7M" },
+            { title: "This is MES", year: "2023", thumbnail: "images/thumb/mes.webp", url: "https://www.youtube.com/embed/sbD0hp_ZSJs0" },
+            { title: "Field Day '23", year: "2023", thumbnail: "images/thumb/field23.webp", url: "https://www.youtube.com/embed/VtP1P_Bu1tU" },
+            { title: "Family Picnic '23", year: "2023", thumbnail: "images/thumb/fampic23.webp", url: "https://www.youtube.com/embed/qMbTH5UfQWE" },
+            { title: "Student Leaders", year: "2022", thumbnail: "images/thumb/studlead.webp", url: "https://www.youtube.com/embed/hRF-zRr2mXA" },
+            { title: "Blue Zone Celebration", year: "2022", thumbnail: "images/thumb/bluecel.webp", url: "https://www.youtube.com/embed/_BKLjwGGky4" },
+            { title: "What is Blue Zone?", year: "2022", thumbnail: "images/thumb/whatblue.webp", url: "https://www.youtube.com/embed/kf4qxxGVlnc" },
+            { title: "Homerun Celebration", year: "2022", thumbnail: "images/thumb/homerun.webp", url: "https://www.youtube.com/embed/jFQUsTIB--I" },
+            { title: "Identity Crisis", year: "2022", thumbnail: "images/thumb/crisis.webp", url: "https://www.youtube.com/embed/MwMFABhzNxk" },
+            { title: "Manatee A-ssembly", year: "2022", thumbnail: "images/thumb/assembly.webp", url: "https://www.youtube.com/embed/A-6e53W0LJw" },
+            { title: "Crystal & Marco", year: "2022", thumbnail: "images/thumb/crystalmarc.webp", url: "https://www.youtube.com/embed/MSR59bpwfJQ" },
+            { title: "Field Day '22", year: "2022", thumbnail: "images/thumb/field22.webp", url: "https://www.youtube.com/embed/tLcdKXZBzVI" }
+        ];
 
-            document.addEventListener("DOMContentLoaded", function () {
+        const top5 = [
+            "Field Day '25",
+            "Yearbooks",
+            "Field Day '24",
+            "Araceli & Brett",
+            "Trunk or Treat '25",
+            "Lighthouse Celebration",
+            "Family Picnic '24",
+            "Rating our First Day '26",
+        ].map(t => videos.find(v => v.title === t)).filter(Boolean);
 
 
-    // Set up the sort toggle
-    const sortContainer = document.querySelector('.sort-container');
-  const filterLabel = sortContainer.querySelector('.filter-label');
-  
-  // Toggle only when clicking on the "sort" label
-  filterLabel.addEventListener('click', function(e) {
-    sortContainer.classList.toggle('expanded');
-    // Stop the click from affecting other elements if needed
-    e.stopPropagation();
-  });
-});
+        /* --------------------- STATE --------------------- */
+
+        let state = {
+            filter: "all",   // all | top5 | az | year
+            year: null
+        };
+
+        let currentVideos = [];
+        let currentIndex = 0;
 
 
+        /* --------------------- APPLY FILTERS --------------------- */
 
+        function applyFilters() {
+            let list = [...videos];
 
-
-            function renderVideos(filterYear = "all") {
-                videoGrid.innerHTML = "";
-                currentVideos = filterYear === "all" ? [...videos] : videos.filter(video => video.year === filterYear);
-        
-                currentVideos.forEach((video, index) => {
-                    const videoItem = document.createElement("div");
-                    videoItem.classList.add("video-item");
-        
-                    const title = document.createElement("span");
-                    title.textContent = video.title;
-                    title.classList.add("video-title");
-        
-                    const img = document.createElement("img");
-                    img.src = video.thumbnail;
-                    img.alt = video.title;
-                    img.classList.add("video-thumbnail");
-                    img.addEventListener("click", () => openModal(index));
-        
-                    videoItem.appendChild(title);
-                    videoItem.appendChild(img);
-                    videoGrid.appendChild(videoItem);
-        
-                    // Ensure fade-in effect
-                    setTimeout(() => videoItem.classList.add("show"), 50);
-                });
-        
-                clearFilter.style.pointerEvents = filterYear !== "all" ? "auto" : "none";
-                clearFilter.classList.toggle("active", filterYear !== "all");
+            if (state.filter === "top5") {
+                list = [...top5];
             }
 
-            
-        
-            /* ==================== MODAL VIDEO FUNCTIONALITY ==================== */
-            function openModal(index) {
-                currentIndex = index;
-                modalVideoPlayer.src = currentVideos[currentIndex].url;
-                videoModal.style.display = "flex";
-
-                // Show/hide arrows based on video position
-                prevArrow.style.visibility = currentIndex === 0 ? "hidden" : "visible";
-                nextArrow.style.visibility = currentIndex === currentVideos.length - 1 ? "hidden" : "visible";
-
-                // 🔹 Add keyboard event listener when modal opens
-                document.addEventListener("keydown", handleKeyDown);
+            if (state.filter === "year") {
+                list = videos.filter(v => v.year === state.year);
             }
 
-            function navigateModal(direction) {
-                currentIndex += direction;
-
-                // Hide left arrow if at first video
-                prevArrow.style.visibility = currentIndex === 0 ? "hidden" : "visible";
-
-                // Hide right arrow if at last video
-                nextArrow.style.visibility = currentIndex === currentVideos.length - 1 ? "hidden" : "visible";
-
-                modalVideoPlayer.src = currentVideos[currentIndex].url;
+            if (state.filter === "az") {
+                list = [...videos].sort((a, b) => a.title.localeCompare(b.title));
             }
 
-            function closeModalFunction() {
-                videoModal.style.display = "none";
-                modalVideoPlayer.src = "";
-
-                // 🔹 Remove keyboard event listener when modal closes
-                document.removeEventListener("keydown", handleKeyDown);
+            // Default "all" = newest first
+            if (state.filter === "all") {
+                list.sort((a, b) => b.year.localeCompare(a.year));
             }
 
-            /* ==================== HANDLE KEYBOARD NAVIGATION ==================== */
-            function handleKeyDown(event) {
-                if (event.key === "ArrowLeft") {
-                    if (currentIndex > 0) navigateModal(-1); // Left arrow moves to previous video
-                } else if (event.key === "ArrowRight") {
-                    if (currentIndex < currentVideos.length - 1) navigateModal(1); // Right arrow moves to next video
-                } else if (event.key === "Escape") {
-                    closeModalFunction(); // ESC key closes the modal
+            return list;
+        }
+
+
+        /* --------------------- RENDER GRID --------------------- */
+
+        const videoGrid = document.getElementById("videoGrid");
+
+        function renderGrid() {
+            videoGrid.innerHTML = "";
+            currentVideos = applyFilters();
+
+            currentVideos.forEach((v, i) => {
+                const div = document.createElement("div");
+                div.className = "video-item";
+
+                div.innerHTML = `
+                    <span>${v.title}</span>
+                    <img src="${v.thumbnail}" alt="${v.title}">
+                `;
+
+                div.querySelector("img").addEventListener("click", () => openModal(i));
+                videoGrid.appendChild(div);
+
+                setTimeout(() => div.classList.add("show"), 30);
+            });
+        }
+
+
+        /* --------------------- TABS --------------------- */
+
+        const tabs = document.querySelectorAll(".sort-container .filter-label");
+
+        function setActiveTab(tab) {
+            tabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener("click", () => {
+                const filter = tab.dataset.filter;
+                const year = tab.dataset.year;
+
+                if (filter === "all") {
+                    state.filter = "all";
+                    state.year = null;
+                } else if (filter === "top5") {
+                    state.filter = "top5";
+                } else if (filter === "az") {
+                    state.filter = "az";
+                } else if (year) {
+                    state.filter = "year";
+                    state.year = year;
                 }
-            }
 
-            /* 🔹 Event Listeners */
-            prevArrow.addEventListener("click", () => navigateModal(-1));
-            nextArrow.addEventListener("click", () => navigateModal(1));
-            closeModal.addEventListener("click", closeModalFunction);
-
-            window.addEventListener("click", function (event) {
-                if (event.target === videoModal) closeModalFunction();
+                setActiveTab(tab);
+                renderGrid();
             });
-
-        
-            renderVideos(); // Load all videos initially
-        });
-        </script>
-
-    -->
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            /* ==================== THEME TOGGLE (DARK/LIGHT MODE) ==================== */
-            const body = document.body;
-            const themeToggle = document.getElementById("themeToggle");
-            const themeToggleMobile = document.getElementById("themeToggleMobile");
-        
-            function applyDarkMode(isDark) {
-                body.classList.toggle("dark-mode", isDark);
-                localStorage.setItem("theme", isDark ? "dark" : "light");
-                if (themeToggle) themeToggle.checked = isDark;
-                if (themeToggleMobile) themeToggleMobile.checked = isDark;
-            }
-        
-            let storedTheme = localStorage.getItem("theme") || "light";
-            applyDarkMode(storedTheme === "dark");
-        
-            if (themeToggle) themeToggle.addEventListener("change", (e) => applyDarkMode(e.target.checked));
-            if (themeToggleMobile) themeToggleMobile.addEventListener("change", (e) => applyDarkMode(e.target.checked));
-        
-            /* ==================== MOBILE MENU (HAMBURGER) ==================== */
-            const hamburger = document.querySelector(".hamburger");
-            const mobileMenu = document.querySelector(".mobile-menu");
-            const mainContent = document.querySelector("main");
-        
-            hamburger.addEventListener("click", function (event) {
-                event.stopPropagation();
-                mobileMenu.classList.toggle("open");
-                mainContent.classList.toggle("shift");
-                hamburger.classList.toggle("open");
-            });
-        
-            document.addEventListener("click", function (event) {
-                if (!mobileMenu.contains(event.target) && !hamburger.contains(event.target)) {
-                    mobileMenu.classList.remove("open");
-                    mainContent.classList.remove("shift");
-                    hamburger.classList.remove("open");
-                }
-            });
-        
-            /* ==================== VIDEO DATA & RENDERING ==================== */
-            const videoGrid = document.getElementById("videoGrid");
-
-            /* 🔹 Get reference to all tabs */
-            const tabAll = document.querySelector(".sort-container .filter-label:nth-child(1)");
-            const tabTop5 = document.querySelector(".sort-container .filter-label:nth-child(2)");
-            const tab2025 = document.querySelector(".sort-container .filter-label[data-year='2025']");
-            const tab2024 = document.querySelector(".sort-container .filter-label[data-year='2024']");
-            const tab2023 = document.querySelector(".sort-container .filter-label[data-year='2023']");
-            const tab2022 = document.querySelector(".sort-container .filter-label[data-year='2022']");
-
-            // 🔹 Video Data
-            const videos = [
-                { title: "Heritage Day '26", year: "2025", thumbnail: "images/thumb/heritage26.webp", url: "https://www.youtube.com/embed/VPXtw-GZWbE" },
-                { title: "Trunk or Treat '26", year: "2025", thumbnail: "images/thumb/trunk26.webp", url: "https://www.youtube.com/embed/IWL6uJBPT4s" },
-                { title: "Camila", year: "2025", thumbnail: "images/thumb/camila.webp", url: "https://www.youtube.com/embed/ze_ysiWAZHc" },
-                { title: "Heroes Walk", year: "2025", thumbnail: "images/thumb/heroes.webp", url: "https://www.youtube.com/embed/PBqokzEvDc0" },
-                { title: "Rating our First Day '26", year: "2025", thumbnail: "images/thumb/firstday26.webp", url: "https://www.youtube.com/embed/r12z4qQ7Ovk" },
-                { title: "Meet the Teacer '26", year: "2025", thumbnail: "images/thumb/meetteacher26.webp", url: "https://www.youtube.com/embed/pTXPXnkBCdg" },
-                { title: "Buddy Banners", year: "2025", thumbnail: "images/thumb/budbanners2.webp", url: "https://www.youtube.com/embed/N-gK2kr_Uvg" },
-                { title: "Leadership Day '25", year: "2025", thumbnail: "images/thumb/leadership25.webp", url: "https://www.youtube.com/embed/tGLHguf7Xzw" },
-                { title: "Family Picnic '25", year: "2025", thumbnail: "images/thumb/fampic25.webp", url: "https://www.youtube.com/embed/MQ6y430HpaI" },
-                { title: "Field Day '25", year: "2025", thumbnail: "images/thumb/field25.webp", url: "https://www.youtube.com/embed/mT77HGdVI2Y" },
-                { title: "Friendship Bracelets", year: "2025", thumbnail: "images/thumb/bracelets.webp", url: "https://www.youtube.com/embed/vu6PTSjqj3k" },
-                { title: "Hurricanes Volleyball '25", year: "2024", thumbnail: "images/thumb/hurricanes.webp", url: "https://www.youtube.com/embed/yeZkcxd3Nr8" },
-                { title: "Trunk or Treat '25", year: "2024", thumbnail: "images/thumb/trunk25.webp", url: "https://www.youtube.com/embed/xhU3j1VueGc" },
-                { title: "Marley-Palooza", year: "2024", thumbnail: "images/thumb/palooza.webp", url: "https://www.youtube.com/embed/9cy2ae1UL4o" },
-                { title: "Hispanic Heritage Month '25", year: "2024", thumbnail: "images/thumb/hispanic.webp", url: "https://www.youtube.com/embed/ZGkC4-htSqM" },
-                { title: "Rating Our First Day '25", year: "2024", thumbnail: "images/thumb/firstday.webp", url: "https://www.youtube.com/embed/ye3UjIz9jxY" },
-                { title: "Make Us Proud", year: "2024", thumbnail: "images/thumb/proud.webp", url: "https://www.youtube.com/embed/IAfNfhlod5Y" },
-                { title: "Yearbooks", year: "2024", thumbnail: "images/thumb/yearbooks.webp", url: "https://www.youtube.com/embed/npAAAWfkdzs" },
-                { title: "Lighthouse Celebration", year: "2024", thumbnail: "images/thumb/lighthouse.webp", url: "https://www.youtube.com/embed/W2AyRdgaVG8" },
-                { title: "Thank You, Ms. Papworth.", year: "2024", thumbnail: "images/thumb/papworth.webp", url: "https://www.youtube.com/embed/rXlTcxSXH4k" },
-                { title: "Family Picnic '24", year: "2024", thumbnail: "images/thumb/fampic24.webp", url: "https://www.youtube.com/embed/YE1GqrZ4YsA" },
-                { title: "Field Day '24", year: "2024", thumbnail: "images/thumb/field24.webp", url: "https://www.youtube.com/embed/56LniJRap90" },
-                { title: "Walkathon", year: "2023", thumbnail: "images/thumb/walkathon.webp", url: "https://www.youtube.com/embed/5aTqg0Cn0bM" },
-                { title: "Trunk or Treat '24", year: "2023", thumbnail: "images/thumb/trunk24.webp", url: "https://www.youtube.com/embed/Rrjpt12fQYI" },
-                { title: "Araceli & Brett", year: "2023", thumbnail: "images/thumb/aracelybrett.webp", url: "https://www.youtube.com/embed/cKci-BdFoKo" },
-                { title: "Jackie's XV", year: "2023", thumbnail: "images/thumb/jackie.webp", url: "https://www.youtube.com/embed/CwHzBi4DV7M" },
-                { title: "This is MES", year: "2023", thumbnail: "images/thumb/mes.webp", url: "https://www.youtube.com/embed/sbD0hp_ZSJs0" },
-                { title: "Field Day '23", year: "2023", thumbnail: "images/thumb/field23.webp", url: "https://www.youtube.com/embed/VtP1P_Bu1tU" },
-                { title: "Family Picnic '23", year: "2023", thumbnail: "images/thumb/fampic23.webp", url: "https://www.youtube.com/embed/qMbTH5UfQWE" },
-                { title: "Student Leaders", year: "2022", thumbnail: "images/thumb/studlead.webp", url: "https://www.youtube.com/embed/hRF-zRr2mXA" },
-                { title: "Blue Zone Celebration", year: "2022", thumbnail: "images/thumb/bluecel.webp", url: "https://www.youtube.com/embed/_BKLjwGGky4" },
-                { title: "What is Blue Zone?", year: "2022", thumbnail: "images/thumb/whatblue.webp", url: "https://www.youtube.com/embed/kf4qxxGVlnc" },
-                { title: "Homerun Celebration", year: "2022", thumbnail: "images/thumb/homerun.webp", url: "https://www.youtube.com/embed/jFQUsTIB--I" },
-                { title: "Identity Crisis", year: "2022", thumbnail: "images/thumb/crisis.webp", url: "https://www.youtube.com/embed/MwMFABhzNxk" },
-                { title: "Manatee A-ssembly", year: "2022", thumbnail: "images/thumb/assembly.webp", url: "https://www.youtube.com/embed/A-6e53W0LJw" },
-                { title: "Crystal & Marco", year: "2022", thumbnail: "images/thumb/crystalmarc.webp", url: "https://www.youtube.com/embed/MSR59bpwfJQ" },
-                { title: "Field Day '22", year: "2022", thumbnail: "images/thumb/field22.webp", url: "https://www.youtube.com/embed/tLcdKXZBzVI" },
-            
-            ];
-        
-            /* 🔹 Custom Top 5 Videos */
-            const top5Videos = [
-                videos.find(video => video.title === "Field Day '25"),
-                videos.find(video => video.title === "Yearbooks"),
-                videos.find(video => video.title === "Field Day '24"),
-                videos.find(video => video.title === "Araceli & Brett"),
-                videos.find(video => video.title === "Family Picnic '24")
-            ].filter(Boolean); // Ensures no undefined values
-
-            let currentVideos = [...videos];
-
-            /* 🔹 Function to Render Videos */
-            function renderVideos(filterYear = "all") {
-                videoGrid.innerHTML = "";
-                currentVideos = filterYear === "all" ? [...videos] : videos.filter(video => video.year === filterYear);
-
-                currentVideos.forEach((video, index) => {
-                    const videoItem = document.createElement("div");
-                    videoItem.classList.add("video-item");
-
-                    const title = document.createElement("span");
-                    title.textContent = video.title;
-                    title.classList.add("video-title");
-
-                    const img = document.createElement("img");
-                    img.src = video.thumbnail;
-                    img.alt = video.title;
-                    img.classList.add("video-thumbnail");
-                    img.addEventListener("click", () => openModal(index));
-
-                    videoItem.appendChild(title);
-                    videoItem.appendChild(img);
-                    videoGrid.appendChild(videoItem);
-                    setTimeout(() => videoItem.classList.add("show"), 50);
-                });
-            }
-
-            /* 🔹 Function to Render Top 5 */
-            function renderTop5() {
-                videoGrid.innerHTML = "";
-                currentVideos = [...top5Videos];
-
-                currentVideos.forEach((video, index) => {
-                    const videoItem = document.createElement("div");
-                    videoItem.classList.add("video-item");
-
-                    const title = document.createElement("span");
-                    title.textContent = video.title;
-                    title.classList.add("video-title");
-
-                    const img = document.createElement("img");
-                    img.src = video.thumbnail;
-                    img.alt = video.title;
-                    img.classList.add("video-thumbnail");
-                    img.addEventListener("click", () => openModal(index));
-
-                    videoItem.appendChild(title);
-                    videoItem.appendChild(img);
-                    videoGrid.appendChild(videoItem);
-                    setTimeout(() => videoItem.classList.add("show"), 50);
-                });
-            }
-
-            /* 🔹 Function to Handle Tab Clicks */
-            function clearTabActive() {
-                document.querySelectorAll(".sort-container .filter-label").forEach(label => {
-                    label.classList.remove("active");
-                });
-            }
-
-            function showAllVideos() {
-                clearTabActive();
-                tabAll.classList.add("active");
-                renderVideos("all");
-            }
-
-            function showTop5Videos() {
-                clearTabActive();
-                tabTop5.classList.add("active");
-                renderTop5();
-            }
-
-            function showVideosByYear(year) {
-                clearTabActive();
-                document.querySelector(`.sort-container .filter-label[data-year="${year}"]`).classList.add("active");
-                renderVideos(year);
-            }
-
-            /* 🔹 Add Event Listeners */
-            tabAll.addEventListener("click", showAllVideos);
-            tabTop5.addEventListener("click", showTop5Videos);
-            tab2025.addEventListener("click", () => showVideosByYear("2025"));
-            tab2024.addEventListener("click", () => showVideosByYear("2024"));
-            tab2023.addEventListener("click", () => showVideosByYear("2023"));
-            tab2022.addEventListener("click", () => showVideosByYear("2022"));
-
-            /* 🔹 Initial Load */
-            showAllVideos();
-        
-            /* ==================== VIDEO MODAL FUNCTIONALITY ==================== */
-            const videoModal = document.getElementById("videoModal");
-            const modalContent = document.querySelector(".modal-content");
-            const modalVideoPlayer = document.getElementById("modal-video-player");
-            const closeModal = document.querySelector(".close");
-        
-            let currentIndex = 0;
-        
-            /* ✅ Fix Navigation Arrows */
-            const prevArrow = document.createElement("span");
-            const nextArrow = document.createElement("span");
-        
-            prevArrow.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
-            nextArrow.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
-        
-            prevArrow.classList.add("modal-arrow", "prev");
-            nextArrow.classList.add("modal-arrow", "next");
-        
-            /*
-            prevArrow.style.position = "absolute";
-            prevArrow.style.left = "20px";
-            prevArrow.style.top = "50%";
-            prevArrow.style.transform = "translateY(-50%)";
-            prevArrow.style.cursor = "pointer";
-            prevArrow.style.zIndex = "1000";
-        
-            nextArrow.style.position = "absolute";
-            nextArrow.style.right = "20px";
-            nextArrow.style.top = "50%";
-            nextArrow.style.transform = "translateY(-50%)";
-            nextArrow.style.cursor = "pointer";
-            nextArrow.style.zIndex = "1000"; */
-        
-            if (!modalContent.contains(prevArrow)) {
-                modalContent.appendChild(prevArrow);
-                modalContent.appendChild(nextArrow);
-            }
-        
-            prevArrow.addEventListener("click", () => navigateModal(-1));
-            nextArrow.addEventListener("click", () => navigateModal(1));
-        
-            function openModal(index) {
-                currentIndex = index;
-                modalVideoPlayer.src = currentVideos[currentIndex].url;
-                videoModal.style.display = "flex";
-                updateArrows();
-                document.addEventListener("keydown", handleKeyDown);
-            }
-        
-            function updateArrows() {
-                prevArrow.style.display = currentIndex === 0 ? "none" : "block";
-                nextArrow.style.display = currentIndex === currentVideos.length - 1 ? "none" : "block";
-            }
-        
-            function navigateModal(direction) {
-                currentIndex += direction;
-                modalVideoPlayer.src = currentVideos[currentIndex].url;
-                updateArrows();
-            }
-        
-            function closeModalFunction() {
-                videoModal.style.display = "none";
-                modalVideoPlayer.src = "";
-                document.removeEventListener("keydown", handleKeyDown);
-            }
-        
-            closeModal.addEventListener("click", closeModalFunction);
-            videoModal.addEventListener("click", function (event) {
-                if (event.target === videoModal) closeModalFunction();
-            });
-
-            /* ==================== MODAL KEYBOARD NAVIGATION ==================== */
-            function handleModalKeydown(event) {
-                if (videoModal.style.display !== "flex") return;
-                switch (event.key) {
-                    case "ArrowLeft":
-                        if (currentIndex > 0) navigateModal(-1);
-                        break;
-                    case "ArrowRight":
-                        if (currentIndex < currentVideos.length - 1) navigateModal(1);
-                        break;
-                    case "Escape":
-                        closeModalFunction();
-                        break;
-                }
-            }
-
-            document.addEventListener("keydown", handleModalKeydown);
-
-            /* ==================== INITIAL VIDEO LOAD (KEEP THIS LAST) ==================== */
-            showAllVideos(); // ensures everything above is already set
         });
 
-        
+
+        /* --------------------- MODAL --------------------- */
+
+        const modal = document.getElementById("videoModal");
+        const modalPlayer = document.getElementById("modal-video-player");
+        const closeBtn = document.querySelector(".close");
+
+        const prevArrow = document.createElement("span");
+        const nextArrow = document.createElement("span");
+
+        prevArrow.className = "modal-arrow prev";
+        nextArrow.className = "modal-arrow next";
+
+        prevArrow.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>`;
+        nextArrow.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>`;
+
+        document.querySelector(".modal-content").appendChild(prevArrow);
+        document.querySelector(".modal-content").appendChild(nextArrow);
+
+        function updateArrows() {
+            prevArrow.style.display = currentIndex === 0 ? "none" : "block";
+            nextArrow.style.display = currentIndex === currentVideos.length - 1 ? "none" : "block";
+        }
+
+        function openModal(i) {
+            currentIndex = i;
+            modalPlayer.src = currentVideos[i].url;
+            modal.style.display = "flex";
+            updateArrows();
+        }
+
+        function navigate(dir) {
+            currentIndex += dir;
+            modalPlayer.src = currentVideos[currentIndex].url;
+            updateArrows();
+        }
+
+        prevArrow.addEventListener("click", () => navigate(-1));
+        nextArrow.addEventListener("click", () => navigate(1));
+
+        closeBtn.addEventListener("click", () => {
+            modal.style.display = "none";
+            modalPlayer.src = "";
+        });
+
+        modal.addEventListener("click", e => {
+            if (e.target === modal) {
+                modal.style.display = "none";
+                modalPlayer.src = "";
+            }
+        });
+
+        document.addEventListener("keydown", e => {
+            if (modal.style.display !== "flex") return;
+
+            if (e.key === "ArrowLeft" && currentIndex > 0) navigate(-1);
+            if (e.key === "ArrowRight" && currentIndex < currentVideos.length - 1) navigate(1);
+            if (e.key === "Escape") {
+                modal.style.display = "none";
+                modalPlayer.src = "";
+            }
+        });
+
+
+        /* --------------------- INITIAL LOAD --------------------- */
+
+        renderGrid(); // load All by default (newest first)
+
+    });
     </script>
-        
-        
-        
-        
-    
-    
-        
-    
-    
-        
-        
+
 </body>
 </html>
-
-
-
-
-
