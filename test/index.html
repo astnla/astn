@@ -223,7 +223,7 @@
         }
 
         /* MOBILE: Remove full-height slide 1 */
-        @media (max-width: 768px) {
+        @media (max-width: 1266px) {
 
             /* Slide 1 becomes auto-height instead of full screen */
             #slide-1 {
@@ -747,7 +747,7 @@
         function activateSlide2() {
             const slide2 = document.getElementById("slide-2");
 
-            if (window.innerWidth > 768) return; // desktop untouched
+            if (window.innerWidth > 1266) return; // desktop untouched
 
             const rect = slide2.getBoundingClientRect();
 
