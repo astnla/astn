@@ -133,7 +133,6 @@
             height: 45vw;
             aspect-ratio: 16/9;
             z-index: 50;
-            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8);
             border-radius: 0.5rem;
         }
 
@@ -153,7 +152,6 @@
                 height: auto;
                 aspect-ratio: 16/9;
                 z-index: 50;
-                box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8);
                 border-radius: 0.5rem;
                 /* Keep rounded corners if desired, or set to 0 */
             }
@@ -246,12 +244,18 @@
                 content: "";
                 position: absolute;
                 inset: 0;
-                background: rgba(0,0,0,0.6);
+                background: linear-gradient(
+                    to bottom,
+                    rgba(0,0,0,0) 0px,
+                    rgba(0,0,0,0.6) 48px,
+                    rgba(0,0,0,0.6) 100%
+                );
                 backdrop-filter: blur(4px);
                 transition: opacity 0.3s ease;
-                z-index: 20;
+                z-index: 50;
                 pointer-events: none;
             }
+
 
             /* Disable interaction on slide 2 until active */
             #slide-2.disabled {
@@ -316,9 +320,7 @@
             data-index="0">
 
             <!-- Background Elements -->
-            <div
-                class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-800/20 via-neutral-950 to-neutral-950 hide-on-expand">
-            </div>
+
 
             <!-- Central Container (Clickable) -->
             <div id="stage-container" onclick="expandPlayer()"
