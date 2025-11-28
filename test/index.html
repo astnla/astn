@@ -96,8 +96,8 @@
 
                 /* Expanded State: 16:9 Wide Cinematic */
         #stage-container.expanded {
-            width: 70vw;
-            height: 40vw;       
+            width: auto;
+            height: 45vw;       
             aspect-ratio: 16/9;
             z-index: 50;
             box-shadow: 0 50px 100px -20px rgba(0,0,0,0.8);
@@ -123,13 +123,13 @@
         }
         }
 
-        /* Hide text when expanded 
+        /* Hide text when expanded */
         .video-mode .hide-on-expand {
             opacity: 0;
             transform: scale(0.9);
             pointer-events: none;
             transition: all 0.5s ease;
-        }*/
+        }
 
         /* Show close button when expanded */
         #close-video-btn {
@@ -244,7 +244,7 @@
                 <!-- YouTube iframe -->
                 <iframe 
                     id="main-video"
-                    class="w-full h-full object-cover opacity-0 transition-opacity duration-500 z-20 absolute inset-0"
+                    class="w-full h-full object-cover opacity-0 transition-opacity duration-500 z-30 absolute inset-0"
                     src=""
                     frameborder="0"
                     allow="autoplay; encrypted-media; picture-in-picture"
@@ -269,7 +269,7 @@
                     <div class="pointer-events-none">
                         <h1 class="text-4xl md:text-5xl font-medium tracking-tighter text-white mb-2">Field Day '25</h1>
                         <p class="text-sm text-neutral-400 max-w-xs mb-6 font-light leading-relaxed">
-                            Austin's suggested video
+                            Manatee Elementary's day out in the sun!
                         </p>
                         
                         <!-- Visual button only, click is handled by container -->
@@ -282,21 +282,7 @@
                     </div>
                 </div>
 
-                <!-- Player Controls (Visible only when expanded) -->
-                <div class="absolute bottom-0 left-0 right-0 p-8 flex justify-between items-end opacity-0 transition-opacity duration-500 z-20 pointer-events-none" id="player-controls">
-                    <div class="pointer-events-auto">
-                        <h3 class="text-2xl font-medium text-white mb-1 tracking-tight" id="player-title">Field Day '25</h3>
-                        <p class="text-xs text-neutral-400 font-mono uppercase tracking-widest">Playing Now</p>
-                    </div>
-                    <div class="flex gap-4 pointer-events-auto">
-                        <button onclick="toggleFullscreen(event)" class="w-10 h-10 rounded-full bg-black/50 backdrop-blur hover:bg-white text-white hover:text-black flex items-center justify-center transition-colors border border-white/10">
-                            <i data-lucide="maximize" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-                <div class="absolute bottom-12 mt-24 flex justify-center gap-8 text-neutral-600 animate-on-scroll delay-300">
+                <div class=" mt-24 flex justify-center gap-8 text-neutral-600 animate-on-scroll delay-300">
                     <i data-lucide="instagram" class="w-5 h-5 hover:text-white transition-colors cursor-pointer"></i>
                     <i data-lucide="twitter" class="w-5 h-5 hover:text-white transition-colors cursor-pointer"></i>
                 </div>
@@ -353,7 +339,7 @@ const videos = [
     { title: "Trunk or Treat '26", year: "2025", thumbnail: "images/thumb/trunk26.webp", youtubeId: "IWL6uJBPT4s" },
     { title: "Camila", year: "2025", thumbnail: "images/thumb/camila.webp", youtubeId: "ze_ysiWAZHc" },
     { title: "Heroes Walk", year: "2025", thumbnail: "images/thumb/heroes.webp", youtubeId: "PBqokzEvDc0" },
-    { title: "Rating our First Day '26", year: "2025", thumbnail: "images/thumb/firstday26.webp", youtubeId: "r12z4Q7Ovk" },
+    { title: "Rating our First Day '26", year: "2025", thumbnail: "images/thumb/firstday26.webp", youtubeId: "r12z4qQ7Ovk" },
     { title: "Meet the Teacher '26", year: "2025", thumbnail: "images/thumb/meetteacher26.webp", youtubeId: "pTXPXnkBCdg" },
     { title: "Buddy Banners", year: "2025", thumbnail: "images/thumb/budbanners2.webp", youtubeId: "N-gK2kr_Uvg" },
     { title: "Leadership Day '25", year: "2025", thumbnail: "images/thumb/leadership25.webp", youtubeId: "tGLHguf7Xzw" },
@@ -375,7 +361,7 @@ const videos = [
     { title: "Trunk or Treat '24", year: "2023", thumbnail: "images/thumb/trunk24.webp", youtubeId: "Rrjpt12fQYI" },
     { title: "Araceli & Brett", year: "2023", thumbnail: "images/thumb/aracelybrett.webp", youtubeId: "cKci-BdFoKo" },
     { title: "Jackie's XV", year: "2023", thumbnail: "images/thumb/jackie.webp", youtubeId: "CwHzBi4DV7M" },
-    { title: "This is MES", year: "2023", thumbnail: "images/thumb/mes.webp", youtubeId: "sbD0hp_ZSJs0" },
+    { title: "This is MES", year: "2023", thumbnail: "images/thumb/mes.webp", youtubeId: "sbD0hp_ZSJs" },
     { title: "Field Day '23", year: "2023", thumbnail: "images/thumb/field23.webp", youtubeId: "VtP1P_Bu1tU" },
     { title: "Family Picnic '23", year: "2023", thumbnail: "images/thumb/fampic23.webp", youtubeId: "qMbTH5UfQWE" },
     { title: "Student Leaders", year: "2022", thumbnail: "images/thumb/studlead.webp", youtubeId: "hRF-zRr2mXA" },
@@ -537,8 +523,10 @@ function expandPlayer() {
     mainIframe.style.opacity = "1";
     mainThumb.style.opacity = "0";
 
-    playerControls.classList.remove('opacity-0');
-    playerControls.style.pointerEvents = 'auto';
+    if (playerControls) {
+        playerControls.classList.remove('opacity-0');
+        playerControls.style.pointerEvents = 'auto';
+    }
 
     recDot.classList.remove('bg-white');
     recDot.classList.add('bg-red-500');
@@ -548,11 +536,13 @@ function expandPlayer() {
 function expandPlayerWithVideo(video) {
     document.getElementById('slide-1').scrollIntoView({ behavior: 'smooth' });
 
-    playerTitle.innerText = video.title;
+    // Only update the title if it exists
+    if (playerTitle) playerTitle.innerText = video.title;
+
     mainThumb.src = video.thumbnail;
 
     mainIframe.src =
-        `https://www.youtube.com/embed/${video.youtubeId}?controls=0&modestbranding=1&rel=0&playsinline=1`;
+        `https://www.youtube.com/embed/${video.youtubeId}?controls=1&modestbranding=1&rel=0&playsinline=1&enablejsapi=1`;
 
     setTimeout(() => expandPlayer(), 400);
 }
@@ -566,17 +556,19 @@ function closeVideo(e) {
     mainIframe.style.opacity = "0";
     mainThumb.style.opacity = "1";
 
-    // stop video
     const url = mainIframe.src;
     mainIframe.src = url;
 
-    playerControls.classList.add('opacity-0');
-    playerControls.style.pointerEvents = 'none';
+    if (playerControls) {
+        playerControls.classList.add('opacity-0');
+        playerControls.style.pointerEvents = 'none';
+    }
 
     recDot.classList.remove('bg-red-500');
     recDot.classList.add('bg-white');
     statusText.innerText = "astn";
 }
+
 
 /* ---------------------------------------
    5. MUTE + FULLSCREEN
@@ -644,8 +636,10 @@ document.querySelectorAll('section').forEach(section => observer.observe(section
 ---------------------------------------- */
 document.addEventListener("DOMContentLoaded", () => {
     // default video
-    mainIframe.src =
-        "https://www.youtube.com/embed/mT77HGdVI2Y?controls=0&modestbranding=1&rel=0&playsinline=1";
+        mainIframe.src =
+  `https://www.youtube.com/embed/mT77HGdVI2Y?controls=1&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&playsinline=1&enablejsapi=1`;
+
+
 
     // load grid default
     filterGrid("all", document.querySelector('.filter-tab.active'));
