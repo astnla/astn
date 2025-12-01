@@ -330,13 +330,30 @@
      NAME INPUT VALIDATION
   ------------------------------------------- */
   nameInput.addEventListener("input", () => {
-    const v = nameInput.value.toUpperCase().trim();
-    nameInput.value = v;
-
-    const valid = /[A-Z0-9]/.test(v);
+    // allow letters, numbers, and spaces in the middle
+    let raw = nameInput.value;
+  
+    // Prevent starting with a space
+    if (raw.length === 1 && raw === " ") {
+      raw = "";
+    }
+  
+    // Remove any characters that aren't A–Z, 0–9, or spaces
+    raw = raw.replace(/[^a-zA-Z0-9 ]/g, "");
+  
+    // Uppercase it
+    raw = raw.toUpperCase();
+  
+    nameInput.value = raw;
+  
+    // Now check for a VALID name (must contain at least one letter/number)
+    const trimmed = raw.trim();
+    const valid = /[A-Z0-9]/.test(trimmed);
+  
     continueBtn.style.opacity = valid ? "1" : "0.4";
     continueBtn.style.pointerEvents = valid ? "auto" : "none";
   });
+
 
 
   /* ------------------------------------------
@@ -375,7 +392,7 @@
     retakeBtn.style.pointerEvents = "none";
 
     const selfieData = canvas.toDataURL("image/png");
-    const safeName = v.replace(/[^A-Z0-9]/g, "_");
+    const safeName = v.replace(/[^A-Z0-9 ]/g, "").replace(/ /g, "_");
     const userKey  = safeName + "_" + Date.now();
 
     try {
