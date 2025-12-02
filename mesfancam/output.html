@@ -228,14 +228,21 @@ onValue(participantsRef, snap => {
      📡 FAN CAM — FRAME STREAM
   ----------------------------------------------*/
   onValue(frameRef, snap => {
-    if (!activeUser) return;
     const jpeg = snap.val();
-    if (!jpeg) return;
-
+  
+    // No user OR no frame → show QR
+    if (!activeUser || !jpeg) {
+      imgEl.style.display = "none";
+      emptyState.style.display = "flex";
+      return;
+    }
+  
+    // Show the live feed
     imgEl.src = jpeg;
     imgEl.style.display = "block";
     emptyState.style.display = "none";
   });
+
 
   /* ---------------------------------------------
      🎯 TRIVIA MODE
