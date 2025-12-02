@@ -228,7 +228,7 @@
     /* ============== LIVE BADGE CSS ================ */
 
     #liveBadge {
-      display: none;               /* hidden until live */
+      display: none;               /* hidden by default */
       position: absolute;
       top: 8px;
       left: 8px;
@@ -239,9 +239,8 @@
       font-weight: 900;
       font-size: 14px;
       font-family: "Outfit", sans-serif;
-      display: flex;
-      align-items: center;
-      gap: 6px;                     /* space between dot and text */
+      align-items: center;         /* safe without flex */
+      gap: 6px;
       z-index: 10;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
@@ -600,7 +599,7 @@ liveBadge.style.display =
       height:100vh;display:flex;align-items:center;justify-content:center;
       text-align:center;font-size:22px;font-weight:900;color:white;
       padding:20px;
-    ">Thanks for joining! You can close this tab.</div>
+    ">THANKS FOR STOPPING BY!<br>YOU MAY NOW CLOSE THIS TAB.</div>
   `;
 
   // Clear identity + redirect after 10 sec
@@ -629,6 +628,8 @@ flipCameraBtn.addEventListener("click", async () => {
   }, 800); // tweak if needed
 });
 
+const liveBadge = document.getElementById("liveBadge");
+liveBadge.style.display = "none";
 
 </script>
 
