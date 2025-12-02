@@ -118,7 +118,6 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      display: none;
     }
 
     #preview.hide-preview {
@@ -435,7 +434,12 @@ async function enableCamera() {
 
     // Bind to UI
     video.srcObject = stream;
+
+    // always active
     shell.classList.add("active");
+
+    // ensure preview is visible once stream is ready
+    video.classList.remove("hide-preview");
     flipCameraBtn.style.display = "flex";
 
     // ⭐ IMPORTANT: Mirror only front camera
@@ -615,8 +619,18 @@ liveBadge.style.display =
 const flipCameraBtn = document.getElementById("flipCameraBtn");
 
 flipCameraBtn.addEventListener("click", async () => {
+
+  // Hide preview immediately
+  video.classList.add("hide-preview");
+
   currentCamera = (currentCamera === "front") ? "back" : "front";
+
   await enableCamera();
+
+  // Restore preview after short delay
+  setTimeout(() => {
+    video.classList.remove("hide-preview");
+  }, 500);
 });
 
 
