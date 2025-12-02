@@ -150,12 +150,19 @@
     <div id="classAnswerOverlay" class="overlayBox"></div>
 
   </div>
+
+  <div id="liveName" style="font-size: 20px;font-weight: 900;color: var(--navy);text-align: center;margin-top: -10px;display: none;">
+  </div>
+
 </div>
 
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
   import { getDatabase, ref, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+  const liveName = document.getElementById("liveName");
+  let participantsCache = {};   // ← declared BEFORE Firebase init
 
   const firebaseConfig = {
     apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
@@ -169,6 +176,8 @@
 
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
+
+  const participantsRef = ref(db, "participants");
 
   const imgEl      = document.getElementById("liveImage");
   const emptyState = document.getElementById("emptyState");
@@ -193,27 +202,47 @@
   /* ---------------------------------------------
      📡 FAN CAM — WHO IS LIVE?
   ----------------------------------------------*/
-  onValue(activeUserRef, snap => {
-    activeUser = snap.val();
+function updateLiveName() {
+  if (!activeUser || !participantsCache[activeUser]) {
+    liveName.style.display = "none";
+    return;
+  }
 
-    if (!activeUser) {
-      imgEl.style.display = "none";
-      emptyState.style.display = "flex";
-    }
-  });
+  liveName.textContent = participantsCache[activeUser].name || "";
+  liveName.style.display = "block";
+}
+
+onValue(activeUserRef, snap => {
+  activeUser = snap.val();
+  updateLiveName();
+});
+
+onValue(participantsRef, snap => {
+  participantsCache = snap.val() || {};
+  updateLiveName();
+});
+
+
 
   /* ---------------------------------------------
      📡 FAN CAM — FRAME STREAM
   ----------------------------------------------*/
   onValue(frameRef, snap => {
-    if (!activeUser) return;
     const jpeg = snap.val();
-    if (!jpeg) return;
-
+  
+    // No user OR no frame → show QR
+    if (!activeUser || !jpeg) {
+      imgEl.style.display = "none";
+      emptyState.style.display = "flex";
+      return;
+    }
+  
+    // Show the live feed
     imgEl.src = jpeg;
     imgEl.style.display = "block";
     emptyState.style.display = "none";
   });
+
 
   /* ---------------------------------------------
      🎯 TRIVIA MODE

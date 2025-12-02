@@ -17,15 +17,18 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     html, body {
-      height: 100vh;
+      min-height: 100vh;
       background: var(--bg-red);
       font-family: "Outfit", sans-serif;
-      overflow: hidden;
+      overflow-x: hidden;     /* keep it clean horizontally */
+      overflow-y: auto;       /* allow scroll if content is too big */
     }
+
 
     /* MAIN LAYOUT — 3 ROW GRID */
     .wrapper {
-      height: 100vh;
+      min-height: 100vh;          /* allows page to grow if needed */
+      height: auto;               /* prevents clipping */
       display: grid;
       grid-template-rows: 1fr auto 1fr;
       justify-items: center;
@@ -77,16 +80,13 @@
       align-items: center;
       justify-content: center;
       width: 100%;
-
-      /* ⭐ ADJUST VIEWFINDER VERTICAL POSITION HERE ⭐ */
-      margin-top: -20px;   /* <--- raise/lower entire middle section */
-      /* Change -20px to -15, -25, etc. */
+      margin-top: clamp(-10px, -2vh, -20px); /* SAFER + RESPONSIVE */
     }
 
     #cameraBox {
       width: calc(100% - 70px);
       max-width: 360px;
-      height: calc(360px * 4 / 3);
+      aspect-ratio: 3 / 4;   /* NEW */
       background: var(--overlay);
       border-radius: 6px;
       overflow: hidden;
@@ -330,13 +330,30 @@
      NAME INPUT VALIDATION
   ------------------------------------------- */
   nameInput.addEventListener("input", () => {
-    const v = nameInput.value.toUpperCase().trim();
-    nameInput.value = v;
-
-    const valid = /[A-Z0-9]/.test(v);
+    // allow letters, numbers, and spaces in the middle
+    let raw = nameInput.value;
+  
+    // Prevent starting with a space
+    if (raw.length === 1 && raw === " ") {
+      raw = "";
+    }
+  
+    // Remove any characters that aren't A–Z, 0–9, or spaces
+    raw = raw.replace(/[^a-zA-Z0-9 ]/g, "");
+  
+    // Uppercase it
+    raw = raw.toUpperCase();
+  
+    nameInput.value = raw;
+  
+    // Now check for a VALID name (must contain at least one letter/number)
+    const trimmed = raw.trim();
+    const valid = /[A-Z0-9]/.test(trimmed);
+  
     continueBtn.style.opacity = valid ? "1" : "0.4";
     continueBtn.style.pointerEvents = valid ? "auto" : "none";
   });
+
 
 
   /* ------------------------------------------
@@ -375,7 +392,7 @@
     retakeBtn.style.pointerEvents = "none";
 
     const selfieData = canvas.toDataURL("image/png");
-    const safeName = v.replace(/[^A-Z0-9]/g, "_");
+    const safeName = v.replace(/[^A-Z0-9 ]/g, "").replace(/ /g, "_");
     const userKey  = safeName + "_" + Date.now();
 
     try {

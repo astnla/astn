@@ -14,57 +14,60 @@
       --overlay: #00000022;
       --highlight: #DA1A32;
     }
-
+    
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
+    
+    /* Allow scrolling on smaller / zoomed devices */
     html, body {
-      height: 100%;
-      background-color: var(--bg-red);
-      overflow: hidden;
-    }
-
-    body {
       min-height: 100vh;
       background-color: var(--bg-red);
       font-family: "Outfit", sans-serif;
       color: var(--navy);
       overflow-x: hidden;
-    }
-
-    .contributor-page {
-      position: relative;
-      height: 100vh;
-      width: 100%;
+      overflow-y: auto;
     }
     
-    .contributor-wrapper {
-      position: relative;
-      z-index: 1;
-      height: 100vh;
+    /* MAIN PAGE WRAPPER */
+    .contributor-page {
+      width: 100%;
+      min-height: 100vh;
+      height: auto;
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: center; /* centered on full-size devices */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
     }
-
+    
+    /* INNER WRAPPER */
+    .contributor-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    
+    /* COLUMN CONTENT */
     .fan-cam-content {
+      width: 100%;
+      max-width: 480px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      width: 100%;
-      max-width: 480px;
-      transform: translateY(-5%);
+    
+      /* Responsive vertical centering */
+      transform: translateY(clamp(-10px, -3vh, -40px));
+      padding: 24px 0;
     }
-
+    
+    /* TITLE BLOCK (image removed soon — CSS safe regardless) */
     .streaming-title-textblock {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 0 24px;
       margin-bottom: 12px;
     }
-
+    
     .manatee-logo {
       width: 80px;
       height: 80px;
@@ -72,42 +75,45 @@
       margin-bottom: 8px;
       border-radius: 12px;
     }
-
+    
     .manatee-fancam-title {
       font-family: "Outfit", sans-serif;
       font-weight: 900;
       font-size: 22px;
-      color: var(--navy);
       letter-spacing: 0.5px;
       text-align: center;
+      color: var(--navy);
     }
-
+    
+    /* CAMERA WRAPPER */
     #publishCameraPreview {
       display: flex;
       flex-direction: column;
-      align-items: stretch;
-      justify-content: flex-start;
+      align-items: center;
+      width: 100%;
       font-family: "Outfit", sans-serif;
     }
-
+    
+    /* RESPONSIVE CAMERA BOX */
     #publishCameraState {
       background-color: var(--overlay);
       width: calc(100% - 70px);
       max-width: 360px;
-      height: calc(360px * 4 / 3);
+      aspect-ratio: 3 / 4; /* ★ responsive fix */
+      height: auto;        /* no fixed height */
       margin: 20px 35px 10px;
       border-radius: 4px;
       overflow: hidden;
       position: relative;
     }
-
-    /* CAMERA */
+    
     .camera-shell {
       width: 100%;
       height: 100%;
       position: relative;
     }
-
+    
+    /* CAMERA VIDEO */
     #preview {
       width: 100%;
       height: 100%;
@@ -115,11 +121,12 @@
       display: none;
       transform: scaleX(-1);
     }
-
+    
     .camera-shell.active #preview {
       display: block;
     }
-
+    
+    /* OVERLAY BEFORE ENABLED */
     .camera-overlay {
       position: absolute;
       inset: 0;
@@ -130,54 +137,58 @@
       cursor: pointer;
       padding: 8px;
     }
-
+    
     .camera-overlay-text {
       font-family: "Outfit", sans-serif;
       font-weight: 900;
       font-size: 16px;
       color: var(--navy);
     }
-
+    
     .camera-shell.active .camera-overlay {
       display: none;
     }
-
+    
+    /* LEGAL TEXT */
     .legal-text {
-      margin-top: 8px;
+      margin-top: 12px;
       text-align: center;
       font-family: "Inter", sans-serif;
       font-size: 10px;
-      color: var(--navy);
       padding: 0 24px;
       line-height: 1.4;
+      color: var(--navy);
     }
-
-    /* -------------------------------
-       TRIVIA MODE UI
-    ------------------------------- */
+    
+    /* ───────────────────────────────────
+       TRIVIA UI
+       ─────────────────────────────────── */
+    
+    /* Question Bar (kept hidden per your logic) */
     #triviaQuestionBar {
       width: 100%;
       max-width: 480px;
       margin: 0 auto;
       background: white;
-      color: var(--navy);
       padding: 10px;
       font-size: 16px;
       font-weight: 900;
       text-align: center;
       border-radius: 6px;
       display: none;
+      color: var(--navy);
     }
-
+    
+    /* Answer Input */
     #triviaAnswerBox {
-      width: 100%;
+      width: 90%;
       max-width: 480px;
-      margin: 10px auto 0;
       display: none;
       flex-direction: column;
       gap: 8px;
+      margin: 16px auto 24px; /* extra space for scrolling */
     }
-
+    
     #triviaAnswerInput {
       padding: 10px;
       border-radius: 6px;
@@ -186,7 +197,7 @@
       font-weight: 700;
       width: 100%;
     }
-
+    
     #triviaSubmitBtn {
       padding: 10px;
       background: var(--navy);
@@ -198,16 +209,21 @@
       cursor: pointer;
       width: 100%;
     }
-
+    
     #triviaSubmittedMsg {
       width: 100%;
       max-width: 480px;
-      margin: 10px auto 0;
       text-align: center;
       font-size: 16px;
       font-weight: 900;
       color: white;
       display: none;
+      margin-top: 10px;
+    }
+    
+    /* Extra safety padding */
+    body {
+      padding-bottom: 80px;
     }
   </style>
 </head>
@@ -218,7 +234,6 @@
     <div class="fan-cam-content">
 
       <div class="streaming-title-textblock">
-        <img class="manatee-logo" src="assets/mestv.png" alt="Marley Logo">
         <div class="manatee-fancam-title">MANATEE CAM</div>
       </div>
 
