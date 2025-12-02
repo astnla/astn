@@ -118,10 +118,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-    }
-
-    #preview.hide-preview {
-      display: none !important;
+      display: none;
     }
     
     .camera-shell.active #preview {
@@ -377,6 +374,8 @@
   const key   = sessionStorage.getItem("fanCamUserKey");
   let currentCamera = "front"; // or "back"
   let currentStream = null;
+  let streamingEnabled = true;
+
 
 
   if (!name || !key) {
@@ -434,12 +433,7 @@ async function enableCamera() {
 
     // Bind to UI
     video.srcObject = stream;
-
-    // always active
     shell.classList.add("active");
-
-    // ensure preview is visible once stream is ready
-    video.classList.remove("hide-preview");
     flipCameraBtn.style.display = "flex";
 
     // ⭐ IMPORTANT: Mirror only front camera
@@ -502,7 +496,7 @@ liveBadge.style.display =
     const ctx = canvas.getContext("2d");
 
     interval = setInterval(() => {
-      if (!userKey || currentlyLiveUser !== userKey) return;
+      if (!userKey || currentlyLiveUser !== userKey || !streamingEnabled) return;
       if (!video || video.readyState < 2) return;
 
       canvas.width = video.videoWidth;
@@ -620,17 +614,19 @@ const flipCameraBtn = document.getElementById("flipCameraBtn");
 
 flipCameraBtn.addEventListener("click", async () => {
 
-  // Hide preview immediately
-  video.classList.add("hide-preview");
+  // 1. Pause outbound stream
+  streamingEnabled = false;
 
+  // 2. Switch camera mode
   currentCamera = (currentCamera === "front") ? "back" : "front";
 
+  // 3. Reinitialize camera
   await enableCamera();
 
-  // Restore preview after short delay
+  // 4. Delay a bit to allow IOS to settle
   setTimeout(() => {
-    video.classList.remove("hide-preview");
-  }, 500);
+    streamingEnabled = true;
+  }, 800); // tweak if needed
 });
 
 
