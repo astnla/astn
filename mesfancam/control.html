@@ -520,30 +520,44 @@
   /* END SESSION resets EVERYTHING */
   endSessionBtn.addEventListener("click", async () => {
     if (confirm("End the entire session and reset everything?")) {
-
+  
+      // Stop auto-live and uncheck toggle
       stopAutoLive();
       autoLiveToggle.checked = false;
-
+  
+      // Remove all participants
       await set(participantsRef, null);
+  
+      // Remove current live user
       await set(liveUserRef, null);
-
+  
+      // ⭐ NEW — IMPORTANT: Clear last frame so output resets to QR instantly
+      await set(ref(db, "live/frame"), null);
+      await set(ref(db, "live/timestamp"), null);
+  
+      // Reset trivia system
       await update(triviaRef, {
         mode: false,
         question: { text: "", show: false },
         correct:  { text: "", show: false },
         answers: null
       });
-
+  
+      // Reset reveal flags
       await set(revealRef, { __reset: Date.now() });
-
+  
+      // Clear control UI inputs
       questionInput.value = "";
       correctInput.value = "";
       questionActive = false;
-
+  
+      // Disable SEND button until correct answer set again
       disableShowBtn();
+  
+      // Turn off trivia panel UI
       triviaToggle.checked = false;
       triviaPanel.style.display = "none";
-
+  
       alert("Session fully reset.");
     }
   });
