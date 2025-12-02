@@ -535,12 +535,12 @@ liveBadge.style.display =
 
       ctx.restore();
 
-      const jpeg = canvas.toDataURL("image/jpeg", 0.62);
+      const jpeg = canvas.toDataURL("image/jpeg", 0.5);
 
       set(ref(db, "live/frame"), jpeg);
       set(ref(db, "live/timestamp"), Date.now());
 
-    }, 125);
+    }, 166);
   }
 
   /* ----------------------------------------
