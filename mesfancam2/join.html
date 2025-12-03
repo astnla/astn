@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>JOIN</title>
@@ -10,25 +11,34 @@
   <style>
     :root {
       --bg-red: #DA1A32;
-      --navy:   #00031F;
-      --overlay:#00000022;
+      --navy: #00031F;
+      --overlay: #00000022;
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-    html, body {
+    html,
+    body {
       min-height: 100vh;
       background: var(--bg-red);
       font-family: "Outfit", sans-serif;
-      overflow-x: hidden;     /* keep it clean horizontally */
-      overflow-y: auto;       /* allow scroll if content is too big */
+      overflow-x: hidden;
+      /* keep it clean horizontally */
+      overflow-y: auto;
+      /* allow scroll if content is too big */
     }
 
 
     /* MAIN LAYOUT — 3 ROW GRID */
     .wrapper {
-      min-height: 100vh;          /* allows page to grow if needed */
-      height: auto;               /* prevents clipping */
+      min-height: 100vh;
+      /* allows page to grow if needed */
+      height: auto;
+      /* prevents clipping */
       display: grid;
       grid-template-rows: 1fr auto 1fr;
       justify-items: center;
@@ -80,13 +90,15 @@
       align-items: center;
       justify-content: center;
       width: 100%;
-      margin-top: clamp(-10px, -2vh, -20px); /* SAFER + RESPONSIVE */
+      margin-top: clamp(-10px, -2vh, -20px);
+      /* SAFER + RESPONSIVE */
     }
 
     #cameraBox {
       width: calc(100% - 70px);
       max-width: 360px;
-      aspect-ratio: 3 / 4;   /* NEW */
+      aspect-ratio: 3 / 4;
+      /* NEW */
       background: var(--overlay);
       border-radius: 6px;
       overflow: hidden;
@@ -113,7 +125,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: scaleX(-1); /* LIVE MIRROR */
+      transform: scaleX(-1);
+      /* LIVE MIRROR */
       display: none;
     }
 
@@ -145,7 +158,10 @@
       cursor: pointer;
       transition: transform 0.1s;
     }
-    #snapBtn:active { transform: scale(0.96); }
+
+    #snapBtn:active {
+      transform: scale(0.96);
+    }
 
     .actionRow {
       display: none;
@@ -161,262 +177,381 @@
       cursor: pointer;
     }
 
-    #retakeBtn { background: white; color: var(--navy); }
-    #continueBtn { background: var(--navy); color: white; opacity: 0.4; pointer-events:none; }
+    #retakeBtn {
+      background: white;
+      color: var(--navy);
+    }
+
+    #continueBtn {
+      background: var(--navy);
+      color: white;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    /* WIFI OVERLAY */
+    .wifi-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      font-family: "Outfit", sans-serif;
+      flex-direction: column;
+
+      opacity: 0;
+      /* start invisible */
+      pointer-events: none;
+      /* don't block clicks when hidden */
+      transition: opacity 0.6s ease;
+    }
+
+    /* visible state (fade in / stay visible) */
+    .wifi-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* you can keep the pulse animation on the icon */
+    .wifi-icon {
+      font-size: 2px;
+      animation: wifiPulse 1.2s ease-in-out infinite;
+    }
+
+    .wifi-content {
+      text-align: center;
+      font-weight: 900;
+      padding: 20px;
+      font-size: 22px;
+      line-height: 1.4;
+    }
+
+    .wifi-text {
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    /* ANIMATIONS (only for icon now) */
+    @keyframes wifiPulse {
+      0% {
+        opacity: 0.4;
+        transform: scale(0.9);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+
+      100% {
+        opacity: 0.4;
+        transform: scale(0.9);
+      }
+    }
   </style>
 </head>
 
 <body>
 
-<div class="wrapper">
+  <!-- WIFI OVERLAY -->
+  <div id="wifiOverlay" class="wifi-overlay">
+    <div class="wifi-content">
+      <div class="wifi-icon">
+        <svg width="80" height="80" viewBox="0 2 24 24" fill="none" stroke="white" stroke-width="3.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2.88 8.88a12 12 0 0118.24 0" />
+          <path d="M6.34 12.34a8 8 0 0111.32 0" />
+          <path d="M9.88 15.88a4 4 0 014.24 0" />
+        </svg>
 
-  <!-- TOP -->
-  <div class="topArea">
-    <div id="topInstruction">TAKE A SELFIE</div>
-    <input id="nameInput" type="text" autocomplete="off" placeholder="ENTER NAME">
-  </div>
-
-  <!-- CENTER -->
-  <div class="centerColumn">
-    <div id="cameraBox">
-      <video id="preview" autoplay playsinline></video>
-      <canvas id="canvasOutput"></canvas>
-
-      <div class="camera-overlay" id="cameraOverlay">
-        <div class="camera-overlay-text">TAP TO ENABLE CAMERA</div>
+      </div>
+      <div class="wifi-text">
+        PLEASE CONNECT TO <br>"CCPS"<br> WI-FI BEFORE JOINING.
       </div>
     </div>
   </div>
 
-  <!-- BOTTOM -->
-  <div class="bottomArea">
-    <div id="snapBtn"></div>
+  <div class="wrapper">
 
-    <div class="actionRow" id="actionRow">
-      <button id="retakeBtn" class="actionBtn">RETAKE</button>
-      <button id="continueBtn" class="actionBtn">CONTINUE</button>
+    <!-- TOP -->
+    <div class="topArea">
+      <div id="topInstruction">TAKE A SELFIE</div>
+      <input id="nameInput" type="text" autocomplete="off" placeholder="ENTER NAME">
     </div>
+
+    <!-- CENTER -->
+    <div class="centerColumn">
+      <div id="cameraBox">
+        <video id="preview" autoplay playsinline></video>
+        <canvas id="canvasOutput"></canvas>
+
+        <div class="camera-overlay" id="cameraOverlay">
+          <div class="camera-overlay-text">TAP TO ENABLE CAMERA</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM -->
+    <div class="bottomArea">
+      <div id="snapBtn"></div>
+
+      <div class="actionRow" id="actionRow">
+        <button id="retakeBtn" class="actionBtn">RETAKE</button>
+        <button id="continueBtn" class="actionBtn">CONTINUE</button>
+      </div>
+    </div>
+
   </div>
 
-</div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+      authDomain: "mes-fancam.firebaseapp.com",
+      databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+      projectId: "mes-fancam",
+      storageBucket: "mes-fancam.firebasestorage.app",
+      messagingSenderId: "1091345682482",
+      appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+    };
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
-    authDomain: "mes-fancam.firebaseapp.com",
-    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
-    projectId: "mes-fancam",
-    storageBucket: "mes-fancam.firebasestorage.app",
-    messagingSenderId: "1091345682482",
-    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
-  };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+    /* RESET FLAG */
+    let alreadyReset = false;
+    onValue(ref(db, "meta/resetFlag"), async snap => {
+      if (snap.exists() && !alreadyReset) {
+        alreadyReset = true;
+        localStorage.clear();
+        await set(ref(db, "meta/resetFlag"), null);
+        location.reload();
+      }
+    });
 
-  /* RESET FLAG */
-  let alreadyReset = false;
-  onValue(ref(db, "meta/resetFlag"), async snap => {
-    if (snap.exists() && !alreadyReset) {
-      alreadyReset = true;
-      localStorage.clear();
-      await set(ref(db, "meta/resetFlag"), null);
-      location.reload();
+    const preview = document.getElementById("preview");
+    const canvas = document.getElementById("canvasOutput");
+    const overlay = document.getElementById("cameraOverlay");
+    const snapBtn = document.getElementById("snapBtn");
+    const retakeBtn = document.getElementById("retakeBtn");
+    const continueBtn = document.getElementById("continueBtn");
+    const actionRow = document.getElementById("actionRow");
+    const nameInput = document.getElementById("nameInput");
+    const topInstruction = document.getElementById("topInstruction");
+
+    let stream = null;
+    let cameraEnabled = false;
+
+    // Disable snap until camera enabled
+    snapBtn.style.opacity = "0.35";
+    snapBtn.style.pointerEvents = "none";
+
+
+    /* ------------------------------------------
+       UPDATED CAMERA START FUNCTION
+       WITH FULL ERROR HANDLING + RETRY MESSAGE
+    ------------------------------------------- */
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 960 }
+          },
+          audio: false
+        });
+
+        preview.srcObject = stream;
+        preview.style.display = "block";
+        canvas.style.display = "none";
+
+        snapBtn.style.opacity = "1";
+        snapBtn.style.pointerEvents = "auto";
+
+        overlay.style.display = "none";
+        cameraEnabled = true;
+
+      } catch (e) {
+        console.error("Camera Error:", e);
+
+        overlay.style.display = "flex";
+        let txt = overlay.querySelector(".camera-overlay-text");
+
+        if (e.name === "NotAllowedError" || e.name === "SecurityError") {
+          txt.textContent = "UNABLE TO ACCESS CAMERA";
+        } else {
+          txt.textContent = "CAMERA ERROR TAP TO RETRY";
+        }
+
+        cameraEnabled = false;
+      }
     }
-  });
-
-  const preview        = document.getElementById("preview");
-  const canvas         = document.getElementById("canvasOutput");
-  const overlay        = document.getElementById("cameraOverlay");
-  const snapBtn        = document.getElementById("snapBtn");
-  const retakeBtn      = document.getElementById("retakeBtn");
-  const continueBtn    = document.getElementById("continueBtn");
-  const actionRow      = document.getElementById("actionRow");
-  const nameInput      = document.getElementById("nameInput");
-  const topInstruction = document.getElementById("topInstruction");
-
-  let stream = null;
-  let cameraEnabled = false;
-
-  // Disable snap until camera enabled
-  snapBtn.style.opacity = "0.35";
-  snapBtn.style.pointerEvents = "none";
 
 
-  /* ------------------------------------------
-     UPDATED CAMERA START FUNCTION
-     WITH FULL ERROR HANDLING + RETRY MESSAGE
-  ------------------------------------------- */
-  async function startCamera() {
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 960 }
-        },
-        audio: false
-      });
+    /* ------------------------------------------
+       OVERLAY TAP — ALWAYS TRY CAMERA AGAIN
+    ------------------------------------------- */
+    overlay.addEventListener("click", async () => {
+      overlay.querySelector(".camera-overlay-text").textContent = "ENABLING CAMERA…";
+      overlay.style.display = "flex"; // ensure visible while trying
+      await startCamera();
+    });
 
-      preview.srcObject = stream;
-      preview.style.display = "block";
-      canvas.style.display = "none";
 
-      snapBtn.style.opacity = "1";
-      snapBtn.style.pointerEvents = "auto";
+    /* ------------------------------------------
+       TAKE SELFIE
+    ------------------------------------------- */
+    snapBtn.addEventListener("click", () => {
+      if (!cameraEnabled) return;
 
-      overlay.style.display = "none";
-      cameraEnabled = true;
+      const ctx = canvas.getContext("2d");
+      canvas.width = preview.videoWidth;
+      canvas.height = preview.videoHeight;
 
-    } catch (e) {
-      console.error("Camera Error:", e);
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(preview, -canvas.width, 0, canvas.width, canvas.height);
+      ctx.restore();
 
-      overlay.style.display = "flex";
-      let txt = overlay.querySelector(".camera-overlay-text");
+      preview.style.display = "none";
+      canvas.style.display = "block";
 
-      if (e.name === "NotAllowedError" || e.name === "SecurityError") {
-        txt.textContent = "UNABLE TO ACCESS CAMERA";
-      } else {
-        txt.textContent = "CAMERA ERROR TAP TO RETRY";
+      if (stream) stream.getTracks().forEach(t => t.stop());
+
+      topInstruction.style.display = "none";
+      nameInput.style.display = "block";
+
+      actionRow.style.display = "flex";
+      snapBtn.style.display = "none";
+    });
+
+
+    /* ------------------------------------------
+       NAME INPUT VALIDATION
+    ------------------------------------------- */
+    nameInput.addEventListener("input", () => {
+      // allow letters, numbers, and spaces in the middle
+      let raw = nameInput.value;
+
+      // Prevent starting with a space
+      if (raw.length === 1 && raw === " ") {
+        raw = "";
       }
 
+      // Remove any characters that aren't A–Z, 0–9, or spaces
+      raw = raw.replace(/[^a-zA-Z0-9 ]/g, "");
+
+      // Uppercase it
+      raw = raw.toUpperCase();
+
+      nameInput.value = raw;
+
+      // Now check for a VALID name (must contain at least one letter/number)
+      const trimmed = raw.trim();
+      const valid = /[A-Z0-9]/.test(trimmed);
+
+      continueBtn.style.opacity = valid ? "1" : "0.4";
+      continueBtn.style.pointerEvents = valid ? "auto" : "none";
+    });
+
+
+
+    /* ------------------------------------------
+       RETAKE
+    ------------------------------------------- */
+    retakeBtn.addEventListener("click", () => {
+      nameInput.style.display = "none";
+      topInstruction.style.display = "block";
+
+      actionRow.style.display = "none";
+      snapBtn.style.display = "block";
+
+      canvas.style.display = "none";
+
+      // Try to restart the camera
+      overlay.style.display = "flex";
+      overlay.querySelector(".camera-overlay-text").textContent = "TAP TO ENABLE CAMERA";
+
       cameraEnabled = false;
-    }
-  }
+      preview.style.display = "none";
+    });
 
 
-  /* ------------------------------------------
-     OVERLAY TAP — ALWAYS TRY CAMERA AGAIN
-  ------------------------------------------- */
-  overlay.addEventListener("click", async () => {
-    overlay.querySelector(".camera-overlay-text").textContent = "ENABLING CAMERA…";
-    overlay.style.display = "flex"; // ensure visible while trying
-    await startCamera();
-  });
+    /* ------------------------------------------
+       CONTINUE → SAVE SELFIE
+    ------------------------------------------- */
+    continueBtn.addEventListener("click", async () => {
+      const v = nameInput.value.trim();
+      if (!/[A-Z0-9]/.test(v)) return;
 
+      continueBtn.style.opacity = "0.4";
+      continueBtn.style.pointerEvents = "none";
+      continueBtn.textContent = "LOADING…";
 
-  /* ------------------------------------------
-     TAKE SELFIE
-  ------------------------------------------- */
-  snapBtn.addEventListener("click", () => {
-    if (!cameraEnabled) return;
+      retakeBtn.style.opacity = "0.4";
+      retakeBtn.style.pointerEvents = "none";
 
-    const ctx = canvas.getContext("2d");
-    canvas.width = preview.videoWidth;
-    canvas.height = preview.videoHeight;
+      const selfieData = canvas.toDataURL("image/png");
+      const safeName = v.replace(/[^A-Z0-9 ]/g, "").replace(/ /g, "_");
+      const userKey = safeName + "_" + Date.now();
 
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.drawImage(preview, -canvas.width, 0, canvas.width, canvas.height);
-    ctx.restore();
+      try {
+        await set(ref(db, "participants/" + userKey), {
+          name: v,
+          selfie: selfieData,
+          joinedAt: Date.now()
+        });
 
-    preview.style.display = "none";
-    canvas.style.display = "block";
+        sessionStorage.setItem("fanCamName", v);
+        sessionStorage.setItem("fanCamUserKey", userKey);
+        sessionStorage.setItem("selfieBase64", selfieData);
 
-    if (stream) stream.getTracks().forEach(t => t.stop());
+        window.location.href = "index.html";
 
-    topInstruction.style.display = "none";
-    nameInput.style.display = "block";
+      } catch (err) {
+        continueBtn.textContent = "ERROR — TRY AGAIN";
+        continueBtn.style.opacity = "1";
+        continueBtn.style.pointerEvents = "auto";
+        retakeBtn.style.opacity = "1";
+        retakeBtn.style.pointerEvents = "auto";
+      }
+    });
+  </script>
 
-    actionRow.style.display = "flex";
-    snapBtn.style.display = "none";
-  });
+  <script>
+    window.addEventListener("load", () => {
+      const overlay = document.getElementById("wifiOverlay");
+      if (!overlay) return;
 
-
-  /* ------------------------------------------
-     NAME INPUT VALIDATION
-  ------------------------------------------- */
-  nameInput.addEventListener("input", () => {
-    // allow letters, numbers, and spaces in the middle
-    let raw = nameInput.value;
-  
-    // Prevent starting with a space
-    if (raw.length === 1 && raw === " ") {
-      raw = "";
-    }
-  
-    // Remove any characters that aren't A–Z, 0–9, or spaces
-    raw = raw.replace(/[^a-zA-Z0-9 ]/g, "");
-  
-    // Uppercase it
-    raw = raw.toUpperCase();
-  
-    nameInput.value = raw;
-  
-    // Now check for a VALID name (must contain at least one letter/number)
-    const trimmed = raw.trim();
-    const valid = /[A-Z0-9]/.test(trimmed);
-  
-    continueBtn.style.opacity = valid ? "1" : "0.4";
-    continueBtn.style.pointerEvents = valid ? "auto" : "none";
-  });
-
-
-
-  /* ------------------------------------------
-     RETAKE
-  ------------------------------------------- */
-  retakeBtn.addEventListener("click", () => {
-    nameInput.style.display = "none";
-    topInstruction.style.display = "block";
-
-    actionRow.style.display = "none";
-    snapBtn.style.display = "block";
-
-    canvas.style.display = "none";
-
-    // Try to restart the camera
-    overlay.style.display = "flex";
-    overlay.querySelector(".camera-overlay-text").textContent = "TAP TO ENABLE CAMERA";
-
-    cameraEnabled = false;
-    preview.style.display = "none";
-  });
-
-
-  /* ------------------------------------------
-     CONTINUE → SAVE SELFIE
-  ------------------------------------------- */
-  continueBtn.addEventListener("click", async () => {
-    const v = nameInput.value.trim();
-    if (!/[A-Z0-9]/.test(v)) return;
-
-    continueBtn.style.opacity = "0.4";
-    continueBtn.style.pointerEvents = "none";
-    continueBtn.textContent = "LOADING…";
-
-    retakeBtn.style.opacity = "0.4";
-    retakeBtn.style.pointerEvents = "none";
-
-    const selfieData = canvas.toDataURL("image/png");
-    const safeName = v.replace(/[^A-Z0-9 ]/g, "").replace(/ /g, "_");
-    const userKey  = safeName + "_" + Date.now();
-
-    try {
-      await set(ref(db, "participants/" + userKey), {
-        name: v,
-        selfie: selfieData,
-        joinedAt: Date.now()
+      // Use the next animation frame so the browser sees the initial opacity: 0
+      requestAnimationFrame(() => {
+        overlay.classList.add("show");   // triggers fade-in
       });
 
-      sessionStorage.setItem("fanCamName", v);
-      sessionStorage.setItem("fanCamUserKey", userKey);
-      sessionStorage.setItem("selfieBase64", selfieData);
+      // How long you want it visible before fading out (ms)
+      const visibleDuration = 5000; // change to 10000 for 10 seconds
 
-      window.location.href = "index.html";
+      setTimeout(() => {
+        // Remove the visible state -> triggers fade-out via transition
+        overlay.classList.remove("show");
 
-    } catch (err) {
-      continueBtn.textContent = "ERROR — TRY AGAIN";
-      continueBtn.style.opacity = "1";
-      continueBtn.style.pointerEvents = "auto";
-      retakeBtn.style.opacity = "1";
-      retakeBtn.style.pointerEvents = "auto";
-    }
-  });
-</script>
+        // After fade-out duration, remove from DOM completely
+        setTimeout(() => {
+          overlay.remove();
+        }, 600); // must match CSS transition duration (0.6s)
+      }, visibleDuration);
+    });
+  </script>
+
+
+
 
 </body>
+
 </html>
