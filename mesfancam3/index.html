@@ -514,42 +514,125 @@ liveBadge.style.display =
 
   });
 
-  let interval = null;
+let fps = 6;            // starts at full FPS
+let quality = 0.50;     // starts high
+let downscale = false;
 
-  function startStreamingFrames() {
-    if (interval) return;
+let avg = 0;
+let samples = [];
 
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+let badTicks = 0;
+let goodTicks = 0;
 
-    interval = setInterval(() => {
-      if (!userKey || currentlyLiveUser !== userKey || !streamingEnabled) return;
-      if (!video || video.readyState < 2) return;
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      ctx.save();
-
-      if (currentCamera === "front") {
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-      } else {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      }
-
-      ctx.restore();
-
-      const jpeg = canvas.toDataURL("image/jpeg", 0.5);
-
-    update(ref(db, "live"), {
-      frame: jpeg,
-      ts: Date.now(),
-      user: userKey
-    });
-
-    }, 166);
+async function sendFrame() {
+  if (!userKey || currentlyLiveUser !== userKey || !streamingEnabled) {
+    setTimeout(sendFrame, 200);
+    return;
   }
+
+  if (!video || video.readyState < 2) {
+    setTimeout(sendFrame, 200);
+    return;
+  }
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  // downscale if needed
+  let w = video.videoWidth;
+  let h = video.videoHeight;
+
+  if (downscale && w > 640) {
+    h = Math.round(h * (640 / w));
+    w = 640;
+  }
+
+  canvas.width = w;
+  canvas.height = h;
+
+  ctx.save();
+  if (currentCamera === "front") {
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -w, 0, w, h);
+  } else {
+    ctx.drawImage(video, 0, 0, w, h);
+  }
+  ctx.restore();
+
+  const jpeg = canvas.toDataURL("image/jpeg", quality);
+
+  const start = performance.now();
+
+  await update(ref(db, "live"), {
+    frame: jpeg,
+    ts: Date.now(),
+    user: userKey
+  });
+
+  const end = performance.now();
+  const duration = end - start;
+
+  samples.push(duration);
+  if (samples.length > 10) samples.shift();
+
+  avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+
+
+// --------------------------------------------------
+// ADAPTIVE BINARY HYSTERESIS
+// Target: smooth on Wi-Fi, stable on LTE
+//
+// Logic:
+//  - avg < 250ms  : treat as "good network" (Wi-Fi)
+//  - avg ≥ 250ms  : treat as "bad network" (LTE)
+//  - changes only occur after 3 consecutive samples
+// --------------------------------------------------
+
+if (avg < 250) {
+
+  // sustained good performance
+  goodTicks++;
+  badTicks = 0;
+
+  // only upgrade after 3 consecutive good frames
+  if (goodTicks >= 3) {
+
+    fps = 6;            // smooth
+    quality = 0.65;     // clean image
+    downscale = false;  // full res
+  }
+}
+
+else {
+
+  // sustained poor performance
+  badTicks++;
+  goodTicks = 0;
+
+  // only downgrade after 3 consecutive slow frames
+  if (badTicks >= 3) {
+
+    fps = 2;            // slideshow mode
+    quality = 0.30;     // heavy compression
+    downscale = true;   // downscale to reduce packet size
+  }
+}
+
+// --------------------------------------------------
+// DEBUG OUTPUT
+// --------------------------------------------------
+
+console.log(
+  `[SEND] ` +
+  `avg=${avg.toFixed(1)}ms | fps=${fps} | q=${quality.toFixed(2)} | ds=${downscale} ` +
+  `| good=${goodTicks} | bad=${badTicks}`
+);
+
+// continue streaming
+setTimeout(sendFrame, 1000 / fps);
+}
+
+sendFrame();
 
   /* ----------------------------------------
      TRIVIA MODE LISTENERS
