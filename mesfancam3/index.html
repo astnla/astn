@@ -578,46 +578,49 @@ async function sendFrame() {
   avg = samples.reduce((a, b) => a + b, 0) / samples.length;
 
 
-// adaptive hysteresis
-if (avg < 200) {
+// --------------------------------------------------
+// ADAPTIVE BINARY HYSTERESIS
+// Target: smooth on Wi-Fi, stable on LTE
+//
+// Logic:
+//  - avg < 250ms  : treat as "good network" (Wi-Fi)
+//  - avg ≥ 250ms  : treat as "bad network" (LTE)
+//  - changes only occur after 3 consecutive samples
+// --------------------------------------------------
+
+if (avg < 250) {
+
+  // sustained good performance
   goodTicks++;
   badTicks = 0;
 
-  // recover after sustained good network
+  // only upgrade after 3 consecutive good frames
   if (goodTicks >= 3) {
-    fps = 6;
-    quality = 0.60;
-    downscale = false;
+
+    fps = 6;            // smooth
+    quality = 0.5;     // clean image
+    downscale = true;  // full res
   }
 }
-else if (avg < 450) {
-  // medium range, don't flip settings fast
-  badTicks = 0;
-  goodTicks = 0;
 
-  fps = 5;
-  quality = 0.40;
-  downscale = true;
-}
 else {
+
+  // sustained poor performance
   badTicks++;
   goodTicks = 0;
 
-  // degrade ONLY after sustained bad network
+  // only downgrade after 3 consecutive slow frames
   if (badTicks >= 3) {
-    fps = 2;            // IMPORTANT: no 1fps unless severe
-    quality = 0.30;
-    downscale = true;
+
+    fps = 2;            // slideshow mode
+    quality = 0.20;     // heavy compression
+    downscale = true;   // downscale to reduce packet size
   }
 }
 
-console.log(
-  `[SEND] avg=${avg.toFixed(1)}ms | fps=${fps} | q=${quality.toFixed(2)} ` +
-  ` | ds=${downscale} | good=${goodTicks} | bad=${badTicks}`
-);
+// continue streaming
+setTimeout(sendFrame, 1000 / fps);
 
-  setTimeout(sendFrame, 1000 / fps);
-}
 
 sendFrame();
 
