@@ -229,10 +229,67 @@
       line-height: 1.4;
     }
 
-    .wifi-text {
-      font-size: 22px;
-      font-weight: 900;
-    }
+.wifi-text {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+/* "CCPS" — glow synced with Wi-Fi icon */
+.wifi-ssid {
+  font-weight: 900;
+  display: inline-block;
+  text-shadow:
+    0 0 3px rgba(255, 255, 255, 0.6),
+    0 0 8px rgba(255, 255, 255, 0.4);
+  animation: ccpsPulse 1.2s ease-in-out infinite; /* same timing as wifiPulse */
+}
+
+@keyframes ccpsPulse {
+  0% {
+    transform: scale(1);
+    text-shadow:
+      0 0 2px rgba(255, 255, 255, 0.4),
+      0 0 6px rgba(255, 255, 255, 0.25);
+  }
+  50% {
+    transform: scale(1.05);
+    text-shadow:
+      0 0 6px rgba(255, 255, 255, 1),
+      0 0 16px rgba(255, 255, 255, 0.9);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow:
+      0 0 2px rgba(255, 255, 255, 0.4),
+      0 0 6px rgba(255, 255, 255, 0.25);
+  }
+}
+
+
+/* Glow pulse animation for "CCPS" */
+@keyframes ssidGlow {
+  0% {
+    transform: scale(1);
+    text-shadow:
+      0 0 2px rgba(255, 255, 255, 0.5),
+      0 0 6px rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    text-shadow:
+      0 0 6px rgba(255, 255, 255, 1),
+      0 0 16px rgba(255, 255, 255, 0.85);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow:
+      0 0 2px rgba(255, 255, 255, 0.5),
+      0 0 6px rgba(255, 255, 255, 0.3);
+  }
+}
+
+
 
     /* ANIMATIONS (only for icon now) */
     @keyframes wifiPulse {
@@ -268,9 +325,10 @@
         </svg>
 
       </div>
-      <div class="wifi-text">
-        PLEASE CONNECT TO <br>"CCPS"<br> WI-FI BEFORE JOINING.
-      </div>
+<div class="wifi-text">
+  PLEASE MAKE SURE YOU'RE <br>
+  CONNECTED TO <span class="wifi-ssid">"CCPS"</span> WI-FI<br>BEFORE JOINING.
+</div>
     </div>
   </div>
 
