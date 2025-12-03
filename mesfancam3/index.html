@@ -598,8 +598,8 @@ if (avg < 250) {
   if (goodTicks >= 3) {
 
     fps = 6;            // smooth
-    quality = 0.5;     // clean image
-    downscale = true;  // full res
+    quality = 0.65;     // clean image
+    downscale = false;  // full res
   }
 }
 
@@ -613,14 +613,24 @@ else {
   if (badTicks >= 3) {
 
     fps = 2;            // slideshow mode
-    quality = 0.20;     // heavy compression
+    quality = 0.30;     // heavy compression
     downscale = true;   // downscale to reduce packet size
   }
 }
 
+// --------------------------------------------------
+// DEBUG OUTPUT
+// --------------------------------------------------
+
+console.log(
+  `[SEND] ` +
+  `avg=${avg.toFixed(1)}ms | fps=${fps} | q=${quality.toFixed(2)} | ds=${downscale} ` +
+  `| good=${goodTicks} | bad=${badTicks}`
+);
+
 // continue streaming
 setTimeout(sendFrame, 1000 / fps);
-
+}
 
 sendFrame();
 
