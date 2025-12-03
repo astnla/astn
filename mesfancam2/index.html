@@ -615,31 +615,47 @@ liveBadge.style.display =
     }
   });
 
-  function endClientSession() {
-  update(ref(db, `participants/${userKey}`), {
-    cameraActive: false
-  });
+function endClientSession() {
 
-  // Stop camera
+  // FIRST: check whether participants still exist
+  onValue(ref(db, "participants"), snap => {
+
+    if (!snap.exists()) {
+      // DB is empty — DON'T WRITE ANYTHING BACK
+      cleanupAndExit();
+    } else {
+      // DB still alive — safe to write cameraActive:false
+      update(ref(db, `participants/${userKey}`), {
+        cameraActive: false
+      });
+
+      cleanupAndExit();
+    }
+
+  }, { onlyOnce: true });
+}
+
+function cleanupAndExit() {
+  // stop camera
   if (video.srcObject) {
     video.srcObject.getTracks().forEach(t => t.stop());
   }
 
-  // Show “thanks” UI
+  // show thanks screen
   document.body.innerHTML = `
-    <div style="
-      height:100vh;display:flex;align-items:center;justify-content:center;
-      text-align:center;font-size:22px;font-weight:900;color:white;
-      padding:20px;
-    ">THANKS FOR STOPPING BY!<br>YOU MAY NOW CLOSE THIS TAB.</div>
+    <div style="height:100vh;display:flex;align-items:center;justify-content:center;
+    text-align:center;font-size:22px;font-weight:900;color:white;padding:20px;">
+      THANKS FOR STOPPING BY!<br>YOU MAY NOW CLOSE THIS TAB.
+    </div>
   `;
 
-  // Clear identity + redirect after 10 sec
+  // delayed redirect
   setTimeout(() => {
     sessionStorage.clear();
     window.location.href = "join.html";
   }, 10000);
 }
+
 
 const flipCameraBtn = document.getElementById("flipCameraBtn");
 
