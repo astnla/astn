@@ -514,42 +514,92 @@ liveBadge.style.display =
 
   });
 
-  let interval = null;
+let fps = 6;            // starts at full FPS
+let quality = 0.50;     // starts high
+let downscale = false;
 
-  function startStreamingFrames() {
-    if (interval) return;
+let avg = 0;
+let samples = [];
 
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
-    interval = setInterval(() => {
-      if (!userKey || currentlyLiveUser !== userKey || !streamingEnabled) return;
-      if (!video || video.readyState < 2) return;
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      ctx.save();
-
-      if (currentCamera === "front") {
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-      } else {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      }
-
-      ctx.restore();
-
-      const jpeg = canvas.toDataURL("image/jpeg", 0.5);
-
-    update(ref(db, "live"), {
-      frame: jpeg,
-      ts: Date.now(),
-      user: userKey
-    });
-
-    }, 166);
+async function sendFrame() {
+  if (!userKey || currentlyLiveUser !== userKey || !streamingEnabled) {
+    setTimeout(sendFrame, 200);
+    return;
   }
+
+  if (!video || video.readyState < 2) {
+    setTimeout(sendFrame, 200);
+    return;
+  }
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  // downscale if needed
+  let w = video.videoWidth;
+  let h = video.videoHeight;
+
+  if (downscale && w > 640) {
+    h = Math.round(h * (640 / w));
+    w = 640;
+  }
+
+  canvas.width = w;
+  canvas.height = h;
+
+  ctx.save();
+  if (currentCamera === "front") {
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -w, 0, w, h);
+  } else {
+    ctx.drawImage(video, 0, 0, w, h);
+  }
+  ctx.restore();
+
+  const jpeg = canvas.toDataURL("image/jpeg", quality);
+
+  const start = performance.now();
+
+  await update(ref(db, "live"), {
+    frame: jpeg,
+    ts: Date.now(),
+    user: userKey
+  });
+
+  const end = performance.now();
+  const duration = end - start;
+
+  samples.push(duration);
+  if (samples.length > 10) samples.shift();
+
+  avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+
+  // adapt
+  if (avg < 120) {
+    fps = 6;
+    quality = 0.5;
+    downscale = false;
+  }
+  else if (avg < 250) {
+    fps = 3;
+    quality = 0.35;
+    downscale = false;
+  }
+  else if (avg < 500) {
+    fps = 1;
+    quality = 0.25;
+    downscale = false;
+  }
+  else {
+    fps = 1;
+    quality = 0.15;
+    downscale = true;
+  }
+
+  setTimeout(sendFrame, 1000 / fps);
+}
+
+sendFrame();
 
   /* ----------------------------------------
      TRIVIA MODE LISTENERS
