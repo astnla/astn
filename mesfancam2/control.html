@@ -530,7 +530,24 @@ body {
       autoLiveToggle.checked = false;
   
       // Clear ALL participants
+      // Clear ALL participants in db
       await set(participantsRef, null);
+
+      // Clear local cache immediately
+      participantsSnapshot = {};
+      answers = {};
+      currentLiveUser = null;
+
+      // Clear active user
+      await set(liveUserRef, null);
+
+      // Force output page reset
+      await set(ref(db, "live/frame"), null);
+      await set(ref(db, "live/timestamp"), null);
+
+      // Force immediate UI refresh
+      buildGrid();
+      highlightLive(null);
   
       // Clear active user
       await set(liveUserRef, null);
