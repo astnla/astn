@@ -78,15 +78,32 @@
       align-items: center;
       text-align: center;
       padding: 16px;
-      color: var(--navy);
+      color: white;
       font-weight: 700;
-      font-size: 16px;
+      animation: overlayPulse 1.6s ease-in-out infinite;
+      font-size: 24px;
+    }
+
+    /* Subtle glow and opacity pulse */
+    @keyframes overlayPulse {
+      0% {
+        opacity: 0.5;
+        text-shadow: 0 0 4px rgba(255,255,255,0.6);
+      }
+      50% {
+        opacity: 1;
+        text-shadow: 0 0 16px rgba(255,255,255,1);
+      }
+      100% {
+        opacity: 0.5;
+        text-shadow: 0 0 4px rgba(255,255,255,0.6);
+      }
     }
 
     #qrImage {
-      width: 140px;
-      height: 140px;
-      margin-top: 12px;
+      width: 200px;
+      height: 200px;
+      margin: 12px;
       object-fit: contain;
     }
 
@@ -123,6 +140,17 @@
       bottom: 65px;
     }
 
+    #liveName {
+      font-size: 20px;
+      font-weight: 900;
+      color: white;
+      text-align: center;
+      margin-top: -10px;
+      display: none; /* still hidden until JS shows it */
+      animation: overlayPulse 1.6s ease-in-out infinite;
+    }
+
+
   </style>
 </head>
 <body>
@@ -140,8 +168,8 @@
 
     <!-- EMPTY STATE -->
     <div id="emptyState">
-      SCAN QR TO JOIN MANATEE CAM!
-      <img id="qrImage" src="assets/qr.png">
+      SCAN ME
+      <img id="qrImage" src="assets/qr2.png">
     </div>
 
     <!-- ✨ TRIVIA OVERLAYS -->
@@ -151,7 +179,7 @@
 
   </div>
 
-  <div id="liveName" style="font-size: 20px;font-weight: 900;color: var(--navy);text-align: center;margin-top: -10px;display: none;">
+  <div id="liveName">
   </div>
 
 </div>
