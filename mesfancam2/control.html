@@ -8,254 +8,262 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
 
   <style>
-    :root {
-      --bg-red: #DA1A32;
-      --navy:   #00031F;
-      --card:   #ffffff;
-    }
+:root {
+  --bg-red: #DA1A32;
+  --navy:   #00031F;
+  --card:   #ffffff;
+}
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
-      font-family: "Outfit", sans-serif;
-      background: var(--bg-red);
-      color: white;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-    }
+body {
+  font-family: "Outfit", sans-serif;
+  background: var(--bg-red);
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      padding: 16px 0;
-      text-align: center;
-      background: var(--bg-red);
-      color: #00031F;
-      font-size: 22px;
-      font-weight: 900;
-      z-index: 10;
-    }
+/* =========================
+  HEADER
+========================= */
 
-    .member-count {
-      position: fixed;
-      top: 55px;
-      width: 100%;
-      text-align: center;
-      font-size: 14px;
-      font-weight: 700;
-      color: #00031F;
-      z-index: 10;
-    }
+.topbar {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-red);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 900;
+  color: white;
+  z-index: 10;
+}
 
-    /* TRIVIA PANEL */
-    #triviaPanel {
-      margin-top: 95px;
-      margin-bottom: 15px;
-      width: 100%;
-      max-width: 500px;
-      padding: 15px;
-      background: #fe3048;
-      border-radius: 10px;
-      color: var(--navy);
-      display: none;
-    }
+.topbar .right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
 
-    #triviaPanel h2 {
-      font-size: 18px;
-      font-weight: 900;
-      margin-bottom: 10px;
-    }
+.toggle {
+  font-size: 14px;
+  font-weight: 900;
+}
 
-    .inputRow {
-      margin-top: 10px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      width: 100%;
-    }
+.toggle input {
+  transform: scale(1.3);
+  margin-right: 6px;
+}
 
-    .inputRow input {
-      flex: 1;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-      font-weight: 700;
-    }
+.end-btn {
+  padding: 8px 16px;
+  background: var(--navy);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 900;
+  cursor: pointer;
+  font-size: 14px;
+  display: none;
+}
 
-    .inputRow button {
-      padding: 10px 15px;
-      background: var(--navy);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 900;
-      cursor: pointer;
-    }
+/* MEMBER COUNT */
 
-    footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      padding: 16px 0;
-      text-align: center;
-      background: var(--bg-red);
-      z-index: 10;
-    }
+.member-count {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px;
+}
 
-    #endSessionBtn {
-      padding: 10px 20px;
-      background: var(--navy);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-weight: 900;
-      cursor: pointer;
-      font-size: 15px;
-      display: none;
-    }
+/* =========================
+  TRIVIA PANEL
+========================= */
 
-    .middle-wrapper {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-    }
+#triviaPanel {
+  width: 100%;
+  max-width: 500px;
+  padding: 15px;
+  margin: 10px auto;
+  background: #fe3048;
+  border-radius: 10px;
+  color: var(--navy);
+  display: none;
+}
 
-    .grid-container {
-      width: 100%;
-      max-width: 900px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-top: 20px;
-    }
+#triviaPanel h2 {
+  font-size: 18px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
 
-    .grid {
-      display: grid;
-      grid-auto-flow: row;
-      grid-template-columns: repeat(auto-fit, 180px);
-      justify-content: center;
-      gap: 12px;
-      width: 100%;
-    }
+.inputRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
 
-    .card {
-      background: white;
-      border-radius: 10px;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      color: var(--navy);
-      transition: 0.2s;
-    }
+.inputRow input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  font-weight: 700;
+}
 
-    .card.answeredCorrect {
-      background: #d9ffd9;
-      border: 2px solid #6bcc6b;
-    }
+.inputRow button {
+  padding: 10px 15px;
+  background: var(--navy);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
 
-    .card.answeredWrong {
-      background: #fff4c2;
-      border: 2px solid #e8c045;
-    }
+/* =========================
+  CONTENT AREA
+========================= */
 
-    .thumb {
-      width: 100%;
-      aspect-ratio: 3 / 4;
-      object-fit: cover;
-      border-radius: 8px;
-    }
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px 8px 80px;
+  overflow-y: auto;
+}
 
-    .name {
-      font-weight: 900;
-      font-size: 16px;
-      text-align: center;
-    }
+/* GRID */
 
-    .joined {
-      font-size: 11px;
-      opacity: 0.7;
-    }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
 
-    .submittedAnswer {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--navy);
-      text-align: center;
-      margin-top: -4px;
-    }
+/* CARD */
 
-    .goLiveBtn,
-    .revealAnswerBtn {
-      padding: 8px 12px;
-      font-size: 14px;
-      font-weight: 900;
-      border-radius: 6px;
-      border: none;
-      background: var(--navy);
-      color: white;
-      cursor: pointer;
-      width: 100%;
-      transition: 0.2s;
-    }
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--navy);
+  transition: 0.2s;
+}
 
-    .goLiveBtn.live {
-      background: var(--bg-red);
-      color: white;
-    }
+.card.answeredCorrect {
+  background: #d9ffd9;
+  border: 2px solid #6bcc6b;
+}
 
-    /* Disabled reveal/hide */
-    .disabled {
-      opacity: 0.35;
-      pointer-events: none;
-    }
+.card.answeredWrong {
+  background: #fff4c2;
+  border: 2px solid #e8c045;
+}
+
+.thumb {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.name {
+  font-weight: 900;
+  font-size: 16px;
+  text-align: center;
+}
+
+.joined {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.submittedAnswer {
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* BUTTONS IN CARD */
+
+.goLiveBtn,
+.revealAnswerBtn {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 900;
+  border-radius: 6px;
+  border: none;
+  background: var(--navy);
+  color: white;
+  cursor: pointer;
+  width: 100%;
+  transition: 0.2s;
+}
+
+.goLiveBtn.live {
+  background: var(--bg-red);
+  color: white;
+}
+
+/* Hide reveal/hide when disabled */
+.disabled {
+  display: none !important;
+}
+
   </style>
 </head>
 
 <body>
 
-<header>CONTROL ROOM</header>
-<div id="memberCount" class="member-count">0 MEMBERS CONNECTED</div>
+<header class="topbar">
+  <div class="left">
+    CONTROL ROOM
+  </div>
 
-<!-- AUTO LIVE + TRIVIA MODE TOGGLES -->
-<div style="margin-top:80px; display:flex; gap:40px; justify-content:center; align-items:center;">
+  <div class="right">
+    <label class="toggle">
+      <input type="checkbox" id="autoLiveToggle">
+      AUTO LIVE
+    </label>
 
-  <label style="font-weight:900; font-size:16px;">
-    <input type="checkbox" id="autoLiveToggle" style="transform:scale(1.3); margin-right:6px;">
-    AUTO LIVE
-  </label>
+    <label class="toggle">
+      <input type="checkbox" id="triviaToggle">
+      TRIVIA
+    </label>
 
-  <label style="font-weight:900; font-size:16px;">
-    <input type="checkbox" id="triviaToggle" style="transform:scale(1.3); margin-right:6px;">
-    TRIVIA MODE
-  </label>
+    <button id="endSessionBtn" class="end-btn">END</button>
+  </div>
+</header>
 
-</div>
+
+<div id="memberCount" class="member-count"></div>
 
 
 <!-- TRIVIA PANEL -->
 <div id="triviaPanel">
   <h2>TRIVIA CONTROLS</h2>
 
-  <!-- QUESTION -->
   <div class="inputRow">
     <input id="questionInput" placeholder="QUESTION">
     <button id="sendQuestionBtn">SHOW</button>
     <button id="resetTriviaBtn">RESET</button>
   </div>
 
-  <!-- CORRECT ANSWER -->
   <div class="inputRow">
     <input id="correctInput" placeholder="ANSWER">
     <button id="okCorrectBtn">ENTER</button>
@@ -263,15 +271,11 @@
   </div>
 </div>
 
-<div class="middle-wrapper">
-  <div class="grid-container">
-    <div id="grid" class="grid"></div>
-  </div>
-</div>
 
-<footer>
-  <button id="endSessionBtn">END SESSION</button>
-</footer>
+<!-- CONTENT AREA -->
+<main class="content">
+  <div class="grid" id="grid"></div>
+</main>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -364,7 +368,7 @@
       lastLive = nextUser;
       set(liveUserRef, nextUser);
 
-    }, 3000); // 3 seconds
+    }, 7000); // 3 seconds
   }
 
   function stopAutoLive() {
@@ -617,53 +621,64 @@
         card.appendChild(ans);
       }
 
-      const liveBtn = document.createElement("button");
-      liveBtn.className = "goLiveBtn";
+    const liveBtn = document.createElement("button");
+    liveBtn.className = "goLiveBtn";
+    liveBtn.dataset.uid = key;
+
+    if (p.cameraActive) {
       liveBtn.textContent = "GO LIVE";
-      liveBtn.dataset.uid = key;
+      liveBtn.disabled = false;
       liveBtn.onclick = () => set(liveUserRef, key);
+    } else {
+      liveBtn.textContent = "WAITING...";
+      liveBtn.disabled = true;
+      liveBtn.style.opacity = "0.4";
+      liveBtn.style.pointerEvents = "none";
+    }
 
       card.appendChild(img);
       card.appendChild(nameDiv);
       card.appendChild(timeDiv);
       card.appendChild(liveBtn);
 
-      /* Reveal / Hide */
-      const revealBtn = document.createElement("button");
-      revealBtn.className = "revealAnswerBtn";
-      revealBtn.textContent = "REVEAL ANSWER";
+/* Reveal / Hide — only when trivia mode ON */
+if (triviaOn) {
 
-      const hideBtn = document.createElement("button");
-      hideBtn.className = "revealAnswerBtn";
-      hideBtn.textContent = "HIDE";
+  const revealBtn = document.createElement("button");
+  revealBtn.className = "revealAnswerBtn";
+  revealBtn.textContent = "REVEAL ANSWER";
 
-      if (!questionActive || !hasAnswer) {
+  const hideBtn = document.createElement("button");
+  hideBtn.className = "revealAnswerBtn";
+  hideBtn.textContent = "HIDE";
+
+  if (!questionActive || !hasAnswer) {
+    revealBtn.classList.add("disabled");
+    hideBtn.classList.add("disabled");
+  } else {
+    onValue(ref(db, `trivia/reveal/${key}`), snap => {
+      const val = snap.val();
+      const revealed = val && typeof val === "object" && val.show === true;
+
+      if (revealed) {
         revealBtn.classList.add("disabled");
-        hideBtn.classList.add("disabled");
+        hideBtn.classList.remove("disabled");
       } else {
-        onValue(ref(db, `trivia/reveal/${key}`), snap => {
-          const val = snap.val();
-          const revealed = val && typeof val === "object" && val.show === true;
-
-          if (revealed) {
-            revealBtn.classList.add("disabled");
-            hideBtn.classList.remove("disabled");
-          } else {
-            revealBtn.classList.remove("disabled");
-            hideBtn.classList.add("disabled");
-          }
-        });
-
-        revealBtn.onclick = () =>
-          update(ref(db, `trivia/reveal/${key}`), { show: true });
-
-        hideBtn.onclick = () =>
-          update(ref(db, `trivia/reveal/${key}`), { show: false });
+        revealBtn.classList.remove("disabled");
+        hideBtn.classList.add("disabled");
       }
+    });
 
-      card.appendChild(revealBtn);
-      card.appendChild(hideBtn);
+    revealBtn.onclick = () =>
+      update(ref(db, `trivia/reveal/${key}`), { show: true });
 
+    hideBtn.onclick = () =>
+      update(ref(db, `trivia/reveal/${key}`), { show: false });
+  }
+
+  card.appendChild(revealBtn);
+  card.appendChild(hideBtn);
+}
       grid.appendChild(card);
     }
   }

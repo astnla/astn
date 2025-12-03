@@ -458,6 +458,11 @@ async function enableCamera() {
     shell.classList.add("active");
     flipCameraBtn.style.display = "flex";
 
+    // ⭐ FLAG USER AS CAMERA ACTIVE
+    update(ref(db, `participants/${userKey}`), {
+      cameraActive: true
+    });
+
     // ⭐ IMPORTANT: Mirror only front camera
     if (currentCamera === "front") {
       video.style.transform = "scaleX(-1)";
@@ -611,6 +616,10 @@ liveBadge.style.display =
   });
 
   function endClientSession() {
+  update(ref(db, `participants/${userKey}`), {
+    cameraActive: false
+  });
+
   // Stop camera
   if (video.srcObject) {
     video.srcObject.getTracks().forEach(t => t.stop());
