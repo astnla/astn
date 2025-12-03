@@ -521,6 +521,9 @@ let downscale = false;
 let avg = 0;
 let samples = [];
 
+let badTicks = 0;
+let goodTicks = 0;
+
 async function sendFrame() {
   if (!userKey || currentlyLiveUser !== userKey || !streamingEnabled) {
     setTimeout(sendFrame, 200);
@@ -574,27 +577,44 @@ async function sendFrame() {
 
   avg = samples.reduce((a, b) => a + b, 0) / samples.length;
 
-  // adapt
-  if (avg < 120) {
+
+// adaptive hysteresis
+if (avg < 200) {
+  goodTicks++;
+  badTicks = 0;
+
+  // recover after sustained good network
+  if (goodTicks >= 3) {
     fps = 6;
-    quality = 0.5;
+    quality = 0.60;
     downscale = false;
   }
-  else if (avg < 250) {
-    fps = 3;
-    quality = 0.35;
-    downscale = false;
-  }
-  else if (avg < 500) {
-    fps = 1;
-    quality = 0.25;
-    downscale = false;
-  }
-  else {
-    fps = 1;
-    quality = 0.15;
+}
+else if (avg < 450) {
+  // medium range, don't flip settings fast
+  badTicks = 0;
+  goodTicks = 0;
+
+  fps = 3;
+  quality = 0.40;
+  downscale = false;
+}
+else {
+  badTicks++;
+  goodTicks = 0;
+
+  // degrade ONLY after sustained bad network
+  if (badTicks >= 3) {
+    fps = 2;            // IMPORTANT: no 1fps unless severe
+    quality = 0.30;
     downscale = true;
   }
+}
+
+console.log(
+  `[SEND] avg=${avg.toFixed(1)}ms | fps=${fps} | q=${quality.toFixed(2)} ` +
+  ` | ds=${downscale} | good=${goodTicks} | bad=${badTicks}`
+);
 
   setTimeout(sendFrame, 1000 / fps);
 }
