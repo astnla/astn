@@ -794,18 +794,21 @@ onValue(ref(db, `kick/${userKey}`), snap => {
       color:white;
       padding:20px;">
       YOU HAVE BEEN REMOVED<br><br>
-      Reason: ${reason}
+      REASON: ${reason}
     </div>
   `;
 
   // Cleanup DB after short delay
   setTimeout(async () => {
-    await update(ref(db, `participants/${userKey}`), { cameraActive: false });
-    await update(ref(db, `participants/${userKey}`), null);
+  await update(ref(db, `participants/${userKey}`), { cameraActive: false });
+  await set(ref(db, `participants/${userKey}`), null);
 
-    sessionStorage.clear();
-    window.location.href = "join.html";
-  }, 8000);
+  // remove the kick flag so loop does NOT repeat on reload
+  await set(ref(db, `kick/${userKey}`), null);
+
+  sessionStorage.clear();
+  window.location.href = "join.html";
+  }, 5000);
 });
 
 

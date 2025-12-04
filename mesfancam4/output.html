@@ -487,35 +487,41 @@ onValue(revealRef, snap => {
 /* ----------------------------------------
    END SESSION → SHOW THANK YOU OVERLAY
 ---------------------------------------- */
-onValue(ref(db, "participants"), snap => {
-  if (snap.exists()) return; // only when fully cleared
+// Watch sessionActive instead of participants
+const sessionRef = ref(db, "sessionActive");
 
+onValue(sessionRef, snap => {
+  const active = snap.val();
+
+  // Session still running → do nothing
+  if (active === true) return;
+
+  // Session ended → show Thanks screen once
   imgEl.style.display = "none";
   emptyState.style.display = "none";
 
-document.body.innerHTML = `
-  <div style="
-    height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    font-size:22px;
-    font-weight:900;
-    color:white;
-    padding:20px;
-    animation: fadeIn 0.4s ease;">
-    THANKS FOR JOINING!
-  </div>
-`;
+  document.body.innerHTML = `
+    <div style="
+      height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      font-size:22px;
+      font-weight:900;
+      color:white;
+      padding:20px;
+      animation: fadeIn 0.4s ease;">
+      THANKS FOR JOINING!
+    </div>
+  `;
 
-setTimeout(() => {
-  // fade out to QR
-  document.body.style.opacity = 0;
   setTimeout(() => {
-    window.location.href = "output.html"; // reload into fresh QR
-  }, 600);
-}, 4000);
+    document.body.style.opacity = 0;
+    setTimeout(() => {
+      window.location.href = "output.html"; 
+    }, 600);
+  }, 4000);
 });
 
 </script>
