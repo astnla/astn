@@ -412,7 +412,7 @@
 
 async function enableCamera() {
   try {
-    // 🔹 Stop any old REAL stream
+    // 🔹 Stop old camera first (if switching)
     if (currentStream) {
       currentStream.getTracks().forEach(t => t.stop());
       currentStream = null;
@@ -421,19 +421,10 @@ async function enableCamera() {
 
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // 🔹 Get camera list (and close warm-up) on Android
-    let cams = [];
-    if (!isIOS) {
-      cams = await getVideoInputs();
-
-      // Optional: avoid depth / IR / aux cameras if they show up
-      cams = cams.filter(c => !/depth|infrared|ir|aux/i.test(c.label));
-    }
-
     let constraints;
 
     if (isIOS) {
-      // ✅ iOS stays exactly how you had it (nice wide FOV on front)
+      // 📱 iPhone → keep your original FOV behavior using facingMode
       constraints = {
         video: {
           facingMode: currentCamera === "front" ? "user" : "environment",
@@ -442,7 +433,23 @@ async function enableCamera() {
         }
       };
     } else {
-      // 🤖 Android → choose front/back by deviceId
+      // 🤖 Android path
+
+      // 1) Warm-up stream ONLY to unlock labels
+      const warmupStream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+      // 2) Enumerate devices
+      const devices = await navigator.mediaDevices.enumerateDevices();
+
+      // 3) STOP the warm-up stream so we don't keep the camera busy
+      warmupStream.getTracks().forEach(t => t.stop());
+
+      // 4) Now pick a real camera from the list
+      let cams = devices.filter(d => d.kind === "videoinput");
+
+      // Optional: avoid weird depth / IR cameras
+      cams = cams.filter(c => !/depth|infrared|ir|aux/i.test(c.label));
+
       let targetCam;
 
       if (currentCamera === "front") {
@@ -458,20 +465,32 @@ async function enableCamera() {
           cams[cams.length - 1];
       }
 
-      if (!targetCam || !targetCam.deviceId) {
+      // Fallback if label / deviceId is funky
+      if (!targetCam || !targetCam.deviceId || targetCam.deviceId.trim() === "") {
+        console.warn("⚠️ Android camera labels unreliable — applying fallback");
+        if (currentCamera === "front") {
+          targetCam = cams[0];
+        } else {
+          targetCam = cams[cams.length - 1];
+        }
+      }
+
+      if (!targetCam) {
         throw new Error("No usable camera found on this Android device.");
       }
+
+      console.log("🎥 Using camera:", targetCam.label, targetCam.deviceId);
 
       constraints = {
         video: {
           deviceId: { exact: targetCam.deviceId },
-          width: { ideal: 1280 },
+          width:  { ideal: 1280 },
           height: { ideal: 720 }
         }
       };
     }
 
-    // 🔹 Start the selected camera
+    // 🔹 Start the selected camera (iOS or Android)
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
 
@@ -480,31 +499,32 @@ async function enableCamera() {
     overlay.style.display = "none";
     flipCameraBtn.style.display = "flex";
 
-    // Firebase flag
+    // 🔹 Firebase flag (same as your original)
     update(ref(db, `participants/${userKey}`), {
       cameraActive: true
     });
 
-    // Mirror only the front camera
+    // 🔹 Mirror only the front camera
     if (currentCamera === "front") {
       video.style.transform = "scaleX(-1)";
     } else {
       video.style.transform = "scaleX(1)";
     }
 
-    // Continue your streaming
+    // 🔹 Continue your streaming
     startStreamingFrames();
 
   } catch (err) {
     console.error("Camera error:", err);
 
-    // Show overlay again instead of a dead black box
+    // Bring overlay back so user can retry
     shell.classList.remove("active");
     overlay.style.display = "flex";
     overlay.querySelector(".camera-overlay-text").textContent =
       "CAMERA ERROR — TAP TO TRY AGAIN";
   }
 }
+
   
 
   /* ----------------------------------------
