@@ -695,11 +695,13 @@ sendFrame();
 
   const participantsRef = ref(db, "participants");
 
-  onValue(participantsRef, snap => {
-    if (!snap.exists()) {
-      endClientSession();
-    }
-  });
+// Only end when session officially ended
+onValue(ref(db, "session/end"), snap => {
+  if (snap.val() === true) {
+    endClientSession();
+  }
+});
+
 
 function endClientSession() {
 

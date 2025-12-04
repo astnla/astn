@@ -389,16 +389,18 @@ body {
     }, 7000); // 3 seconds
   }
 
-  function stopAutoLive() {
-    autoLiveEnabled = false;
-    if (autoLiveInterval) clearInterval(autoLiveInterval);
-    autoLiveInterval = null;
+function stopAutoLive() {
+  autoLiveEnabled = false;
+  if (autoLiveInterval) clearInterval(autoLiveInterval);
+  autoLiveInterval = null;
 
-    // Leave whoever was last live
-    if (lastLive) {
-      set(liveUserRef, lastLive);
-    }
+  if (lastLive) {
+    update(ref(db, "live"), {
+      activeUser: lastLive,
+      user: lastLive
+    });
   }
+}
 
   /* Toggle listener */
   autoLiveToggle.addEventListener("change", () => {
@@ -593,6 +595,9 @@ body {
       disableShowBtn();
       triviaToggle.checked = false;
       triviaPanel.style.display = "none";
+
+      // Mark session officially ended
+      await update(ref(db, "session"), { end: true });
   
       alert("Session fully reset.");
     }

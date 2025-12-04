@@ -487,16 +487,10 @@ onValue(revealRef, snap => {
 /* ----------------------------------------
    END SESSION → SHOW THANK YOU OVERLAY
 ---------------------------------------- */
-// Watch sessionActive instead of participants
-const sessionRef = ref(db, "sessionActive");
+onValue(ref(db, "session/end"), snap => {
+  if (!snap.val()) return;
 
-onValue(sessionRef, snap => {
-  const active = snap.val();
-
-  // Session still running → do nothing
-  if (active === true) return;
-
-  // Session ended → show Thanks screen once
+  // Session ended
   imgEl.style.display = "none";
   emptyState.style.display = "none";
 
@@ -517,12 +511,10 @@ onValue(sessionRef, snap => {
   `;
 
   setTimeout(() => {
-    document.body.style.opacity = 0;
-    setTimeout(() => {
-      window.location.href = "output.html"; 
-    }, 600);
-  }, 4000);
+    window.location.href = "output.html";
+  }, 2000);
 });
+
 
 </script>
 
