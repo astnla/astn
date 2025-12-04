@@ -285,36 +285,47 @@ onValue(participantsRef, snap => {
    LIVE FRAME STREAM
    atomic + filtered + drop stale
 --------------------------------------------------*/
-const liveRef = ref(db, "live");
+const frameRef = ref(db, "live/frame");
+const tsRef    = ref(db, "live/ts");
+const userRef  = ref(db, "live/user");
 
-onValue(liveRef, snap => {
-  const data = snap.val();
+let bufferedFrame = null;
+let bufferedTS = 0;
+let bufferedUser = null;
 
-  // nothing in DB yet?
-  if (!data) {
-    imgEl.style.display = "none";
-    emptyState.style.display = "flex";
-    badOverlay.style.display = "none";
-    return;
-  }
+/* Listen for FRAME ONLY */
+onValue(frameRef, snap => {
+  bufferedFrame = snap.val();
+  tryApplyFrame();
+});
 
-  const { frame, ts, user } = data;
+/* Listen for TS ONLY */
+onValue(tsRef, snap => {
+  bufferedTS = snap.val();
+  tryApplyFrame();
+});
 
-  // ignore if wrong user
-  if (!activeUser || user !== activeUser) return;
+/* Listen for USER ONLY */
+onValue(userRef, snap => {
+  bufferedUser = snap.val();
+  tryApplyFrame();
+});
 
-  // drop stale
-  if (!ts || ts <= lastTS) return;
+/* Apply frame only when ALL 3 match conditions */
+function tryApplyFrame() {
+  if (!bufferedFrame || !bufferedTS || !bufferedUser) return;
 
-  // accept
-  lastTS = ts;
+  if (bufferedUser !== activeUser) return;
+  if (bufferedTS <= lastTS) return;
+
+  lastTS = bufferedTS;
   lastFrameTime = performance.now();
 
-  imgEl.src = frame;
+  imgEl.src = bufferedFrame;
   imgEl.style.display = "block";
   emptyState.style.display = "none";
   badOverlay.style.display = "none";
-});
+}
 
 /* -------------------------------------------------
    BAD CONNECTION MONITOR
