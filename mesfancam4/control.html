@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CONTROL</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <style>
+:root {
+  --bg-red: #DA1A32;
+  --navy:   #00031F;
+  --card:   #ffffff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: "Outfit", sans-serif;
+  background: var(--bg-red);
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================
+  HEADER
+========================= */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-red);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 900;
+  color: white;
+  z-index: 10;
+}
+
+.topbar .right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.toggle {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.toggle input {
+  transform: scale(1.3);
+  margin-right: 6px;
+}
+
+.end-btn {
+  padding: 8px 16px;
+  background: var(--navy);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 900;
+  cursor: pointer;
+  font-size: 14px;
+  display: none;
+}
+
+/* MEMBER COUNT */
+
+.member-count {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px;
+}
+
+/* =========================
+  TRIVIA PANEL
+========================= */
+
+#triviaPanel {
+  width: 100%;
+  max-width: 500px;
+  padding: 15px;
+  margin: 10px auto;
+  background: #fe3048;
+  border-radius: 10px;
+  color: var(--navy);
+  display: none;
+}
+
+#triviaPanel h2 {
+  font-size: 18px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.inputRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.inputRow input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.inputRow button {
+  padding: 10px 15px;
+  background: var(--navy);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* =========================
+  CONTENT AREA
+========================= */
+
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px 8px 80px;
+  overflow-y: auto;
+}
+
+/* GRID */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+/* CARD */
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--navy);
+  transition: 0.2s;
+}
+
+.card.answeredCorrect {
+  background: #d9ffd9;
+  border: 2px solid #6bcc6b;
+}
+
+.card.answeredWrong {
+  background: #fff4c2;
+  border: 2px solid #e8c045;
+}
+
+.thumb {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.name {
+  font-weight: 900;
+  font-size: 16px;
+  text-align: center;
+}
+
+.joined {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.submittedAnswer {
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* BUTTONS IN CARD */
+
+.goLiveBtn,
+.revealAnswerBtn {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 900;
+  border-radius: 6px;
+  border: none;
+  background: var(--navy);
+  color: white;
+  cursor: pointer;
+  width: 100%;
+  transition: 0.2s;
+}
+
+.goLiveBtn.live {
+  background: var(--bg-red);
+  color: white;
+}
+
+/* Hide reveal/hide when disabled */
+.disabled {
+  display: none !important;
+}
+
+  </style>
+</head>
+
+<body>
+
+<header class="topbar">
+  <div class="left">
+    CONTROL ROOM
+  </div>
+
+  <div class="right">
+    <label class="toggle">
+      <input type="checkbox" id="autoLiveToggle">
+      AUTO LIVE
+    </label>
+
+    <label class="toggle">
+      <input type="checkbox" id="triviaToggle">
+      TRIVIA
+    </label>
+
+    <button id="endSessionBtn" class="end-btn">END</button>
+  </div>
+</header>
+
+
+<div id="memberCount" class="member-count"></div>
+
+
+<!-- TRIVIA PANEL -->
+<div id="triviaPanel">
+  <h2>TRIVIA CONTROLS</h2>
+
+  <div class="inputRow">
+    <input id="questionInput" placeholder="QUESTION">
+    <button id="sendQuestionBtn">SHOW</button>
+    <button id="resetTriviaBtn">RESET</button>
+  </div>
+
+  <div class="inputRow">
+    <input id="correctInput" placeholder="ANSWER">
+    <button id="okCorrectBtn">ENTER</button>
+    <button id="revealCorrectBtn">SHOW</button>
+  </div>
+</div>
+
+
+<!-- CONTENT AREA -->
+<main class="content">
+  <div class="grid" id="grid"></div>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+    authDomain: "mes-fancam.firebaseapp.com",
+    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+    projectId: "mes-fancam",
+    storageBucket: "mes-fancam.firebasestorage.app",
+    messagingSenderId: "1091345682482",
+    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  /* ELEMENTS */
+  const autoLiveToggle   = document.getElementById("autoLiveToggle");
+  const triviaToggle     = document.getElementById("triviaToggle");
+  const triviaPanel      = document.getElementById("triviaPanel");
+
+  const questionInput    = document.getElementById("questionInput");
+  const correctInput     = document.getElementById("correctInput");
+
+  const sendQuestionBtn  = document.getElementById("sendQuestionBtn");
+  const resetTriviaBtn   = document.getElementById("resetTriviaBtn");
+
+  const okCorrectBtn     = document.getElementById("okCorrectBtn");
+  const revealCorrectBtn = document.getElementById("revealCorrectBtn");
+
+  const participantsRef = ref(db, "participants");
+  const liveUserRef     = ref(db, "live/activeUser");
+
+  const triviaRef   = ref(db, "trivia");
+  const answersRef  = ref(db, "trivia/answers");
+  const correctRef  = ref(db, "trivia/correct");
+  const revealRef   = ref(db, "trivia/reveal");
+  const modeRef     = ref(db, "trivia/mode");
+
+  let triviaOn = false;
+  let answers = {};
+  let questionActive = false;
+  let correctAnswer = "";
+  let currentLiveUser = null;
+
+  /* ===============================
+        AUTO LIVE SYSTEM
+     =============================== */
+
+  let autoLiveEnabled = false;
+  let autoLiveInterval = null;
+  let autoCycle = [];        // Current cycle order
+  let autoIndex = 0;         // Index within cycle
+  let lastLive = null;
+
+  /* Shuffle helper */
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function rebuildCycle() {
+    const users = Object.keys(participantsSnapshot)
+      .filter(uid => participantsSnapshot[uid].cameraActive === true);
+    autoCycle = shuffle([...users]);
+    autoIndex = 0;
+  }
+
+  function startAutoLive() {
+    if (autoLiveInterval) clearInterval(autoLiveInterval);
+
+    autoLiveEnabled = true;
+
+    if (autoCycle.length === 0) rebuildCycle();
+
+    autoLiveInterval = setInterval(() => {
+      const users = Object.keys(participantsSnapshot)
+        .filter(uid => participantsSnapshot[uid].cameraActive === true);
+
+      if (users.length === 0) return;
+
+      if (autoIndex >= autoCycle.length) rebuildCycle();
+
+      const nextUser = autoCycle[autoIndex];
+      autoIndex++;
+
+      lastLive = nextUser;
+    update(ref(db, "live"), {
+      activeUser: nextUser,
+      user: nextUser
+    });
+    }, 7000); // 3 seconds
+  }
+
+  function stopAutoLive() {
+    autoLiveEnabled = false;
+    if (autoLiveInterval) clearInterval(autoLiveInterval);
+    autoLiveInterval = null;
+
+    // Leave whoever was last live
+    if (lastLive) {
+      set(liveUserRef, lastLive);
+    }
+  }
+
+  /* Toggle listener */
+  autoLiveToggle.addEventListener("change", () => {
+    if (autoLiveToggle.checked) {
+      rebuildCycle();
+      startAutoLive();
+    } else {
+      stopAutoLive();
+    }
+  });
+
+  /* ===============================
+        SHOW BUTTON DISABLE LOGIC
+     =============================== */
+  disableShowBtn();
+  function disableShowBtn() {
+    sendQuestionBtn.disabled = true;
+    sendQuestionBtn.style.opacity = "0.35";
+    sendQuestionBtn.style.pointerEvents = "none";
+  }
+  function enableShowBtn() {
+    sendQuestionBtn.disabled = false;
+    sendQuestionBtn.style.opacity = "1";
+    sendQuestionBtn.style.pointerEvents = "auto";
+  }
+  correctInput.addEventListener("input", () => disableShowBtn());
+
+  /* ===============================
+        TRIVIA MODE
+     =============================== */
+  onValue(modeRef, snap => {
+    triviaOn = snap.val() === true;
+    triviaToggle.checked = triviaOn;
+    triviaPanel.style.display = triviaOn ? "block" : "none";
+    buildGrid();
+    highlightLive(currentLiveUser);
+  });
+
+  triviaToggle.addEventListener("change", () => {
+    update(triviaRef, { mode: triviaToggle.checked });
+  });
+
+  /* SEND QUESTION */
+  sendQuestionBtn.addEventListener("click", () => {
+    const q = questionInput.value.trim();
+    if (!q) return;
+
+    questionActive = true;
+
+    update(triviaRef, {
+      question: { text: q, show: true }
+    });
+
+    buildGrid();
+    highlightLive(currentLiveUser);
+  });
+
+  /* RESET TRIVIA */
+  resetTriviaBtn.addEventListener("click", async () => {
+    await update(triviaRef, {
+      question: { text: "", show: false },
+      correct: { text: "", show: false },
+      answers: null
+    });
+
+    await set(revealRef, { __reset: Date.now() });
+
+    questionInput.value = "";
+    correctInput.value  = "";
+    questionActive = false;
+    disableShowBtn();
+
+    buildGrid();
+    highlightLive(currentLiveUser);
+  });
+
+  /* OK correct answer */
+  okCorrectBtn.addEventListener("click", () => {
+    const answer = correctInput.value.trim();
+    if (!answer) return;
+
+    update(triviaRef, {
+      correct: { text: answer, show: false }
+    });
+
+    enableShowBtn();
+  });
+
+  /* Reveal correct answer */
+  revealCorrectBtn.addEventListener("click", () => {
+    update(triviaRef, {
+      correct: { text: correctInput.value.trim(), show: true }
+    });
+  });
+
+  /* ANSWERS UPDATE */
+  onValue(answersRef, snap => {
+    answers = snap.val() || {};
+    buildGrid();
+    highlightLive(currentLiveUser);
+  });
+
+  onValue(correctRef, snap => {
+    const d = snap.val() || {};
+    correctAnswer = d.text ? d.text.toLowerCase().trim() : "";
+    buildGrid();
+    highlightLive(currentLiveUser);
+  });
+
+  onValue(ref(db, "trivia/question"), snap => {
+    const q = snap.val();
+    questionActive = q && q.show === true && q.text?.length > 0;
+    buildGrid();
+    highlightLive(currentLiveUser);
+  });
+
+  /* ===============================
+        PARTICIPANTS + GRID
+     =============================== */
+  const grid = document.getElementById("grid");
+  const memberCount = document.getElementById("memberCount");
+  const endSessionBtn = document.getElementById("endSessionBtn");
+
+  let participantsSnapshot = {};
+
+  onValue(participantsRef, snap => {
+    participantsSnapshot = snap.val() || {};
+
+    if (autoLiveEnabled) rebuildCycle();
+
+    buildGrid();
+    highlightLive(currentLiveUser);
+  });
+
+  /* LIVE USER TRACKER */
+  onValue(liveUserRef, snap => {
+    currentLiveUser = snap.val();
+    highlightLive(currentLiveUser);
+  });
+
+  /* END SESSION resets EVERYTHING */
+  endSessionBtn.addEventListener("click", async () => {
+    if (confirm("End the entire session and reset everything?")) {
+  
+      // Stop auto live if running
+      stopAutoLive();
+      autoLiveToggle.checked = false;
+  
+      // Clear ALL participants
+      // Clear ALL participants in db
+      await set(participantsRef, null);
+
+      // Clear local cache immediately
+      participantsSnapshot = {};
+      answers = {};
+      currentLiveUser = null;
+
+      // Clear active user
+      await set(liveUserRef, null);
+
+      // Force output page reset
+      await set(ref(db, "live/frame"), null);
+      await set(ref(db, "live/timestamp"), null);
+
+      // Force immediate UI refresh
+      buildGrid();
+      highlightLive(null);
+  
+      // Clear active user
+      await set(liveUserRef, null);
+  
+      // Force output page to switch back to QR
+      await set(ref(db, "live/frame"), null);
+      await set(ref(db, "live/timestamp"), null);
+  
+      // Reset trivia fully
+      await update(triviaRef, {
+        mode: false,
+        question: { text: "", show: false },
+        correct:  { text: "", show: false },
+        answers: null
+      });
+  
+      // Reset reveal
+      await set(revealRef, { __reset: Date.now() });
+  
+      // Reset UI fields
+      questionInput.value = "";
+      correctInput.value  = "";
+      questionActive = false;
+  
+      disableShowBtn();
+      triviaToggle.checked = false;
+      triviaPanel.style.display = "none";
+  
+      alert("Session fully reset.");
+    }
+  });
+
+  /* ===============================
+        BUILD GRID
+     =============================== */
+  function buildGrid() {
+    grid.innerHTML = "";
+
+    const participants = participantsSnapshot;
+    const keys = Object.keys(participants);
+
+    if (keys.length === 0) {
+      memberCount.textContent = "0 MEMBERS CONNECTED";
+      endSessionBtn.style.display = "none";
+      grid.innerHTML = "<div style='font-size:13px;color:white;'>NO PARTICIPANTS YET.</div>";
+      return;
+    }
+
+    endSessionBtn.style.display = "inline-block";
+    memberCount.textContent = keys.length + " MEMBERS CONNECTED";
+
+    const sorted = Object.entries(participants).sort((a, b) => {
+      const aAns = answers[a[0]] ? 1 : 0;
+      const bAns = answers[b[0]] ? 1 : 0;
+      if (aAns !== bAns) return bAns - aAns;
+      return (b[1].joinedAt || 0) - (a[1].joinedAt || 0);
+    });
+
+    for (const [key, p] of sorted) {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const hasAnswer = answers[key] && answers[key].answer;
+      const userAns = hasAnswer ? answers[key].answer.toLowerCase().trim() : "";
+      const isCorrect = hasAnswer && correctAnswer && userAns === correctAnswer;
+
+      if (hasAnswer) card.classList.add(isCorrect ? "answeredCorrect" : "answeredWrong");
+
+      const img = document.createElement("img");
+      img.className = "thumb";
+      img.src = p.selfie;
+
+      const nameDiv = document.createElement("div");
+      nameDiv.className = "name";
+      nameDiv.textContent = p.name || key;
+
+      const timeDiv = document.createElement("div");
+      timeDiv.className = "joined";
+      if (p.joinedAt) {
+        const d = new Date(p.joinedAt);
+        timeDiv.textContent = "Joined: " + d.toLocaleTimeString();
+      }
+
+      if (hasAnswer) {
+        const ans = document.createElement("div");
+        ans.className = "submittedAnswer";
+        ans.textContent = "Answer: " + answers[key].answer;
+        card.appendChild(ans);
+      }
+
+    const liveBtn = document.createElement("button");
+    liveBtn.className = "goLiveBtn";
+    liveBtn.dataset.uid = key;
+
+    if (p.cameraActive) {
+      liveBtn.textContent = "GO LIVE";
+      liveBtn.disabled = false;
+    liveBtn.onclick = () => {
+      update(ref(db, "live"), {
+        activeUser: key,
+        user: key
+      });
+    };
+    } else {
+      liveBtn.textContent = "WAITING...";
+      liveBtn.disabled = true;
+      liveBtn.style.opacity = "0.4";
+      liveBtn.style.pointerEvents = "none";
+    }
+
+      card.appendChild(img);
+      card.appendChild(nameDiv);
+      card.appendChild(timeDiv);
+      card.appendChild(liveBtn);
+
+      /* ⭐ KICK BUTTON */
+      const kickBtn = document.createElement("button");
+      kickBtn.className = "goLiveBtn";
+      kickBtn.style.background = "#B00020"; 
+      kickBtn.style.marginTop = "4px";
+      kickBtn.textContent = "KICK";
+
+      kickBtn.onclick = async () => {
+        const reason = prompt("Enter kick reason:");
+        if (!reason) return;
+
+        // Write kick event
+        await update(ref(db, `kick/${key}`), {
+          reason,
+          ts: Date.now()
+        });
+
+        // If they were live, switch immediately
+        if (currentLiveUser === key) {
+
+          const eligible = Object.keys(participantsSnapshot)
+            .filter(uid => uid !== key && participantsSnapshot[uid].cameraActive);
+
+          if (eligible.length > 0) {
+            const next = eligible[0];
+            await update(ref(db, "live"), { activeUser: next, user: next });
+          } else {
+            // No one left → clear live
+            await update(ref(db, "live"), { activeUser: null, user: null });
+          }
+        }
+
+        // Optional immediate UI update
+        alert(`${p.name} has been kicked.`);
+      };
+
+      card.appendChild(kickBtn);
+
+      
+
+
+/* Reveal / Hide — only when trivia mode ON */
+if (triviaOn) {
+
+  const revealBtn = document.createElement("button");
+  revealBtn.className = "revealAnswerBtn";
+  revealBtn.textContent = "REVEAL ANSWER";
+
+  const hideBtn = document.createElement("button");
+  hideBtn.className = "revealAnswerBtn";
+  hideBtn.textContent = "HIDE";
+
+  if (!questionActive || !hasAnswer) {
+    revealBtn.classList.add("disabled");
+    hideBtn.classList.add("disabled");
+  } else {
+    onValue(ref(db, `trivia/reveal/${key}`), snap => {
+      const val = snap.val();
+      const revealed = val && typeof val === "object" && val.show === true;
+
+      if (revealed) {
+        revealBtn.classList.add("disabled");
+        hideBtn.classList.remove("disabled");
+      } else {
+        revealBtn.classList.remove("disabled");
+        hideBtn.classList.add("disabled");
+      }
+    });
+
+    revealBtn.onclick = () =>
+      update(ref(db, `trivia/reveal/${key}`), { show: true });
+
+    hideBtn.onclick = () =>
+      update(ref(db, `trivia/reveal/${key}`), { show: false });
+  }
+
+  card.appendChild(revealBtn);
+  card.appendChild(hideBtn);
+}
+      grid.appendChild(card);
+    }
+  }
+
+  /* ===============================
+        HIGHLIGHT LIVE BUTTON
+     =============================== */
+  function highlightLive(liveId) {
+    document.querySelectorAll(".goLiveBtn").forEach(btn => {
+      btn.classList.remove("live");
+      btn.textContent = "GO LIVE";
+
+      if (liveId && btn.dataset.uid === liveId) {
+        btn.classList.add("live");
+        btn.textContent = "LIVE";
+      }
+    });
+  }
+
+</script>
+
+
+
+</body>
+</html>

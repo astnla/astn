@@ -212,7 +212,11 @@ import { getDatabase, ref, onValue, off } from "https://www.gstatic.com/firebase
 const liveName    = document.getElementById("liveName");
 const imgEl       = document.getElementById("liveImage");
 const emptyState  = document.getElementById("emptyState");
-const badOverlay  = document.getElementById("badConnection");  // NEW
+const badOverlay  = document.getElementById("badConnection");
+
+// Prevent initial broken-image flash
+imgEl.style.display = "none";
+imgEl.src = "";
 
 const questionOverlay = document.getElementById("questionOverlay");
 const correctOverlay  = document.getElementById("correctOverlay");
@@ -300,8 +304,15 @@ onValue(liveRef, snap => {
 
   const { frame, ts, user } = data;
 
-  // ignore if wrong user
+  // Ignore non-active frames
   if (!activeUser || user !== activeUser) return;
+
+  // If user was kicked → clear immediately
+  if (!participantsCache[activeUser] || participantsCache[activeUser].cameraActive !== true) {
+    imgEl.style.display = "none";
+    emptyState.style.display = "flex";
+    return;
+  }
 
   // drop stale
   if (!ts || ts <= lastTS) return;
@@ -448,6 +459,36 @@ onValue(revealRef, snap => {
     classOverlay.style.display = "block";
   });
 });
+
+/* ----------------------------------------
+   END SESSION → SHOW THANK YOU OVERLAY
+---------------------------------------- */
+onValue(ref(db, "participants"), snap => {
+  if (snap.exists()) return; // only when fully cleared
+
+  imgEl.style.display = "none";
+  emptyState.style.display = "none";
+
+  document.body.innerHTML = `
+    <div style="
+      height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      font-size:22px;
+      font-weight:900;
+      color:white;
+      padding:20px;">
+      THANKS FOR JOINING!
+    </div>
+  `;
+
+  setTimeout(() => {
+    window.location.reload();
+  }, 5000);
+});
+
 </script>
 
 

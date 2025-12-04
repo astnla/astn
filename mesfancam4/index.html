@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CAMERA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-red: #DA1A32;
+      --navy:   #00031F;
+      --overlay: #00000022;
+      --highlight: #DA1A32;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    /* Allow scrolling on smaller / zoomed devices */
+    html, body {
+      min-height: 100vh;
+      background-color: var(--bg-red);
+      font-family: "Outfit", sans-serif;
+      color: var(--navy);
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    
+    /* MAIN PAGE WRAPPER */
+    .contributor-page {
+      width: 100%;
+      min-height: 100vh;
+      height: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center; /* centered on full-size devices */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    
+    /* INNER WRAPPER */
+    .contributor-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    
+    /* COLUMN CONTENT */
+    .fan-cam-content {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    
+      /* Responsive vertical centering */
+      transform: translateY(clamp(-10px, -3vh, -40px));
+      padding: 24px 0;
+    }
+    
+    /* TITLE BLOCK (image removed soon — CSS safe regardless) */
+    .streaming-title-textblock {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .manatee-logo {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      margin-bottom: 8px;
+      border-radius: 12px;
+    }
+    
+    .manatee-fancam-title {
+      font-family: "Outfit", sans-serif;
+      font-weight: 900;
+      font-size: 22px;
+      letter-spacing: 0.5px;
+      text-align: center;
+      color: var(--navy);
+    }
+    
+    /* CAMERA WRAPPER */
+    #publishCameraPreview {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      font-family: "Outfit", sans-serif;
+    }
+    
+    /* RESPONSIVE CAMERA BOX */
+    #publishCameraState {
+      background-color: var(--overlay);
+      width: calc(100% - 70px);
+      max-width: 360px;
+      aspect-ratio: 3 / 4; /* ★ responsive fix */
+      height: auto;        /* no fixed height */
+      margin: 20px 35px 10px;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .camera-shell {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    /* CAMERA VIDEO */
+    #preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+    
+    .camera-shell.active #preview {
+      display: block;
+    }
+    
+    /* OVERLAY BEFORE ENABLED */
+    .camera-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      padding: 8px;
+    }
+    
+/* ✨ TAP TO ENABLE ANIMATION */
+.camera-overlay-text {
+  font-family: "Outfit", sans-serif;
+  font-weight: 900;
+  font-size: 20px;
+  text-align: center;
+  line-height: 1.4;
+  color: white;
+  text-shadow: 0 0 8px rgba(255,255,255,0.8);
+  animation: overlayPulse 1.6s ease-in-out infinite;
+  letter-spacing: 0.5px;
+}
+
+/* Subtle glow and opacity pulse */
+@keyframes overlayPulse {
+  0% {
+    opacity: 0.5;
+    text-shadow: 0 0 4px rgba(255,255,255,0.6);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 16px rgba(255,255,255,1);
+  }
+  100% {
+    opacity: 0.5;
+    text-shadow: 0 0 4px rgba(255,255,255,0.6);
+  }
+}
+
+    
+    .camera-shell.active .camera-overlay {
+      display: none;
+    }
+    
+    /* LEGAL TEXT */
+    .legal-text {
+      margin-top: 12px;
+      text-align: center;
+      font-family: "Inter", sans-serif;
+      font-size: 10px;
+      padding: 0 24px;
+      line-height: 1.4;
+      color: var(--navy);
+    }
+    
+    /* ───────────────────────────────────
+       TRIVIA UI
+       ─────────────────────────────────── */
+    
+    /* Question Bar (kept hidden per your logic) */
+    #triviaQuestionBar {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      background: white;
+      padding: 10px;
+      font-size: 16px;
+      font-weight: 900;
+      text-align: center;
+      border-radius: 6px;
+      display: none;
+      color: var(--navy);
+    }
+    
+    /* Answer Input */
+    #triviaAnswerBox {
+      width: 90%;
+      max-width: 480px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin: 16px auto 24px; /* extra space for scrolling */
+    }
+    
+    #triviaAnswerInput {
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+      font-weight: 700;
+      width: 100%;
+    }
+    
+    #triviaSubmitBtn {
+      padding: 10px;
+      background: var(--navy);
+      color: white;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      width: 100%;
+    }
+    
+    #triviaSubmittedMsg {
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 900;
+      color: white;
+      display: none;
+      margin-top: 10px;
+    }
+    
+    /* Extra safety padding */
+    body {
+      padding-bottom: 80px;
+    }
+
+    /* ============== LIVE BADGE CSS ================ */
+
+    #liveBadge {
+      display: none;               /* hidden by default */
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(255,255,255,0.92);
+      color: #DA1A32;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 900;
+      font-size: 14px;
+      font-family: "Outfit", sans-serif;
+      align-items: center;         /* safe without flex */
+      gap: 6px;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    /* the animated dot */
+    .live-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #DA1A32;
+      border-radius: 50%;
+      animation: pulse 1s infinite;
+    }
+
+    /* pulse animation */
+    @keyframes pulse {
+      0%   { transform: scale(1); opacity: 1; }
+      50%  { transform: scale(0.4); opacity: 0.4; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ============== FLIP CAMERA CSS ================ */
+
+    .flip-btn {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      backdrop-filter: blur(6px);
+      border: none;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 11;
+      padding: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    /* Icon */
+    .flip-icon {
+      width: 20px;
+      height: 20px;
+      stroke: #000;
+      opacity: 0.85;
+      transform: rotate(0deg);
+      transition: transform 0.3s ease;
+    }
+
+    .flip-btn:active {
+      transform: scale(0.92);
+      opacity: 0.75;
+    }
+
+
+    .flip-btn:active .flip-icon {
+      transform: rotate(180deg);
+      opacity: 0.6;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="contributor-page app-name-live">
+  <div class="contributor-wrapper">
+    <div class="fan-cam-content">
+
+      <div class="streaming-title-textblock">
+        <div class="manatee-fancam-title">MANATEE CAM</div>
+      </div>
+
+      <!-- ⭐ TRIVIA QUESTION BAR -->
+      <div id="triviaQuestionBar"></div>
+
+      <!-- ⭐ CAMERA -->
+<div id="publishCameraState">
+  <div class="camera-shell" id="cameraShell">
+    <video id="preview" autoplay playsinline muted></video>
+
+    <div class="camera-overlay" id="cameraOverlay">
+      <div class="camera-overlay-text">TAP TO ENABLE CAMERA <br> & GET READY!</div>
+    </div>
+
+    <!-- ⭐ LIVE BADGE MOVED INSIDE CAMERA PREVIEW -->
+    <div id="liveBadge">
+      <span class="live-dot"></span>
+      LIVE
+    </div>
+
+    <!-- ⭐ CAMERA FLIP BUTTON -->
+    <button id="flipCameraBtn" class="flip-btn" aria-label="Switch Camera">
+      <svg class="flip-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0114.13-3.36L23 10"></path>
+        <path d="M20.49 15a9 9 0 01-14.13 3.36L1 14"></path>
+      </svg>
+    </button>
+
+  </div>
+</div>
+
+        <!-- ⭐ TRIVIA ANSWER INPUT -->
+        <div id="triviaAnswerBox">
+          <input id="triviaAnswerInput" placeholder="Type your answer..." />
+          <button id="triviaSubmitBtn">SUBMIT</button>
+        </div>
+
+        <!-- After submitting -->
+        <div id="triviaSubmittedMsg">ANSWER SUBMITTED!</div>
+
+        <p class="legal-text">
+          By submitting your video, you agree that it may be used on the live broadcast.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<script type="module">
+  /* ----------------------------------------
+     CAMERA ENABLE (same as before)
+  ---------------------------------------- */
+  const name  = sessionStorage.getItem("fanCamName");
+  const key   = sessionStorage.getItem("fanCamUserKey");
+  let currentCamera = "front"; // or "back"
+  let currentStream = null;
+  let streamingEnabled = true;
+
+
+
+  if (!name || !key) {
+    window.location.href = "join.html";
+  }
+
+  const shell   = document.getElementById("cameraShell");
+  const video   = document.getElementById("preview");
+  const overlay = document.getElementById("cameraOverlay");
+
+async function enableCamera() {
+  try {
+    // First request: ask for ANY camera permission
+    let stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    
+    // Get device list AFTER permission granted
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === "videoinput");
+
+    // Try to find front camera FIRST
+    const preferred =
+      cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) ||
+      cams.find(c => /front/i.test(c.label)) ||
+      cams[0];
+
+    // Stop previous stream if exists
+    if (currentStream) {
+      currentStream.getTracks().forEach(t => t.stop());
+    }
+
+    let constraints;
+
+    // Switch between front/back camera based on currentCamera
+    if (currentCamera === "front") {
+      constraints = {
+        video: {
+          facingMode: "user",
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        }
+      };
+    } else {
+      constraints = {
+        video: {
+          facingMode: "environment",
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        }
+      };
+    }
+
+    // Request the stream again
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    currentStream = stream;
+
+    // Bind to UI
+    video.srcObject = stream;
+    shell.classList.add("active");
+    flipCameraBtn.style.display = "flex";
+
+    // ⭐ FLAG USER AS CAMERA ACTIVE
+    update(ref(db, `participants/${userKey}`), {
+      cameraActive: true
+    });
+
+    // ⭐ IMPORTANT: Mirror only front camera
+    if (currentCamera === "front") {
+      video.style.transform = "scaleX(-1)";
+    } else {
+      video.style.transform = "scaleX(1)";
+    }
+
+    startStreamingFrames();
+
+  } catch (err) {
+    console.error(err);
+    overlay.querySelector(".camera-overlay-text").textContent = "CAMERA ERROR — TAP AGAIN";
+  }
+}
+
+
+  shell.addEventListener("click", () => {
+    if (!shell.classList.contains("active")) enableCamera();
+  });
+
+  /* ----------------------------------------
+     FIREBASE STREAMING
+  ---------------------------------------- */
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+    authDomain: "mes-fancam.firebaseapp.com",
+    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+    projectId: "mes-fancam",
+    storageBucket: "mes-fancam.firebasestorage.app",
+    messagingSenderId: "1091345682482",
+    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  const userKey = sessionStorage.getItem("fanCamUserKey");
+
+  let currentlyLiveUser = null;
+
+  onValue(ref(db, "live/activeUser"), snap => {
+    currentlyLiveUser = snap.val() || null;
+
+liveBadge.style.display =
+  currentlyLiveUser === userKey ? "flex" : "none";
+
+  });
+
+let fps = 6;            // starts at full FPS
+let quality = 0.50;     // starts high
+let downscale = false;
+
+let avg = 0;
+let samples = [];
+
+let badTicks = 0;
+let goodTicks = 0;
+
+async function sendFrame() {
+  if (!userKey || currentlyLiveUser !== userKey || !streamingEnabled) {
+    setTimeout(sendFrame, 200);
+    return;
+  }
+
+  if (!video || video.readyState < 2) {
+    setTimeout(sendFrame, 200);
+    return;
+  }
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  // downscale if needed
+  let w = video.videoWidth;
+  let h = video.videoHeight;
+
+  if (downscale && w > 640) {
+    h = Math.round(h * (640 / w));
+    w = 640;
+  }
+
+  canvas.width = w;
+  canvas.height = h;
+
+  ctx.save();
+  if (currentCamera === "front") {
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -w, 0, w, h);
+  } else {
+    ctx.drawImage(video, 0, 0, w, h);
+  }
+  ctx.restore();
+
+  const jpeg = canvas.toDataURL("image/jpeg", quality);
+
+  const start = performance.now();
+
+  await update(ref(db, "live"), {
+    frame: jpeg,
+    ts: Date.now(),
+    user: userKey
+  });
+
+  const end = performance.now();
+  const duration = end - start;
+
+  samples.push(duration);
+  if (samples.length > 10) samples.shift();
+
+  avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+
+
+// --------------------------------------------------
+// ADAPTIVE BINARY HYSTERESIS
+// Target: smooth on Wi-Fi, stable on LTE
+//
+// Logic:
+//  - avg < 250ms  : treat as "good network" (Wi-Fi)
+//  - avg ≥ 250ms  : treat as "bad network" (LTE)
+//  - changes only occur after 3 consecutive samples
+// --------------------------------------------------
+
+if (avg < 250) {
+
+  // sustained good performance
+  goodTicks++;
+  badTicks = 0;
+
+  // only upgrade after 3 consecutive good frames
+  if (goodTicks >= 3) {
+
+    fps = 6;            // smooth
+    quality = 0.;     // clean image
+    downscale = true;  // full res
+  }
+}
+
+else {
+
+  // sustained poor performance
+  badTicks++;
+  goodTicks = 0;
+
+  // only downgrade after 3 consecutive slow frames
+  if (badTicks >= 3) {
+
+    fps = 2;            // slideshow mode
+    quality = 0.30;     // heavy compression
+    downscale = true;   // downscale to reduce packet size
+  }
+}
+
+// --------------------------------------------------
+// DEBUG OUTPUT
+// --------------------------------------------------
+
+console.log(
+  `[SEND] ` +
+  `avg=${avg.toFixed(1)}ms | fps=${fps} | q=${quality.toFixed(2)} | ds=${downscale} ` +
+  `| good=${goodTicks} | bad=${badTicks}`
+);
+
+// continue streaming
+setTimeout(sendFrame, 1000 / fps);
+}
+
+sendFrame();
+
+  /* ----------------------------------------
+     TRIVIA MODE LISTENERS
+  ---------------------------------------- */
+  const triviaQuestionBar = document.getElementById("triviaQuestionBar");
+  const triviaAnswerBox   = document.getElementById("triviaAnswerBox");
+  const triviaAnswerInput = document.getElementById("triviaAnswerInput");
+  const triviaSubmitBtn   = document.getElementById("triviaSubmitBtn");
+  const triviaSubmittedMsg = document.getElementById("triviaSubmittedMsg");
+
+  // Trivia mode toggle on/off
+  onValue(ref(db, "trivia/mode"), snap => {
+    const enabled = snap.val() === true;
+
+    if (!enabled) {
+      triviaQuestionBar.style.display = "none";
+      triviaAnswerBox.style.display = "none";
+      triviaSubmittedMsg.style.display = "none";
+    }
+  });
+
+  // Listen for question — BUT do NOT show the question text anymore
+  onValue(ref(db, "trivia/question"), snap => {
+    const data = snap.val() || {};
+    const questionVisible = data.show === true && data.text;
+
+    if (questionVisible) {
+      // DO NOT show question text at all anymore
+      triviaQuestionBar.style.display = "none";
+
+      // Reset UI so user can answer
+      triviaAnswerBox.style.display = "flex";
+      triviaSubmittedMsg.style.display = "none";
+
+    } else {
+      // RESET happened → hide EVERYTHING
+      triviaQuestionBar.style.display = "none";
+      triviaAnswerBox.style.display = "none";
+      triviaSubmittedMsg.style.display = "none";
+
+      // Clear input for next question
+      triviaAnswerInput.value = "";
+    }
+  });
+
+  // Submit answer
+  triviaSubmitBtn.addEventListener("click", () => {
+    const answer = triviaAnswerInput.value.trim();
+    if (!answer || !userKey) return;
+
+    const answerRef = ref(db, `trivia/answers/${userKey}`);
+    update(answerRef, {
+      answer,
+      timestamp: Date.now()
+    });
+
+    triviaAnswerBox.style.display = "none";
+    triviaSubmittedMsg.style.display = "block";
+  });
+
+  const participantsRef = ref(db, "participants");
+
+  onValue(participantsRef, snap => {
+    if (!snap.exists()) {
+      endClientSession();
+    }
+  });
+
+function endClientSession() {
+
+  // FIRST: check whether participants still exist
+  onValue(ref(db, "participants"), snap => {
+
+    if (!snap.exists()) {
+      // DB is empty — DON'T WRITE ANYTHING BACK
+      cleanupAndExit();
+    } else {
+      // DB still alive — safe to write cameraActive:false
+      update(ref(db, `participants/${userKey}`), {
+        cameraActive: false
+      });
+
+      cleanupAndExit();
+    }
+
+  }, { onlyOnce: true });
+}
+
+function cleanupAndExit() {
+  // stop camera
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+  }
+
+  // show thanks screen
+  document.body.innerHTML = `
+    <div style="height:100vh;display:flex;align-items:center;justify-content:center;
+    text-align:center;font-size:22px;font-weight:900;color:white;padding:20px;">
+      THANKS FOR STOPPING BY!<br>YOU MAY NOW CLOSE THIS TAB.
+    </div>
+  `;
+
+  // delayed redirect
+  setTimeout(() => {
+    sessionStorage.clear();
+    window.location.href = "join.html";
+  }, 10000);
+}
+
+
+const flipCameraBtn = document.getElementById("flipCameraBtn");
+
+flipCameraBtn.addEventListener("click", async () => {
+
+  // 1. Pause outbound stream
+  streamingEnabled = false;
+
+  // 2. Switch camera mode
+  currentCamera = (currentCamera === "front") ? "back" : "front";
+
+  // 3. Reinitialize camera
+  await enableCamera();
+
+  // 4. Delay a bit to allow IOS to settle
+  setTimeout(() => {
+    streamingEnabled = true;
+  }, 800); // tweak if needed
+});
+
+const liveBadge = document.getElementById("liveBadge");
+liveBadge.style.display = "none";
+
+/* ----------------------------------------
+   LISTEN FOR ADMIN KICK
+---------------------------------------- */
+onValue(ref(db, `kick/${userKey}`), snap => {
+  if (!snap.exists()) return;
+
+  const { reason } = snap.val();
+
+  // Stop streaming immediately
+  streamingEnabled = false;
+
+  // Stop camera
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+  }
+
+  // Full-screen overlay (same style as thanks screen)
+  document.body.innerHTML = `
+    <div style="
+      height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      font-size:22px;
+      font-weight:900;
+      color:white;
+      padding:20px;">
+      YOU HAVE BEEN REMOVED<br><br>
+      Reason: ${reason}
+    </div>
+  `;
+
+  // Cleanup DB after short delay
+  setTimeout(async () => {
+    await update(ref(db, `participants/${userKey}`), { cameraActive: false });
+    await update(ref(db, `participants/${userKey}`), null);
+
+    sessionStorage.clear();
+    window.location.href = "join.html";
+  }, 8000);
+});
+
+
+</script>
+
+</body>
+</html>
