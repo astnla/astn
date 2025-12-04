@@ -430,24 +430,26 @@ async function enableCamera() {
 
     let constraints;
 
-    // Switch between front/back camera based on currentCamera
-    if (currentCamera === "front") {
-      constraints = {
-        video: {
-          facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 960 },
-        }
-      };
-    } else {
-      constraints = {
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 960 },
-        }
-      };
+// Switch between front/back camera based on currentCamera
+if (currentCamera === "front") {
+  constraints = {
+    video: {
+      facingMode: "user",
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+      frameRate: { ideal: 30, min: 24 }
     }
+  };
+} else {
+  constraints = {
+    video: {
+      facingMode: "environment",
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+      frameRate: { ideal: 30, min: 24 }
+    }
+  };
+}
 
     // Request the stream again
     stream = await navigator.mediaDevices.getUserMedia(constraints);
