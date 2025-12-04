@@ -177,6 +177,22 @@
     <div id="correctOverlay" class="overlayBox"></div>
     <div id="classAnswerOverlay" class="overlayBox"></div>
 
+      <div id="badConnection" style="
+  position:absolute;
+  inset:0;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  background:rgba(0,0,0,0.4);
+  color:white;
+  font-size:20px;
+  font-weight:900;
+  backdrop-filter:blur(4px);
+">
+  BAD CONNECTION<br>
+</div>
+
   </div>
 
   <div id="liveName">
@@ -186,49 +202,50 @@
 
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getDatabase, ref, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getDatabase, ref, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
-  const liveName = document.getElementById("liveName");
-  let participantsCache = {};   // ← declared BEFORE Firebase init
+/* -------------------------------------------------
+   DOM ELEMENTS
+--------------------------------------------------*/
+const liveName    = document.getElementById("liveName");
+const imgEl       = document.getElementById("liveImage");
+const emptyState  = document.getElementById("emptyState");
+const badOverlay  = document.getElementById("badConnection");  // NEW
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
-    authDomain: "mes-fancam.firebaseapp.com",
-    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
-    projectId: "mes-fancam",
-    storageBucket: "mes-fancam.firebasestorage.app",
-    messagingSenderId: "1091345682482",
-    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
-  };
+const questionOverlay = document.getElementById("questionOverlay");
+const correctOverlay  = document.getElementById("correctOverlay");
+const classOverlay    = document.getElementById("classAnswerOverlay");
 
-  const app = initializeApp(firebaseConfig);
-  const db  = getDatabase(app);
+/* -------------------------------------------------
+   FIREBASE INIT
+--------------------------------------------------*/
+const firebaseConfig = {
+  apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+  authDomain: "mes-fancam.firebaseapp.com",
+  databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+  projectId: "mes-fancam",
+  storageBucket: "mes-fancam.firebasestorage.app",
+  messagingSenderId: "1091345682482",
+  appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+};
 
-  const participantsRef = ref(db, "participants");
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
 
-  const imgEl      = document.getElementById("liveImage");
-  const emptyState = document.getElementById("emptyState");
+/* -------------------------------------------------
+   GLOBAL STATE
+--------------------------------------------------*/
+let participantsCache = {};
+let activeUser = null;
 
-  const questionOverlay = document.getElementById("questionOverlay");
-  const correctOverlay  = document.getElementById("correctOverlay");
-  const classOverlay    = document.getElementById("classAnswerOverlay");
+let lastTS = 0;           // last timestamp from DB
+let lastFrameTime = 0;    // when we last displayed a frame
+const TIMEOUT_MS = 2000;  // frame timeout
 
-  const activeUserRef  = ref(db, "live/activeUser");
-  const triviaModeRef  = ref(db, "trivia/mode");
-  const triviaQRef     = ref(db, "trivia/question");
-  const triviaCRef     = ref(db, "trivia/correct");
-  const revealRef      = ref(db, "trivia/reveal");
-
-  let activeUser = null;
-  let triviaMode = false;
-
-  /* Track last active listener */
-  let lastAnswerListenerRef = null;
-
-  /* ---------------------------------------------
-     📡 FAN CAM — WHO IS LIVE?
-  ----------------------------------------------*/
+/* -------------------------------------------------
+   UTILS
+--------------------------------------------------*/
 function updateLiveName() {
   if (!activeUser || !participantsCache[activeUser]) {
     liveName.style.display = "none";
@@ -239,9 +256,23 @@ function updateLiveName() {
   liveName.style.display = "block";
 }
 
+/* -------------------------------------------------
+   WHO IS LIVE?
+--------------------------------------------------*/
+const activeUserRef  = ref(db, "live/activeUser");
+const participantsRef = ref(db, "participants");
+
 onValue(activeUserRef, snap => {
   activeUser = snap.val();
+
   updateLiveName();
+
+  // fresh start
+  lastFrameTime = performance.now();
+  lastTS        = 0;
+
+  // hide overlays immediately
+  badOverlay.style.display = "none";
 });
 
 onValue(participantsRef, snap => {
@@ -249,165 +280,173 @@ onValue(participantsRef, snap => {
   updateLiveName();
 });
 
-
-
-/* ---------------------------------------------
-   📡 FAN CAM — FRAME STREAM (atomic + filtered)
-----------------------------------------------*/
-
-// Listen to full object, not just JPEG
+/* -------------------------------------------------
+   LIVE FRAME STREAM
+   atomic + filtered + drop stale
+--------------------------------------------------*/
 const liveRef = ref(db, "live");
-
-let lastTS = 0;
 
 onValue(liveRef, snap => {
   const data = snap.val();
 
-  // Nothing in DB yet?
+  // nothing in DB yet?
   if (!data) {
     imgEl.style.display = "none";
     emptyState.style.display = "flex";
+    badOverlay.style.display = "none";
     return;
   }
 
   const { frame, ts, user } = data;
 
-  // Ignore if no active user or wrong user
-  if (!activeUser || user !== activeUser) {
-    return;
-  }
+  // ignore if wrong user
+  if (!activeUser || user !== activeUser) return;
 
-  // Drop stale frames
-  if (!ts || ts <= lastTS) {
-    return;
-  }
+  // drop stale
+  if (!ts || ts <= lastTS) return;
 
-  // Accept: update UI
+  // accept
   lastTS = ts;
+  lastFrameTime = performance.now();
 
   imgEl.src = frame;
   imgEl.style.display = "block";
   emptyState.style.display = "none";
+  badOverlay.style.display = "none";
 });
 
+/* -------------------------------------------------
+   BAD CONNECTION MONITOR
+--------------------------------------------------*/
+setInterval(() => {
 
-  /* ---------------------------------------------
-     🎯 TRIVIA MODE
-  ----------------------------------------------*/
-  onValue(triviaModeRef, snap => {
-    triviaMode = snap.val() === true;
+  // no live user → QR state
+  if (!activeUser) {
+    imgEl.style.display = "none";
+    emptyState.style.display = "flex";
+    badOverlay.style.display = "none";
+    return;
+  }
 
-    if (!triviaMode) {
-      questionOverlay.style.display = "none";
-      correctOverlay.style.display = "none";
-      classOverlay.style.display = "none";
+  const delta = performance.now() - lastFrameTime;
 
-      // Stop listening to any previous student's answer
-      if (lastAnswerListenerRef) {
-        off(lastAnswerListenerRef);
-        lastAnswerListenerRef = null;
-      }
+  // no frames recently → bad connection
+  if (delta > TIMEOUT_MS) {
+    imgEl.style.display = "none";
+    emptyState.style.display = "none";
+    badOverlay.style.display = "flex";
+  }
+
+}, 500);
+
+/* -------------------------------------------------
+   TRIVIA MODE
+   (unchanged from yours, simplified)
+--------------------------------------------------*/
+const triviaModeRef  = ref(db, "trivia/mode");
+const triviaQRef     = ref(db, "trivia/question");
+const triviaCRef     = ref(db, "trivia/correct");
+const revealRef      = ref(db, "trivia/reveal");
+
+let triviaMode = false;
+let lastAnswerListenerRef = null;
+
+/* trivia mode ON/OFF */
+onValue(triviaModeRef, snap => {
+  triviaMode = snap.val() === true;
+
+  if (!triviaMode) {
+    questionOverlay.style.display = "none";
+    correctOverlay.style.display = "none";
+    classOverlay.style.display = "none";
+
+    if (lastAnswerListenerRef) {
+      off(lastAnswerListenerRef);
+      lastAnswerListenerRef = null;
     }
-  });
+  }
+});
 
-  /* ---------------------------------------------
-     ❓ GLOBAL QUESTION OVERLAY
-  ----------------------------------------------*/
-  onValue(triviaQRef, snap => {
-    const data = snap.val() || {};
+/* global question overlay */
+onValue(triviaQRef, snap => {
+  const data = snap.val() || {};
 
-    if (!triviaMode || !data.show) {
-      questionOverlay.style.display = "none";
-      return;
-    }
+  if (!triviaMode || !data.show) {
+    questionOverlay.style.display = "none";
+    return;
+  }
 
-    questionOverlay.textContent = data.text || "";
-    questionOverlay.style.display = "block";
-  });
+  questionOverlay.textContent = data.text || "";
+  questionOverlay.style.display = "block";
+});
 
-  /* ---------------------------------------------
-     ✅ CORRECT ANSWER OVERLAY
-  ----------------------------------------------*/
-  onValue(triviaCRef, snap => {
-    const data = snap.val() || {};
+/* correct answer overlay */
+onValue(triviaCRef, snap => {
+  const data = snap.val() || {};
 
-    if (!triviaMode || !data.show) {
-      correctOverlay.style.display = "none";
-      return;
-    }
+  if (!triviaMode || !data.show) {
+    correctOverlay.style.display = "none";
+    return;
+  }
 
-    correctOverlay.textContent = "Correct Answer: " + (data.text || "");
-    correctOverlay.style.display = "block";
-  });
+  correctOverlay.textContent = "Correct Answer: " + (data.text || "");
+  correctOverlay.style.display = "block";
+});
 
-  /* ---------------------------------------------
-     📝 REVEAL CLASS ANSWER
-  ----------------------------------------------*/
-  onValue(revealRef, snap => {
+/* class answer overlay */
+onValue(revealRef, snap => {
 
-    // RESET or NO trivia → hide everything
-    if (
-        !triviaMode ||
-        !snap.exists() ||
-        Object.keys(snap.val()).length === 0
-    ) {
-      classOverlay.style.display = "none";
+  if (!triviaMode || !snap.exists()) {
+    classOverlay.style.display = "none";
 
-      // stop the old listener
-      if (lastAnswerListenerRef) {
-        off(lastAnswerListenerRef);
-        lastAnswerListenerRef = null;
-      }
-
-      return;
-    }
-
-    const revealData = snap.val();
-    const keys = Object.keys(revealData);
-
-    // Look for { show: true }
-    const revealedKey = keys.find(k =>
-      revealData[k] &&
-      typeof revealData[k] === "object" &&
-      revealData[k].show === true
-    );
-
-    // No user revealed → hide
-    if (!revealedKey) {
-      classOverlay.style.display = "none";
-
-      if (lastAnswerListenerRef) {
-        off(lastAnswerListenerRef);
-        lastAnswerListenerRef = null;
-      }
-
-      return;
-    }
-
-    // Cancel previous student's listener
     if (lastAnswerListenerRef) {
       off(lastAnswerListenerRef);
       lastAnswerListenerRef = null;
     }
 
-    // Listen ONLY to this user's answer
-    const answerPath = ref(db, `trivia/answers/${revealedKey}`);
-    lastAnswerListenerRef = answerPath;
+    return;
+  }
 
-    onValue(answerPath, answerSnap => {
-      const answerData = answerSnap.val() || {};
+  const revealData = snap.val();
+  const keys = Object.keys(revealData);
 
-      if (!answerData.answer) {
-        classOverlay.style.display = "none";
-        return;
-      }
+  const revealedKey = keys.find(k =>
+    revealData[k] &&
+    typeof revealData[k] === "object" &&
+    revealData[k].show === true
+  );
 
-      classOverlay.textContent = "Their Answer: " + answerData.answer;
-      classOverlay.style.display = "block";
-    });
+  if (!revealedKey) {
+    classOverlay.style.display = "none";
 
+    if (lastAnswerListenerRef) {
+      off(lastAnswerListenerRef);
+      lastAnswerListenerRef = null;
+    }
+
+    return;
+  }
+
+  // cancel previous
+  if (lastAnswerListenerRef) {
+    off(lastAnswerListenerRef);
+  }
+
+  const answerPath = ref(db, `trivia/answers/${revealedKey}`);
+  lastAnswerListenerRef = answerPath;
+
+  onValue(answerPath, answerSnap => {
+    const answerData = answerSnap.val() || {};
+
+    if (!answerData.answer) {
+      classOverlay.style.display = "none";
+      return;
+    }
+
+    classOverlay.textContent = "Their Answer: " + answerData.answer;
+    classOverlay.style.display = "block";
   });
-
+});
 </script>
 
 
