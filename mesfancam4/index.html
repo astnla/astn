@@ -446,13 +446,29 @@ async function enableCamera() {
     console.log("🎥 Using camera:", targetCam.label, targetCam.deviceId);
 
     // 🔹 TRUE FIX FOR ANDROID → use deviceId, NOT facingMode
-    const constraints = {
-      video: {
-        deviceId: { exact: targetCam.deviceId },
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
-    };
+    let constraints;
+
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isIOS) {
+      // 📱 iPhone → use facingMode to preserve natural FOV
+      constraints = {
+        video: {
+          facingMode: currentCamera === "front" ? "user" : "environment",
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
+      };
+    } else {
+      // 🤖 Android → must use deviceId to avoid black screen
+      constraints = {
+        video: {
+          deviceId: { exact: targetCam.deviceId },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+    }
 
     // 🔹 Start the selected camera
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -601,10 +617,10 @@ if (avg < 250) {
   badTicks = 0;
 
   // only upgrade after 3 consecutive good frames
-  if (goodTicks >= 3) {
+  if (goodTicks >= 1) {
 
     fps = 6;            // smooth
-    quality = 0.;     // clean image
+    quality = 0.3;     // clean image
     downscale = true;  // full res
   }
 }
