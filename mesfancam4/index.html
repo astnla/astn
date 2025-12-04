@@ -537,26 +537,22 @@ liveBadge.style.display =
 
   });
 
-let interval = null;
+let sending = false;
 
 function startStreamingFrames() {
-  if (interval) return;
-
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
-  let lastSend = 0;
-  const frameInterval = 1000 / 6; // EXACT 6fps pacing
+  async function sendLoop() {
+    requestAnimationFrame(sendLoop);
 
-  function loop(now) {
-    requestAnimationFrame(loop);
-
+    if (sending) return; // <-- DO NOT send again until prior upload finishes
     if (currentlyLiveUser !== userKey || !streamingEnabled) return;
     if (!video || video.readyState < 2) return;
 
-    if (now - lastSend < frameInterval) return;
-    lastSend = now;
+    sending = true;
 
+    // --- SCALE TO FIXED WIDTH ---
     const targetW = 640;
     const scale = targetW / video.videoWidth;
 
@@ -564,28 +560,31 @@ function startStreamingFrames() {
     canvas.height = Math.round(video.videoHeight * scale);
 
     ctx.save();
-
     if (currentCamera === "front") {
       ctx.scale(-1, 1);
       ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
     } else {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     }
-
     ctx.restore();
 
     const jpeg = canvas.toDataURL("image/jpeg", 0.33);
 
-    update(ref(db, "live"), {
-      frame: jpeg,
-      ts: Date.now(),
-      user: userKey
-    });
+    try {
+      await update(ref(db, "live"), {
+        frame: jpeg,
+        ts: Date.now(),
+        user: userKey
+      });
+    } catch (e) {
+      console.warn("Upload failed:", e);
+    }
+
+    sending = false; // <-- upload finished, NOW allow another frame
   }
 
-  requestAnimationFrame(loop);
+  sendLoop();
 }
-
 
   /* ----------------------------------------
      TRIVIA MODE LISTENERS
