@@ -215,6 +215,20 @@ body {
   transition: 0.2s;
 }
 
+.kickBtn {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 900;
+  border-radius: 6px;
+  border: none;
+  background: #B00020;
+  color: white;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 4px;
+  transition: 0.2s;
+}
+
 .goLiveBtn.live {
   background: var(--bg-red);
   color: white;
@@ -669,7 +683,7 @@ body {
 
       /* ⭐ KICK BUTTON */
       const kickBtn = document.createElement("button");
-      kickBtn.className = "goLiveBtn";
+      kickBtn.className = "kickBtn";
       kickBtn.style.background = "#B00020"; 
       kickBtn.style.marginTop = "4px";
       kickBtn.textContent = "KICK";
@@ -684,22 +698,23 @@ body {
           ts: Date.now()
         });
 
-        // If they were live, switch immediately
-        if (currentLiveUser === key) {
+        // Remove user from participants
+        await set(ref(db, `participants/${key}`), null);
+        delete participantsSnapshot[key];
 
+        // If they were live → switch immediately
+        if (currentLiveUser === key) {
           const eligible = Object.keys(participantsSnapshot)
-            .filter(uid => uid !== key && participantsSnapshot[uid].cameraActive);
+            .filter(uid => participantsSnapshot[uid].cameraActive);
 
           if (eligible.length > 0) {
             const next = eligible[0];
             await update(ref(db, "live"), { activeUser: next, user: next });
           } else {
-            // No one left → clear live
             await update(ref(db, "live"), { activeUser: null, user: null });
           }
         }
 
-        // Optional immediate UI update
         alert(`${p.name} has been kicked.`);
       };
 
@@ -753,17 +768,17 @@ if (triviaOn) {
   /* ===============================
         HIGHLIGHT LIVE BUTTON
      =============================== */
-  function highlightLive(liveId) {
-    document.querySelectorAll(".goLiveBtn").forEach(btn => {
-      btn.classList.remove("live");
-      btn.textContent = "GO LIVE";
+function highlightLive(liveId) {
+  document.querySelectorAll(".goLiveBtn").forEach(btn => {
+    btn.classList.remove("live");
+    btn.textContent = "GO LIVE";
 
-      if (liveId && btn.dataset.uid === liveId) {
-        btn.classList.add("live");
-        btn.textContent = "LIVE";
-      }
-    });
-  }
+    if (liveId && btn.dataset.uid === liveId) {
+      btn.classList.add("live");
+      btn.textContent = "LIVE";
+    }
+  });
+}
 
 </script>
 

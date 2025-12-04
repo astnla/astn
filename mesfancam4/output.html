@@ -150,6 +150,10 @@
       animation: overlayPulse 1.6s ease-in-out infinite;
     }
 
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
 
   </style>
 </head>
@@ -307,10 +311,22 @@ onValue(liveRef, snap => {
   // Ignore non-active frames
   if (!activeUser || user !== activeUser) return;
 
-  // If user was kicked → clear immediately
+  // Kicked or camera disabled → instantly switch to next user
   if (!participantsCache[activeUser] || participantsCache[activeUser].cameraActive !== true) {
+
+    // hide
     imgEl.style.display = "none";
     emptyState.style.display = "flex";
+
+    // auto-switch to the next person
+    const keys = Object.keys(participantsCache);
+    const next = keys.find(k => participantsCache[k].cameraActive === true);
+
+    if (next) {
+      // assign new live user
+      update(ref(db, "live"), { activeUser: next });
+    }
+
     return;
   }
 
@@ -322,6 +338,14 @@ onValue(liveRef, snap => {
   lastFrameTime = performance.now();
 
   imgEl.src = frame;
+  imgEl.onload = () => {
+  imgEl.style.display = "block";
+  emptyState.style.display = "none";
+  };
+  imgEl.onerror = () => {
+    imgEl.style.display = "none";
+  };
+
   imgEl.style.display = "block";
   emptyState.style.display = "none";
   badOverlay.style.display = "none";
@@ -469,24 +493,29 @@ onValue(ref(db, "participants"), snap => {
   imgEl.style.display = "none";
   emptyState.style.display = "none";
 
-  document.body.innerHTML = `
-    <div style="
-      height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      font-size:22px;
-      font-weight:900;
-      color:white;
-      padding:20px;">
-      THANKS FOR JOINING!
-    </div>
-  `;
+document.body.innerHTML = `
+  <div style="
+    height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-size:22px;
+    font-weight:900;
+    color:white;
+    padding:20px;
+    animation: fadeIn 0.4s ease;">
+    THANKS FOR JOINING!
+  </div>
+`;
 
+setTimeout(() => {
+  // fade out to QR
+  document.body.style.opacity = 0;
   setTimeout(() => {
-    window.location.reload();
-  }, 5000);
+    window.location.href = "output.html"; // reload into fresh QR
+  }, 600);
+}, 4000);
 });
 
 </script>
