@@ -536,15 +536,16 @@ liveBadge.style.display =
 
   });
 
-let fps = 6;            // starts at full FPS
-let quality = 0.50;     // starts high
-let downscale = false;
+let fps = 6;               // target fps for strong connections
+let quality = 0.85;        // high quality on wifi
+let downscale = false;     // downscale only when required
 
-let avg = 0;
 let samples = [];
+let avg = 0;
 
-let badTicks = 0;
 let goodTicks = 0;
+let midTicks = 0;
+let badTicks = 0;
 
 async function sendFrame() {
   if (!userKey || currentlyLiveUser !== userKey || !streamingEnabled) {
@@ -557,13 +558,14 @@ async function sendFrame() {
     return;
   }
 
+  // - - - CANVAS DRAW - - -
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
-  // downscale if needed
   let w = video.videoWidth;
   let h = video.videoHeight;
 
+  // dynamic downscaling for poor connections
   if (downscale && w > 640) {
     h = Math.round(h * (640 / w));
     w = 640;
@@ -583,6 +585,7 @@ async function sendFrame() {
 
   const jpeg = canvas.toDataURL("image/jpeg", quality);
 
+  // measure upload timing
   const start = performance.now();
 
   await update(ref(db, "live"), {
@@ -594,64 +597,63 @@ async function sendFrame() {
   const end = performance.now();
   const duration = end - start;
 
+  // moving average smoothing (10 samples)
   samples.push(duration);
   if (samples.length > 10) samples.shift();
-
   avg = samples.reduce((a, b) => a + b, 0) / samples.length;
 
+  // - - - HYBRID ADAPTIVE LOGIC (V5) - - -
+  //
+  // WIFI: usually 300–600ms per frame (device encode + RTT)
+  // LTE: 600–1400ms+
+  //
+  // GOOD: < 600ms => try 6 fps
+  // MID:  600–1100ms => drop to 4 fps
+  // BAD:  > 1100ms => drop to 2 fps
+  //
+  // Hysteresis ensures stability (no flickering between modes)
 
-// --------------------------------------------------
-// ADAPTIVE BINARY HYSTERESIS
-// Target: smooth on Wi-Fi, stable on LTE
-//
-// Logic:
-//  - avg < 250ms  : treat as "good network" (Wi-Fi)
-//  - avg ≥ 250ms  : treat as "bad network" (LTE)
-//  - changes only occur after 3 consecutive samples
-// --------------------------------------------------
+  if (avg < 600) {
+    goodTicks++;
+    midTicks = 0;
+    badTicks = 0;
 
-if (avg < 250) {
-
-  // sustained good performance
-  goodTicks++;
-  badTicks = 0;
-
-  // only upgrade after 3 consecutive good frames
-  if (goodTicks >= 1) {
-
-    fps = 6;            // smooth
-    quality = 0.3;     // clean image
-    downscale = true;  // full res
+    if (goodTicks >= 3) {
+      fps = 6;
+      quality = 0.85;
+      downscale = false;
+    }
   }
-}
+  else if (avg < 1100) {
+    midTicks++;
+    goodTicks = 0;
+    badTicks = 0;
 
-else {
-
-  // sustained poor performance
-  badTicks++;
-  goodTicks = 0;
-
-  // only downgrade after 3 consecutive slow frames
-  if (badTicks >= 3) {
-
-    fps = 2;            // slideshow mode
-    quality = 0.30;     // heavy compression
-    downscale = true;   // downscale to reduce packet size
+    if (midTicks >= 3) {
+      fps = 4;
+      quality = 0.70;
+      downscale = false;
+    }
   }
-}
+  else {
+    badTicks++;
+    goodTicks = 0;
+    midTicks = 0;
 
-// --------------------------------------------------
-// DEBUG OUTPUT
-// --------------------------------------------------
+    if (badTicks >= 3) {
+      fps = 2;
+      quality = 0.40;
+      downscale = true;
+    }
+  }
 
-console.log(
-  `[SEND] ` +
-  `avg=${avg.toFixed(1)}ms | fps=${fps} | q=${quality.toFixed(2)} | ds=${downscale} ` +
-  `| good=${goodTicks} | bad=${badTicks}`
-);
+  // Debug output
+  console.log(
+    `[SEND] avg=${avg.toFixed(1)}ms | fps=${fps} | q=${quality.toFixed(2)} | ds=${downscale} | ` +
+    `g=${goodTicks} m=${midTicks} b=${badTicks}`
+  );
 
-// continue streaming
-setTimeout(sendFrame, 1000 / fps);
+  setTimeout(sendFrame, 1000 / fps);
 }
 
 sendFrame();
