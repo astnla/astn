@@ -408,72 +408,60 @@
   const video   = document.getElementById("preview");
   const overlay = document.getElementById("cameraOverlay");
 
+  
+
 async function enableCamera() {
   try {
-    // 🔹 Stop old camera first (if switching)
+    // 🔹 Stop any old REAL stream
     if (currentStream) {
       currentStream.getTracks().forEach(t => t.stop());
+      currentStream = null;
+      video.srcObject = null;
     }
 
-    // 🔹 REQUIRED on Android — unlocks camera labels
-    await navigator.mediaDevices.getUserMedia({ video: true });
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    // 🔹 Get device list
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const cams = devices.filter(d => d.kind === "videoinput");
+    // 🔹 Get camera list (and close warm-up) on Android
+    let cams = [];
+    if (!isIOS) {
+      cams = await getVideoInputs();
 
-const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-let targetCam;
-
-if (currentCamera === "front") {
-  targetCam =
-    cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) ||
-    cams.find(c => /front/i.test(c.label)) ||
-    cams[0];
-} else {
-  targetCam =
-    cams.find(c => /back/i.test(c.label)) ||
-    cams.find(c => /rear/i.test(c.label)) ||
-    cams.find(c => /environment/i.test(c.label)) ||
-    cams[cams.length - 1];
-}
-
-// ✅ NOW the fallback block is below isIOS and targetCam
-if (!isIOS) {
-  if (!targetCam || !targetCam.deviceId || targetCam.deviceId.trim() === "") {
-    console.warn("⚠️ Android camera labels unreliable — applying fallback");
-
-    if (currentCamera === "front") {
-      targetCam = cams[0];
-    } else {
-      targetCam = cams[cams.length - 1];
-    }
-  }
-}
-
-
-
-    if (!targetCam) {
-      throw new Error("No usable camera found.");
+      // Optional: avoid depth / IR / aux cameras if they show up
+      cams = cams.filter(c => !/depth|infrared|ir|aux/i.test(c.label));
     }
 
-    console.log("🎥 Using camera:", targetCam.label, targetCam.deviceId);
-
-    // 🔹 TRUE FIX FOR ANDROID → use deviceId, NOT facingMode
     let constraints;
 
     if (isIOS) {
-      // 📱 iPhone → use facingMode to preserve natural FOV
+      // ✅ iOS stays exactly how you had it (nice wide FOV on front)
       constraints = {
         video: {
           facingMode: currentCamera === "front" ? "user" : "environment",
-          width: { ideal: 640 },
+          width:  { ideal: 640 },
           height: { ideal: 480 }
         }
       };
     } else {
-      // 🤖 Android → must use deviceId to avoid black screen
+      // 🤖 Android → choose front/back by deviceId
+      let targetCam;
+
+      if (currentCamera === "front") {
+        targetCam =
+          cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) ||
+          cams.find(c => /front/i.test(c.label)) ||
+          cams[0];
+      } else {
+        targetCam =
+          cams.find(c => /back/i.test(c.label)) ||
+          cams.find(c => /rear/i.test(c.label)) ||
+          cams.find(c => /environment/i.test(c.label)) ||
+          cams[cams.length - 1];
+      }
+
+      if (!targetCam || !targetCam.deviceId) {
+        throw new Error("No usable camera found on this Android device.");
+      }
+
       constraints = {
         video: {
           deviceId: { exact: targetCam.deviceId },
@@ -487,36 +475,36 @@ if (!isIOS) {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
 
-    // Bind to UI
     video.srcObject = stream;
     shell.classList.add("active");
+    overlay.style.display = "none";
     flipCameraBtn.style.display = "flex";
 
-    // 🔹 Firebase flag (this was missing in earlier snippet)
+    // Firebase flag
     update(ref(db, `participants/${userKey}`), {
       cameraActive: true
     });
 
-    // 🔹 Mirror only the front camera
+    // Mirror only the front camera
     if (currentCamera === "front") {
       video.style.transform = "scaleX(-1)";
     } else {
       video.style.transform = "scaleX(1)";
     }
 
-    // 🔹 Continue your streaming
+    // Continue your streaming
     startStreamingFrames();
 
   } catch (err) {
     console.error("Camera error:", err);
+
+    // Show overlay again instead of a dead black box
+    shell.classList.remove("active");
+    overlay.style.display = "flex";
     overlay.querySelector(".camera-overlay-text").textContent =
-      "CAMERA ERROR — TAP AGAIN";
+      "CAMERA ERROR — TAP TO TRY AGAIN";
   }
 }
-
-  shell.addEventListener("click", () => {
-    if (!shell.classList.contains("active")) enableCamera();
-  });
   
 
   /* ----------------------------------------
