@@ -422,22 +422,37 @@ async function enableCamera() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const cams = devices.filter(d => d.kind === "videoinput");
 
-    let targetCam;
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+let targetCam;
+
+if (currentCamera === "front") {
+  targetCam =
+    cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) ||
+    cams.find(c => /front/i.test(c.label)) ||
+    cams[0];
+} else {
+  targetCam =
+    cams.find(c => /back/i.test(c.label)) ||
+    cams.find(c => /rear/i.test(c.label)) ||
+    cams.find(c => /environment/i.test(c.label)) ||
+    cams[cams.length - 1];
+}
+
+// ✅ NOW the fallback block is below isIOS and targetCam
+if (!isIOS) {
+  if (!targetCam || !targetCam.deviceId || targetCam.deviceId.trim() === "") {
+    console.warn("⚠️ Android camera labels unreliable — applying fallback");
 
     if (currentCamera === "front") {
-      // Try to find a normal front camera (avoid ultrawide)
-      targetCam =
-        cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) ||
-        cams.find(c => /front/i.test(c.label)) ||
-        cams[0];
+      targetCam = cams[0];
     } else {
-      // Android: back cameras may be labeled weirdly
-      targetCam =
-        cams.find(c => /back/i.test(c.label)) ||
-        cams.find(c => /rear/i.test(c.label)) ||
-        cams.find(c => /environment/i.test(c.label)) ||
-        cams[cams.length - 1]; // fallback: last is usually back
+      targetCam = cams[cams.length - 1];
     }
+  }
+}
+
+
 
     if (!targetCam) {
       throw new Error("No usable camera found.");
@@ -447,8 +462,6 @@ async function enableCamera() {
 
     // 🔹 TRUE FIX FOR ANDROID → use deviceId, NOT facingMode
     let constraints;
-
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     if (isIOS) {
       // 📱 iPhone → use facingMode to preserve natural FOV
