@@ -408,49 +408,85 @@
   const video   = document.getElementById("preview");
   const overlay = document.getElementById("cameraOverlay");
 
+  
+
 async function enableCamera() {
   try {
-    // First request: ask for ANY camera permission
-    let stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    
-    // Get device list AFTER permission granted
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const cams = devices.filter(d => d.kind === "videoinput");
-
-    // Try to find front camera FIRST
-    const preferred =
-      cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) ||
-      cams.find(c => /front/i.test(c.label)) ||
-      cams[0];
-
-    // Stop previous stream if exists
+    // 🔹 Stop old camera first (if switching)
     if (currentStream) {
       currentStream.getTracks().forEach(t => t.stop());
     }
 
+    // 🔹 REQUIRED on Android — unlocks camera labels
+    await navigator.mediaDevices.getUserMedia({ video: true });
+
+    // 🔹 Get device list
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === "videoinput");
+
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+let targetCam;
+
+if (currentCamera === "front") {
+  targetCam =
+    cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) ||
+    cams.find(c => /front/i.test(c.label)) ||
+    cams[0];
+} else {
+  targetCam =
+    cams.find(c => /back/i.test(c.label)) ||
+    cams.find(c => /rear/i.test(c.label)) ||
+    cams.find(c => /environment/i.test(c.label)) ||
+    cams[cams.length - 1];
+}
+
+// ✅ NOW the fallback block is below isIOS and targetCam
+if (!isIOS) {
+  if (!targetCam || !targetCam.deviceId || targetCam.deviceId.trim() === "") {
+    console.warn("⚠️ Android camera labels unreliable — applying fallback");
+
+    if (currentCamera === "front") {
+      targetCam = cams[0];
+    } else {
+      targetCam = cams[cams.length - 1];
+    }
+  }
+}
+
+
+
+    if (!targetCam) {
+      throw new Error("No usable camera found.");
+    }
+
+    console.log("🎥 Using camera:", targetCam.label, targetCam.deviceId);
+
+    // 🔹 TRUE FIX FOR ANDROID → use deviceId, NOT facingMode
     let constraints;
 
-    // Switch between front/back camera based on currentCamera
-    if (currentCamera === "front") {
+    if (isIOS) {
+      // 📱 iPhone → use facingMode to preserve natural FOV
       constraints = {
         video: {
-          facingMode: "user",
+          facingMode: currentCamera === "front" ? "user" : "environment",
           width: { ideal: 640 },
-          height: { ideal: 480 },
+          height: { ideal: 480 }
         }
       };
     } else {
+      // 🤖 Android → must use deviceId to avoid black screen
       constraints = {
         video: {
-          facingMode: "environment",
+          deviceId: { exact: targetCam.deviceId },
           width: { ideal: 640 },
-          height: { ideal: 480 },
+          height: { ideal: 480 }
         }
       };
     }
 
-    // Request the stream again
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    // 🔹 Start the selected camera
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
 
     // Bind to UI
@@ -458,30 +494,32 @@ async function enableCamera() {
     shell.classList.add("active");
     flipCameraBtn.style.display = "flex";
 
-    // ⭐ FLAG USER AS CAMERA ACTIVE
+    // 🔹 Firebase flag (this was missing in earlier snippet)
     update(ref(db, `participants/${userKey}`), {
       cameraActive: true
     });
 
-    // ⭐ IMPORTANT: Mirror only front camera
+    // 🔹 Mirror only the front camera
     if (currentCamera === "front") {
       video.style.transform = "scaleX(-1)";
     } else {
       video.style.transform = "scaleX(1)";
     }
 
+    // 🔹 Continue your streaming
     startStreamingFrames();
 
   } catch (err) {
-    console.error(err);
-    overlay.querySelector(".camera-overlay-text").textContent = "CAMERA ERROR — TAP AGAIN";
+    console.error("Camera error:", err);
+    overlay.querySelector(".camera-overlay-text").textContent =
+      "CAMERA ERROR — TAP AGAIN";
   }
 }
-
 
   shell.addEventListener("click", () => {
     if (!shell.classList.contains("active")) enableCamera();
   });
+  
 
   /* ----------------------------------------
      FIREBASE STREAMING
@@ -514,125 +552,54 @@ liveBadge.style.display =
 
   });
 
-let fps = 6;            // starts at full FPS
-let quality = 0.50;     // starts high
-let downscale = false;
+let sending = false;
 
-let avg = 0;
-let samples = [];
-
-let badTicks = 0;
-let goodTicks = 0;
-
-async function sendFrame() {
-  if (!userKey || currentlyLiveUser !== userKey || !streamingEnabled) {
-    setTimeout(sendFrame, 200);
-    return;
-  }
-
-  if (!video || video.readyState < 2) {
-    setTimeout(sendFrame, 200);
-    return;
-  }
-
+function startStreamingFrames() {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
-  // downscale if needed
-  let w = video.videoWidth;
-  let h = video.videoHeight;
+  async function sendLoop() {
+    requestAnimationFrame(sendLoop);
 
-  if (downscale && w > 640) {
-    h = Math.round(h * (640 / w));
-    w = 640;
+    if (sending) return; // <-- DO NOT send again until prior upload finishes
+    if (currentlyLiveUser !== userKey || !streamingEnabled) return;
+    if (!video || video.readyState < 2) return;
+
+    sending = true;
+
+    // --- SCALE TO FIXED WIDTH ---
+    const targetW = 640;
+    const scale = targetW / video.videoWidth;
+
+    canvas.width = targetW;
+    canvas.height = Math.round(video.videoHeight * scale);
+
+    ctx.save();
+    if (currentCamera === "front") {
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    } else {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    }
+    ctx.restore();
+
+    const jpeg = canvas.toDataURL("image/jpeg", 0.33);
+
+    try {
+      await update(ref(db, "live"), {
+        frame: jpeg,
+        ts: Date.now(),
+        user: userKey
+      });
+    } catch (e) {
+      console.warn("Upload failed:", e);
+    }
+
+    sending = false; // <-- upload finished, NOW allow another frame
   }
 
-  canvas.width = w;
-  canvas.height = h;
-
-  ctx.save();
-  if (currentCamera === "front") {
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, -w, 0, w, h);
-  } else {
-    ctx.drawImage(video, 0, 0, w, h);
-  }
-  ctx.restore();
-
-  const jpeg = canvas.toDataURL("image/jpeg", quality);
-
-  const start = performance.now();
-
-  await update(ref(db, "live"), {
-    frame: jpeg,
-    ts: Date.now(),
-    user: userKey
-  });
-
-  const end = performance.now();
-  const duration = end - start;
-
-  samples.push(duration);
-  if (samples.length > 10) samples.shift();
-
-  avg = samples.reduce((a, b) => a + b, 0) / samples.length;
-
-
-// --------------------------------------------------
-// ADAPTIVE BINARY HYSTERESIS
-// Target: smooth on Wi-Fi, stable on LTE
-//
-// Logic:
-//  - avg < 250ms  : treat as "good network" (Wi-Fi)
-//  - avg ≥ 250ms  : treat as "bad network" (LTE)
-//  - changes only occur after 3 consecutive samples
-// --------------------------------------------------
-
-if (avg < 250) {
-
-  // sustained good performance
-  goodTicks++;
-  badTicks = 0;
-
-  // only upgrade after 3 consecutive good frames
-  if (goodTicks >= 3) {
-
-    fps = 6;            // smooth
-    quality = 0.;     // clean image
-    downscale = true;  // full res
-  }
+  sendLoop();
 }
-
-else {
-
-  // sustained poor performance
-  badTicks++;
-  goodTicks = 0;
-
-  // only downgrade after 3 consecutive slow frames
-  if (badTicks >= 3) {
-
-    fps = 2;            // slideshow mode
-    quality = 0.30;     // heavy compression
-    downscale = true;   // downscale to reduce packet size
-  }
-}
-
-// --------------------------------------------------
-// DEBUG OUTPUT
-// --------------------------------------------------
-
-console.log(
-  `[SEND] ` +
-  `avg=${avg.toFixed(1)}ms | fps=${fps} | q=${quality.toFixed(2)} | ds=${downscale} ` +
-  `| good=${goodTicks} | bad=${badTicks}`
-);
-
-// continue streaming
-setTimeout(sendFrame, 1000 / fps);
-}
-
-sendFrame();
 
   /* ----------------------------------------
      TRIVIA MODE LISTENERS

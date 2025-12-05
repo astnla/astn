@@ -342,11 +342,15 @@ body {
     return arr;
   }
 
-  function rebuildCycle() {
-    const users = Object.keys(participantsSnapshot);
-    autoCycle = shuffle([...users]);
-    autoIndex = 0;
-  }
+function rebuildCycle() {
+  const activeUsers = Object.entries(participantsSnapshot)
+    .filter(([id, p]) => p.cameraActive === true)
+    .map(([id]) => id);
+
+  autoCycle = shuffle(activeUsers);
+  autoIndex = 0;
+}
+
 
   function startAutoLive() {
     if (autoLiveInterval) clearInterval(autoLiveInterval);
@@ -370,7 +374,7 @@ body {
       activeUser: nextUser,
       user: nextUser
     });
-    }, 7000); // 3 seconds
+    }, 5000); // 3 seconds
   }
 
   function stopAutoLive() {
