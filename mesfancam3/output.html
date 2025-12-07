@@ -32,7 +32,9 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      transform: translateY(-5%);
+
+      /* slightly less lift to reduce spacing on huge screens */
+      transform: translateY(-2%);
     }
 
     .manatee-logo {
@@ -44,8 +46,7 @@
     }
 
     .title {
-      font-size: 22px;
-      font-weight: 900;
+      font-size: clamp(22px, 2vw, 28px);      font-weight: 900;
       letter-spacing: 0.5px;
       text-align: center;
       margin-bottom: 12px;
@@ -53,12 +54,16 @@
 
     #displayBox {
       background: var(--overlay);
-      width: calc(100% - 70px);
-      max-width: 360px;
-      height: calc(360px * 4/3);
-      border-radius: 6px;
+
+      /* Scale up as viewport grows, but keep original ratio */
+  width: clamp(360px, 30vw, 575px);
+  height: calc(clamp(360px, 30vw, 575px) * 4/3);
+
+      border-radius: 8px;
       overflow: hidden;
       position: relative;
+
+      /* Tight margin so layout stays compact */
       margin-bottom: 20px;
     }
 
@@ -101,8 +106,8 @@
     }
 
     #qrImage {
-      width: 200px;
-      height: 200px;
+      width: clamp(140px, 18vw, 200px);
+      height: auto;
       margin: 12px;
       object-fit: contain;
     }
@@ -141,7 +146,7 @@
     }
 
     #liveName {
-      font-size: 20px;
+      font-size: clamp(16px, 2vw, 24px);
       font-weight: 900;
       color: white;
       text-align: center;
