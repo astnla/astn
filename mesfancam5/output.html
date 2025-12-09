@@ -117,32 +117,45 @@
     ------------------------------*/
 
     .overlayBox {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 90%;
-      max-width: 320px;
+      position: relative;
+      width: 100%;
       background: var(--panel-bg);
       color: var(--panel-text);
-      padding: 12px;
       border-radius: 8px;
       text-align: center;
-      font-size: 16px;
-      font-weight: 900;
       display: none;
       backdrop-filter: blur(4px);
+      font-size: clamp(14px, 1.5vw, 22px);
+      font-weight: 600;
+      padding: clamp(8px, 1vw, 16px);
     }
+
 
     #questionOverlay {
+      position: absolute;
       top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 95%;
+      z-index: 10;
     }
 
-    #correctOverlay {
+    
+    #bottomOverlayStack {
+      position: absolute;
       bottom: 10px;
-    }
+      left: 50%;
+      transform: translateX(-50%);
+      width: 95%;
+      max-width: clamp(360px, 95%, 600px);
 
-    #classAnswerOverlay {
-      bottom: 65px;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(6px, 1vh, 10px);
+      z-index: 10;
+
+
+      pointer-events: none;
     }
 
     #liveName {
@@ -180,8 +193,11 @@
 
     <!-- ✨ TRIVIA OVERLAYS -->
     <div id="questionOverlay" class="overlayBox"></div>
-    <div id="correctOverlay" class="overlayBox"></div>
-    <div id="classAnswerOverlay" class="overlayBox"></div>
+    <div id="bottomOverlayStack">
+      <div id="classAnswerOverlay" class="overlayBox"></div>
+      <div id="correctOverlay" class="overlayBox"></div>
+    </div>
+
 
       <div id="badConnection" style="
   position:absolute;
@@ -406,7 +422,7 @@ onValue(triviaCRef, snap => {
     return;
   }
 
-  correctOverlay.textContent = "Correct Answer: " + (data.text || "");
+  correctOverlay.textContent = "Answer: " + (data.text || "");
   correctOverlay.style.display = "block";
 });
 
@@ -460,7 +476,7 @@ onValue(revealRef, snap => {
       return;
     }
 
-    classOverlay.textContent = "Their Answer: " + answerData.answer;
+    classOverlay.textContent = "Class Answer: " + answerData.answer;
     classOverlay.style.display = "block";
   });
 });

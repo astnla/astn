@@ -225,6 +225,24 @@ body {
   display: none !important;
 }
 
+.kickBtn {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 900;
+  border-radius: 6px;
+  border: none;
+  background: var(--bg-red);
+  color: white;
+  cursor: pointer;
+  width: 100%;
+  transition: 0.2s;
+}
+
+.kickBtn:hover {
+  opacity: 0.8;
+}
+
+
   </style>
 </head>
 
@@ -668,6 +686,31 @@ function rebuildCycle() {
       card.appendChild(nameDiv);
       card.appendChild(timeDiv);
       card.appendChild(liveBtn);
+
+
+            // ⛔ KICK BUTTON
+      const kickBtn = document.createElement("button");
+      kickBtn.textContent = "KICK";
+      kickBtn.className = "kickBtn"; // optional class for styling
+
+      kickBtn.onclick = async () => {
+        // optional safety confirm
+        if (!confirm(`Kick ${p.name || key}?`)) return;
+
+        // Remove from db
+        await set(ref(db, "participants/" + key), null);
+
+        // Optional: if this user was live, clear them
+        const currentLive = currentLiveUser;
+        if (currentLive === key) {
+          await set(liveUserRef, null);
+        }
+      };
+
+      card.appendChild(kickBtn);
+
+
+
 
 /* Reveal / Hide — only when trivia mode ON */
 if (triviaOn) {
