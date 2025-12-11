@@ -261,30 +261,55 @@ const db = getDatabase(app);
 let activeUser = null;
 let lastTS = 0;
 let lastFrameTime = 0;
-let participantsCache = {};
 
-let listenersActive = false;   // <-- Dynamic ON/OFF control
+let listenersActive = false;
 const TIMEOUT_MS = 2000;
 
 /* ----------------------------------------
    REFS
 -----------------------------------------*/
-const activeUserRef   = ref(db, "live/activeUser");
-const participantsRef = ref(db, "participants");
+const activeUserRef = ref(db, "live/activeUser");
 
 const frameRef = ref(db, "live/frame");
 const tsRef    = ref(db, "live/ts");
 const userRef  = ref(db, "live/user");
 
-const triviaModeRef  = ref(db, "trivia/mode");
-const triviaQRef     = ref(db, "trivia/question");
-const triviaCRef     = ref(db, "trivia/correct");
-const revealRef      = ref(db, "trivia/reveal");
+const triviaModeRef = ref(db, "trivia/mode");
+const triviaQRef    = ref(db, "trivia/question");
+const triviaCRef    = ref(db, "trivia/correct");
+const revealRef     = ref(db, "trivia/reveal");
+
+/* ----------------------------------------
+   NEW — Load only the live user's name
+   (Instead of all participants)
+-----------------------------------------*/
+function loadLiveUserName(uid) {
+  if (!uid) {
+    liveName.style.display = "none";
+    return;
+  }
+
+  const nameRef = ref(db, `participants/${uid}/name`);
+
+  // Download ONCE — extremely tiny cost
+  onValue(
+    nameRef,
+    snap => {
+      const name = snap.val();
+      if (!name) {
+        liveName.style.display = "none";
+        return;
+      }
+      liveName.textContent = name;
+      liveName.style.display = "block";
+    },
+    { onlyOnce: true }
+  );
+}
 
 /* ----------------------------------------
    LISTENER MANAGER
 -----------------------------------------*/
-
 function stopAllListeners() {
   if (!listenersActive) return;
 
@@ -310,13 +335,13 @@ function startListenersForLiveUser() {
   listenersActive = true;
 
   /* ----------------------------------------
-     FRAME LISTENERS (turn on ONLY for live)
-  -----------------------------------------*/
+     FRAME LISTENER
+-----------------------------------------*/
   onValue(frameRef, snap => {
-    const frame = snap.val();
-    if (!frame) return;
+    const jpeg = snap.val();
+    if (!jpeg) return;
 
-    imgEl.src = frame;
+    imgEl.src = jpeg;
     imgEl.style.display = "block";
     emptyState.style.display = "none";
     badOverlay.style.display = "none";
@@ -326,20 +351,16 @@ function startListenersForLiveUser() {
 
   onValue(tsRef, snap => {
     const ts = snap.val();
-    if (!ts) return;
-
-    if (ts <= lastTS) return;
+    if (!ts || ts <= lastTS) return;
     lastTS = ts;
   });
 
-  onValue(userRef, snap => {
-    const u = snap.val();
-    if (u !== activeUser) return;
-  });
+  // Not technically needed but leaving it is fine
+  onValue(userRef, ()=>{});
 
   /* ----------------------------------------
-     TRIVIA LISTENERS (only when live)
-  -----------------------------------------*/
+     TRIVIA LISTENERS
+-----------------------------------------*/
   onValue(triviaModeRef, snap => {
     const mode = snap.val() === true;
     if (!mode) {
@@ -355,7 +376,7 @@ function startListenersForLiveUser() {
       questionOverlay.style.display = "none";
       return;
     }
-    questionOverlay.textContent = data.text || "";
+    questionOverlay.textContent = data.text;
     questionOverlay.style.display = "block";
   });
 
@@ -370,19 +391,17 @@ function startListenersForLiveUser() {
   });
 
   onValue(revealRef, snap => {
-    const revealData = snap.val() || {};
-    const keys = Object.keys(revealData);
+    const r = snap.val() || {};
+    const key = Object.keys(r).find(k => r[k]?.show === true);
 
-    const shownKey = keys.find(k => revealData[k]?.show === true);
-
-    if (!shownKey) {
+    if (!key) {
       classOverlay.style.display = "none";
       return;
     }
 
-    const ansRef = ref(db, `trivia/answers/${shownKey}`);
-    onValue(ansRef, ansSnap => {
-      const d = ansSnap.val() || {};
+    const ansRef = ref(db, `trivia/answers/${key}`);
+    onValue(ansRef, aSnap => {
+      const d = aSnap.val() || {};
       if (!d.answer) {
         classOverlay.style.display = "none";
         return;
@@ -394,42 +413,24 @@ function startListenersForLiveUser() {
 }
 
 /* ----------------------------------------
-   LIVE USER HANDLING
------------------------------------------*/
-function updateLiveName() {
-  if (!activeUser || !participantsCache[activeUser]) {
-    liveName.style.display = "none";
-    return;
-  }
-  liveName.textContent = participantsCache[activeUser].name || "";
-  liveName.style.display = "block";
-}
-
-onValue(participantsRef, snap => {
-  participantsCache = snap.val() || {};
-  updateLiveName();
-});
-
-/* ----------------------------------------
    WATCH ACTIVE USER
 -----------------------------------------*/
 onValue(activeUserRef, snap => {
   activeUser = snap.val();
-  updateLiveName();
 
-  // Reset frames
+  // Load name ONLY for the active user
+  loadLiveUserName(activeUser);
+
   lastTS = 0;
   lastFrameTime = performance.now();
 
   if (!activeUser) {
-    // QR MODE → turn listeners OFF
     stopAllListeners();
     imgEl.style.display = "none";
     emptyState.style.display = "flex";
     return;
   }
 
-  // LIVE MODE → turn listeners ON
   emptyState.style.display = "none";
   startListenersForLiveUser();
 });
@@ -448,7 +449,7 @@ setInterval(() => {
 }, 500);
 
 /* ----------------------------------------
-   PAGE VISIBILITY HANDLING (OBS scene switch)
+   HANDLE OBS SCENE SWITCH
 -----------------------------------------*/
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
