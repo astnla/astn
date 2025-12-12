@@ -536,19 +536,23 @@ onValue(participantsRef, snap => {
   const incoming = snap.val() || {};
 
   if (!participantsInitialized) {
-    // FIRST LOAD — allow selfies ONCE
+    // FIRST LOAD
     participantsSnapshot = incoming;
     participantsInitialized = true;
   } else {
-    // PATCH MODE — DO NOT re-download selfies
+    // PATCH + ADD MODE
     for (const id in incoming) {
-      if (!participantsSnapshot[id]) continue;
-
-      participantsSnapshot[id].cameraActive = incoming[id].cameraActive;
-      participantsSnapshot[id].joinedAt     = incoming[id].joinedAt;
+      if (!participantsSnapshot[id]) {
+        // ✅ NEW USER — allow selfie ONCE
+        participantsSnapshot[id] = incoming[id];
+      } else {
+        // ✅ EXISTING USER — patch only light fields
+        participantsSnapshot[id].cameraActive = incoming[id].cameraActive;
+        participantsSnapshot[id].joinedAt     = incoming[id].joinedAt;
+      }
     }
 
-    // Handle removals (kick / end session)
+    // Handle removals
     for (const id in participantsSnapshot) {
       if (!incoming[id]) delete participantsSnapshot[id];
     }
