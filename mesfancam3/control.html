@@ -528,40 +528,16 @@ function rebuildCycle() {
   const memberCount = document.getElementById("memberCount");
   const endSessionBtn = document.getElementById("endSessionBtn");
 
+  let participantsSnapshot = {};
 
-let participantsSnapshot = {};
-let participantsInitialized = false;
+  onValue(participantsRef, snap => {
+    participantsSnapshot = snap.val() || {};
 
-onValue(participantsRef, snap => {
-  const incoming = snap.val() || {};
+    if (autoLiveEnabled) rebuildCycle();
 
-  if (!participantsInitialized) {
-    // FIRST LOAD
-    participantsSnapshot = incoming;
-    participantsInitialized = true;
-  } else {
-    // PATCH + ADD MODE
-    for (const id in incoming) {
-      if (!participantsSnapshot[id]) {
-        // ✅ NEW USER — allow selfie ONCE
-        participantsSnapshot[id] = incoming[id];
-      } else {
-        // ✅ EXISTING USER — patch only light fields
-        participantsSnapshot[id].cameraActive = incoming[id].cameraActive;
-        participantsSnapshot[id].joinedAt     = incoming[id].joinedAt;
-      }
-    }
-
-    // Handle removals
-    for (const id in participantsSnapshot) {
-      if (!incoming[id]) delete participantsSnapshot[id];
-    }
-  }
-
-  if (autoLiveEnabled) rebuildCycle();
-  buildGrid();
-  highlightLive(currentLiveUser);
-});
+    buildGrid();
+    highlightLive(currentLiveUser);
+  });
 
   /* LIVE USER TRACKER */
   onValue(liveUserRef, snap => {
@@ -631,18 +607,6 @@ onValue(participantsRef, snap => {
   /* ===============================
         BUILD GRID
      =============================== */
-  let revealState = {};
-
-onValue(revealRef, snap => {
-  revealState = {};
-  const data = snap.val() || {};
-  for (const k in data) {
-    if (data[k]?.show === true) revealState[k] = true;
-  }
-  buildGrid();
-});
-
-  
   function buildGrid() {
     grid.innerHTML = "";
 
@@ -759,29 +723,33 @@ if (triviaOn) {
   hideBtn.className = "revealAnswerBtn";
   hideBtn.textContent = "HIDE";
 
-const isRevealed = revealState[key] === true;
+  if (!questionActive || !hasAnswer) {
+    revealBtn.classList.add("disabled");
+    hideBtn.classList.add("disabled");
+  } else {
+    onValue(ref(db, `trivia/reveal/${key}`), snap => {
+      const val = snap.val();
+      const revealed = val && typeof val === "object" && val.show === true;
 
-revealBtn.classList.toggle(
-  "disabled",
-  !questionActive || !hasAnswer || isRevealed
-);
+      if (revealed) {
+        revealBtn.classList.add("disabled");
+        hideBtn.classList.remove("disabled");
+      } else {
+        revealBtn.classList.remove("disabled");
+        hideBtn.classList.add("disabled");
+      }
+    });
 
-hideBtn.classList.toggle(
-  "disabled",
-  !isRevealed
-);
+    revealBtn.onclick = () =>
+      update(ref(db, `trivia/reveal/${key}`), { show: true });
 
-revealBtn.onclick = () =>
-  update(ref(db, `trivia/reveal/${key}`), { show: true });
-
-hideBtn.onclick = () =>
-  update(ref(db, `trivia/reveal/${key}`), { show: false });
-
+    hideBtn.onclick = () =>
+      update(ref(db, `trivia/reveal/${key}`), { show: false });
+  }
 
   card.appendChild(revealBtn);
   card.appendChild(hideBtn);
 }
-
       grid.appendChild(card);
     }
   }
