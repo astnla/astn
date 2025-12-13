@@ -544,6 +544,29 @@
     /* ------------------------------------------
        CONTINUE → SAVE SELFIE
     ------------------------------------------- */
+    function canvasToWebP(canvas, maxSize = 640, quality = 0.65) {
+      const tmp = document.createElement("canvas");
+      const ctx = tmp.getContext("2d");
+
+      let { width, height } = canvas;
+
+      // Scale down while preserving aspect ratio
+      if (width > height && width > maxSize) {
+        height = Math.round(height * (maxSize / width));
+        width = maxSize;
+      } else if (height > maxSize) {
+        width = Math.round(width * (maxSize / height));
+        height = maxSize;
+      }
+
+      tmp.width = width;
+      tmp.height = height;
+
+      ctx.drawImage(canvas, 0, 0, width, height);
+
+      return tmp.toDataURL("image/webp", quality);
+    }
+
     continueBtn.addEventListener("click", async () => {
       const v = nameInput.value.trim();
       if (!/[A-Z0-9]/.test(v)) return;
@@ -555,20 +578,22 @@
       retakeBtn.style.opacity = "0.4";
       retakeBtn.style.pointerEvents = "none";
 
-      const selfieData = canvas.toDataURL("image/png");
+      const selfieWebP = canvasToWebP(canvas);
       const safeName = v.replace(/[^A-Z0-9 ]/g, "").replace(/ /g, "_");
       const userKey = safeName + "_" + Date.now();
 
       try {
-        await set(ref(db, "participants/" + userKey), {
-          name: v,
-          selfie: selfieData,
-          joinedAt: Date.now()
-        });
+        await Promise.all([
+          set(ref(db, "selfies/" + userKey), selfieWebP),
+          set(ref(db, "participants/" + userKey), {
+            name: v,
+            joinedAt: Date.now(),
+            cameraActive: true
+          })
+        ]);
 
         sessionStorage.setItem("fanCamName", v);
         sessionStorage.setItem("fanCamUserKey", userKey);
-        sessionStorage.setItem("selfieBase64", selfieData);
 
         window.location.href = "index.html";
 

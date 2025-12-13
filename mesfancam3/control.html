@@ -334,12 +334,16 @@ body {
   const correctRef  = ref(db, "trivia/correct");
   const revealRef   = ref(db, "trivia/reveal");
   const modeRef     = ref(db, "trivia/mode");
+  const selfiesRef = ref(db, "selfies");
 
   let triviaOn = false;
   let answers = {};
   let questionActive = false;
   let correctAnswer = "";
   let currentLiveUser = null;
+  let selfieCache = {};
+  let revealState = {};
+
 
   /* ===============================
         AUTO LIVE SYSTEM
@@ -521,6 +525,17 @@ function rebuildCycle() {
     highlightLive(currentLiveUser);
   });
 
+  onValue(selfiesRef, snap => {
+    selfieCache = snap.val() || {};
+    buildGrid();
+  });
+
+  onValue(revealRef, snap => {
+    revealState = snap.val() || {};
+    buildGrid();
+  });
+
+
   /* ===============================
         PARTICIPANTS + GRID
      =============================== */
@@ -556,6 +571,8 @@ function rebuildCycle() {
       // Clear ALL participants
       // Clear ALL participants in db
       await set(participantsRef, null);
+      await set(selfiesRef, null);
+      selfieCache = {};
 
       // Clear local cache immediately
       participantsSnapshot = {};
@@ -642,7 +659,7 @@ function rebuildCycle() {
 
       const img = document.createElement("img");
       img.className = "thumb";
-      img.src = p.selfie;
+      img.src = selfieCache[key] || "";
 
       const nameDiv = document.createElement("div");
       nameDiv.className = "name";
@@ -727,18 +744,15 @@ if (triviaOn) {
     revealBtn.classList.add("disabled");
     hideBtn.classList.add("disabled");
   } else {
-    onValue(ref(db, `trivia/reveal/${key}`), snap => {
-      const val = snap.val();
-      const revealed = val && typeof val === "object" && val.show === true;
+    const isRevealed = revealState[key]?.show === true;
 
-      if (revealed) {
-        revealBtn.classList.add("disabled");
-        hideBtn.classList.remove("disabled");
-      } else {
-        revealBtn.classList.remove("disabled");
-        hideBtn.classList.add("disabled");
-      }
-    });
+    if (isRevealed) {
+      revealBtn.classList.add("disabled");
+      hideBtn.classList.remove("disabled");
+    } else {
+      revealBtn.classList.remove("disabled");
+      hideBtn.classList.add("disabled");
+    }
 
     revealBtn.onclick = () =>
       update(ref(db, `trivia/reveal/${key}`), { show: true });
