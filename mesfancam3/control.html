@@ -702,15 +702,13 @@ function rebuildCycle() {
       liveBtn.className = "goLiveBtn";
       liveBtn.dataset.uid = key;
 
-      if (p.cameraActive) {
+      if (p.cameraActive === true) {
         const isLive = currentLiveUser === key;
 
         liveBtn.textContent = isLive ? "LIVE" : "GO LIVE";
         liveBtn.disabled = false;
 
-        if (isLive) {
-          liveBtn.classList.add("live");
-        }
+        if (isLive) liveBtn.classList.add("live");
 
         liveBtn.onclick = () => {
           update(ref(db, "live"), {
@@ -719,7 +717,7 @@ function rebuildCycle() {
           });
         };
       } else {
-        liveBtn.textContent = "WAITING...";
+        liveBtn.textContent = "CAMERA OFF";
         liveBtn.disabled = true;
         liveBtn.style.opacity = "0.4";
         liveBtn.style.pointerEvents = "none";
@@ -803,17 +801,15 @@ if (triviaOn) {
   /* ===============================
         HIGHLIGHT LIVE BUTTON
      =============================== */
-  function highlightLive(liveId) {
-    document.querySelectorAll(".goLiveBtn").forEach(btn => {
-      btn.classList.remove("live");
-      btn.textContent = "GO LIVE";
+function highlightLive(liveId) {
+  document.querySelectorAll(".goLiveBtn").forEach(btn => {
+    btn.classList.remove("live");
 
-      if (liveId && btn.dataset.uid === liveId) {
-        btn.classList.add("live");
-        btn.textContent = "LIVE";
-      }
-    });
-  }
+    if (liveId && btn.dataset.uid === liveId) {
+      btn.classList.add("live");
+    }
+  });
+}
 
 </script>
 
