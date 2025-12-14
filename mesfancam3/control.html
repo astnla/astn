@@ -801,15 +801,17 @@ if (triviaOn) {
   /* ===============================
         HIGHLIGHT LIVE BUTTON
      =============================== */
-function highlightLive(liveId) {
-  document.querySelectorAll(".goLiveBtn").forEach(btn => {
-    btn.classList.remove("live");
+  function highlightLive(liveId) {
+    document.querySelectorAll(".goLiveBtn").forEach(btn => {
+      btn.classList.remove("live");
+      btn.textContent = "GO LIVE";
 
-    if (liveId && btn.dataset.uid === liveId) {
-      btn.classList.add("live");
-    }
-  });
-}
+      if (liveId && btn.dataset.uid === liveId) {
+        btn.classList.add("live");
+        btn.textContent = "LIVE";
+      }
+    });
+  }
 
 </script>
 
