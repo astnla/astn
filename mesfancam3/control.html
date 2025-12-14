@@ -698,25 +698,32 @@ function rebuildCycle() {
         card.appendChild(ans);
       }
 
-    const liveBtn = document.createElement("button");
-    liveBtn.className = "goLiveBtn";
-    liveBtn.dataset.uid = key;
+      const liveBtn = document.createElement("button");
+      liveBtn.className = "goLiveBtn";
+      liveBtn.dataset.uid = key;
 
-    if (p.cameraActive) {
-      liveBtn.textContent = "GO LIVE";
-      liveBtn.disabled = false;
-    liveBtn.onclick = () => {
-      update(ref(db, "live"), {
-        activeUser: key,
-        user: key
-      });
-    };
-    } else {
-      liveBtn.textContent = "WAITING...";
-      liveBtn.disabled = true;
-      liveBtn.style.opacity = "0.4";
-      liveBtn.style.pointerEvents = "none";
-    }
+      if (p.cameraActive) {
+        const isLive = currentLiveUser === key;
+
+        liveBtn.textContent = isLive ? "LIVE" : "GO LIVE";
+        liveBtn.disabled = false;
+
+        if (isLive) {
+          liveBtn.classList.add("live");
+        }
+
+        liveBtn.onclick = () => {
+          update(ref(db, "live"), {
+            activeUser: key,
+            user: key
+          });
+        };
+      } else {
+        liveBtn.textContent = "WAITING...";
+        liveBtn.disabled = true;
+        liveBtn.style.opacity = "0.4";
+        liveBtn.style.pointerEvents = "none";
+      }
 
       card.appendChild(img);
       card.appendChild(nameDiv);
@@ -746,6 +753,9 @@ function rebuildCycle() {
       };
 
       card.appendChild(kickBtn);
+
+
+
 
 
 
@@ -787,6 +797,7 @@ if (triviaOn) {
 }
       grid.appendChild(card);
     }
+      highlightLive(currentLiveUser);
   }
 
   /* ===============================
