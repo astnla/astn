@@ -297,8 +297,8 @@ body {
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
-
+  import { getDatabase, ref, onValue, onChildAdded, onChildRemoved, set, update } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+  
   const firebaseConfig = {
     apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
     authDomain: "mes-fancam.firebaseapp.com",
@@ -366,7 +366,7 @@ body {
 
 function rebuildCycle() {
   const activeUsers = Object.entries(participantsSnapshot)
-    .filter(([id, p]) => p.cameraActive === true)
+    .filter(([id, p]) => p?.cameraActive === true)
     .map(([id]) => id);
 
   autoCycle = shuffle(activeUsers);
@@ -382,20 +382,28 @@ function rebuildCycle() {
     if (autoCycle.length === 0) rebuildCycle();
 
     autoLiveInterval = setInterval(() => {
-      const users = Object.keys(participantsSnapshot);
+      const activeUsers = Object.entries(participantsSnapshot)
+        .filter(([id, p]) => p?.cameraActive === true)
+        .map(([id]) => id);
 
-      if (users.length === 0) return;
+      if (activeUsers.length === 0) {
+        // nobody has camera enabled — don't push undefined live users
+        return;
+      }
 
-      if (autoIndex >= autoCycle.length) rebuildCycle();
+      if (autoCycle.length === 0 || autoIndex >= autoCycle.length) {
+        rebuildCycle();
+      }
 
-      const nextUser = autoCycle[autoIndex];
-      autoIndex++;
+      const nextUser = autoCycle[autoIndex++];
+      if (!nextUser) return;
 
       lastLive = nextUser;
-    update(ref(db, "live"), {
-      activeUser: nextUser,
-      user: nextUser
-    });
+
+      update(ref(db, "live"), {
+        activeUser: nextUser,
+        user: nextUser
+      });
     }, 5000); // 3 seconds
   }
 
@@ -525,8 +533,24 @@ function rebuildCycle() {
     highlightLive(currentLiveUser);
   });
 
-  onValue(selfiesRef, snap => {
-    selfieCache = snap.val() || {};
+  /* =========================================
+   OPTIMIZED SELFIE LOADING
+   ========================================= */
+
+  // Ensure cache starts empty
+  selfieCache = {};
+
+  // Download each selfie ONCE
+  onChildAdded(selfiesRef, snap => {
+    const uid = snap.key;
+    selfieCache[uid] = snap.val();
+    buildGrid();
+  });
+
+  // Remove selfie if user is kicked / leaves
+  onChildRemoved(selfiesRef, snap => {
+    const uid = snap.key;
+    delete selfieCache[uid];
     buildGrid();
   });
 
@@ -584,18 +608,13 @@ function rebuildCycle() {
 
       // Force output page reset
       await set(ref(db, "live/frame"), null);
-      await set(ref(db, "live/timestamp"), null);
+      await set(ref(db, "live/ts"), null);
+      await set(ref(db, "live/user"), null);
+      await set(ref(db, "live/activeUser"), null);
 
       // Force immediate UI refresh
       buildGrid();
       highlightLive(null);
-  
-      // Clear active user
-      await set(liveUserRef, null);
-  
-      // Force output page to switch back to QR
-      await set(ref(db, "live/frame"), null);
-      await set(ref(db, "live/timestamp"), null);
   
       // Reset trivia fully
       await update(triviaRef, {
@@ -711,16 +730,18 @@ function rebuildCycle() {
       kickBtn.className = "kickBtn"; // optional class for styling
 
       kickBtn.onclick = async () => {
-        // optional safety confirm
         if (!confirm(`Kick ${p.name || key}?`)) return;
 
-        // Remove from db
         await set(ref(db, "participants/" + key), null);
+        await set(ref(db, "selfies/" + key), null);
+        await set(ref(db, "trivia/answers/" + key), null);
+        await set(ref(db, "trivia/reveal/" + key), null);
 
-        // Optional: if this user was live, clear them
-        const currentLive = currentLiveUser;
-        if (currentLive === key) {
-          await set(liveUserRef, null);
+        if (currentLiveUser === key) {
+          await set(ref(db, "live/activeUser"), null);
+          await set(ref(db, "live/frame"), null);
+          await set(ref(db, "live/ts"), null);
+          await set(ref(db, "live/user"), null);
         }
       };
 

@@ -563,13 +563,21 @@
         tmp.height = Math.round(height);
         ctx.drawImage(canvas, 0, 0, tmp.width, tmp.height);
 
-        // Try WebP first
+        // 1️⃣ Try WebP
         tmp.toBlob(blob => {
-          if (!blob) return;
+          if (blob && blob.type === "image/webp") {
+            const r = new FileReader();
+            r.onloadend = () => resolve(r.result);
+            r.readAsDataURL(blob);
+            return;
+          }
 
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
+          // 2️⃣ Fallback to JPEG (much better than PNG)
+          tmp.toBlob(jpegBlob => {
+            const r2 = new FileReader();
+            r2.onloadend = () => resolve(r2.result);
+            r2.readAsDataURL(jpegBlob);
+          }, "image/jpeg", quality);
 
         }, "image/webp", quality);
       });

@@ -389,18 +389,34 @@
 
 
 <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+    authDomain: "mes-fancam.firebaseapp.com",
+    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+    projectId: "mes-fancam",
+    storageBucket: "mes-fancam.firebasestorage.app",
+    messagingSenderId: "1091345682482",
+    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
   /* ----------------------------------------
      CAMERA ENABLE (same as before)
   ---------------------------------------- */
   const name  = sessionStorage.getItem("fanCamName");
-  const key   = sessionStorage.getItem("fanCamUserKey");
+  const userKey = sessionStorage.getItem("fanCamUserKey");
   let currentCamera = "front"; // or "back"
   let currentStream = null;
   let streamingEnabled = true;
 
 
 
-  if (!name || !key) {
+  if (!name || !userKey) {
     window.location.href = "join.html";
   }
 
@@ -524,23 +540,6 @@ if (!isIOS) {
   /* ----------------------------------------
      FIREBASE STREAMING
   ---------------------------------------- */
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
-    authDomain: "mes-fancam.firebaseapp.com",
-    databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
-    projectId: "mes-fancam",
-    storageBucket: "mes-fancam.firebasestorage.app",
-    messagingSenderId: "1091345682482",
-    appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db  = getDatabase(app);
-
-  const userKey = sessionStorage.getItem("fanCamUserKey");
 
   let currentlyLiveUser = null;
 
@@ -660,13 +659,19 @@ function startStreamingFrames() {
     triviaSubmittedMsg.style.display = "block";
   });
 
-  const participantsRef = ref(db, "participants");
+/* =========================================
+   OPTIMIZED SESSION CHECK
+   ========================================= */
 
-  onValue(participantsRef, snap => {
-    if (!snap.exists()) {
-      endClientSession();
-    }
-  });
+// Only listen to MY OWN participant node
+const myUserRef = ref(db, `participants/${userKey}`);
+
+onValue(myUserRef, snap => {
+  // If MY node disappears, I was kicked or session ended
+  if (!snap.exists()) {
+    endClientSession();
+  }
+});
 
 function endClientSession() {
 
