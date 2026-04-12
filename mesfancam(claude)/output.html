@@ -4,105 +4,448 @@
   <meta charset="UTF-8"/>
   <title>FEED — MANATEE CAM</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root { --red:#DA1A32; --navy:#00031F; }
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-    html,body{height:100%;overflow:hidden;background:var(--red);font-family:"DM Sans",sans-serif;}
-    .scene{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:translateY(-1.5%);}
-    .wordmark{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-    .wordmark img{width:52px;height:52px;object-fit:contain;border-radius:8px;}
-    .wordmark-text{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:clamp(20px,2vw,28px);letter-spacing:2px;color:var(--navy);}
-    #displayBox{position:relative;width:clamp(300px,28vw,520px);aspect-ratio:3/4;background:rgba(0,0,0,0.2);border-radius:12px;overflow:hidden;}
-    #displayBox::before,#displayBox::after{content:"";position:absolute;width:clamp(16px,2vw,24px);height:clamp(16px,2vw,24px);border-color:rgba(255,255,255,0.3);border-style:solid;z-index:5;pointer-events:none;}
-    #displayBox::before{top:10px;left:10px;border-width:2px 0 0 2px;border-radius:3px 0 0 0;}
-    #displayBox::after{bottom:10px;right:10px;border-width:0 2px 2px 0;border-radius:0 0 3px 0;}
-    #liveImage{width:100%;height:100%;object-fit:cover;display:none;}
-    #emptyState{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;text-align:center;padding:16px;color:white;}
-    .empty-label{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:clamp(18px,2.5vw,26px);letter-spacing:2px;animation:breathe 1.8s ease-in-out infinite;}
-    @keyframes breathe{0%,100%{opacity:0.5;}50%{opacity:1;}}
-    #qrImage{width:clamp(120px,14vw,180px);height:auto;object-fit:contain;margin:10px 0;border-radius:8px;}
-    #badOverlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);color:white;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:clamp(16px,2vw,22px);letter-spacing:1.5px;z-index:10;flex-direction:column;gap:8px;}
-    .bad-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.5);animation:breathe 0.8s ease-in-out infinite;}
-    .overlay-top{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:92%;z-index:8;}
-    .overlay-bottom-stack{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:92%;display:flex;flex-direction:column;gap:6px;z-index:8;pointer-events:none;}
-    .overlay-pill{background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);border-radius:8px;color:white;text-align:center;padding:clamp(7px,0.8vw,13px) clamp(10px,1vw,16px);font-size:clamp(13px,1.4vw,19px);font-weight:500;display:none;border:1px solid rgba(255,255,255,0.1);}
-    .overlay-pill.show{display:block;}
-    .overlay-pill strong{font-family:"Barlow Condensed",sans-serif;font-weight:900;letter-spacing:0.5px;}
+    :root {
+      --red:  #DA1A32;
+      --navy: #00031F;
+      --card: rgba(0, 3, 31, 0.82);
+      --line: rgba(255,255,255,0.10);
+      --muted: rgba(255,255,255,0.55);
+    }
 
-    /* ── POLL OVERLAY ── */
-    #pollOverlay{background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);border-radius:10px;color:white;text-align:center;padding:clamp(10px,1vw,16px);border:1px solid rgba(255,255,255,0.12);display:none;flex-direction:column;gap:8px;}
-    #pollOverlay.show{display:flex;}
-    #pollOverlayQuestion{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:clamp(14px,1.6vw,20px);letter-spacing:0.5px;line-height:1.2;}
-    #pollOverlayBars{display:flex;flex-direction:column;gap:6px;}
-    .poll-bar-row{display:grid;grid-template-columns:1fr auto;gap:4px;align-items:center;}
-    .poll-bar-label{font-size:clamp(11px,1.1vw,15px);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
-    .poll-bar-pct{font-size:clamp(10px,1vw,14px);font-weight:700;color:rgba(255,255,255,0.75);white-space:nowrap;}
-    .poll-bar-wrap{height:clamp(6px,0.7vw,10px);background:rgba(255,255,255,0.15);border-radius:99px;overflow:hidden;grid-column:1/-1;}
-    .poll-bar-fill{height:100%;background:white;border-radius:99px;transition:width 0.5s ease;width:0%;}
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    #nameBadge{display:none;margin-top:10px;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:clamp(16px,2vw,22px);letter-spacing:2px;color:white;animation:breathe 2s ease-in-out infinite;text-align:center;}
-    #nameBadge.show{display:block;}
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--navy);
+      font-family: "DM Sans", sans-serif;
+      color: #fff;
+    }
+
+    /* ── SCENE ── */
+    .scene {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── COLUMN ──
+       Width is 56vh so on a 4K display (2160px tall) this gives ~1210px.
+       Padding provides breathing room from screen edges.
+       flex column so everything stacks: header → name → feed → panel */
+    .column {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      width: min(56vh, calc(100vw - clamp(48px, 8vw, 160px)));
+      max-height: 100vh;
+      padding: clamp(14px, 2.5vh, 40px) 0;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: clamp(8px, 1vh, 14px);
+      margin-bottom: clamp(10px, 1.5vh, 20px);
+      flex-shrink: 0;
+    }
+    .header-accent {
+      width: 3px;
+      height: clamp(22px, 3vh, 36px);
+      background: var(--red);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .header img {
+      width: clamp(30px, 4vh, 48px);
+      height: clamp(30px, 4vh, 48px);
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    .header-title {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(18px, 2.4vh, 32px);
+      letter-spacing: 2.5px;
+      color: white;
+    }
+
+    /* ── HEADER TITLE fills available space ── */
+    .header-title { flex: 1; }
+
+    /* ── LIVE NAME SLOT (right side of header) ── */
+    #liveNameSlot {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: clamp(6px, 0.8vh, 10px);
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    #liveNameSlot.show { opacity: 1; }
+
+    .name-dot {
+      width: clamp(6px, 0.8vh, 9px);
+      height: clamp(6px, 0.8vh, 9px);
+      border-radius: 50%;
+      background: var(--red);
+      flex-shrink: 0;
+      animation: livePulse 1s ease-in-out infinite;
+    }
+
+    /* Clip window — one name visible at a time */
+    .name-window {
+      height: clamp(18px, 2.4vh, 30px);
+      overflow: hidden;
+      position: relative;
+      min-width: clamp(60px, 8vh, 120px);
+    }
+
+    .name-label {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(14px, 1.9vh, 26px);
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.9);
+      white-space: nowrap;
+      line-height: 1;
+      position: absolute;
+      bottom: 0; right: 0; left: 0;
+      text-align: right;
+    }
+
+    .name-label.current {
+      transform: translateY(0);
+      opacity: 1;
+      transition:
+        transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity   0.4s ease;
+    }
+    .name-label.exit-up {
+      transform: translateY(-120%);
+      opacity: 0;
+      transition:
+        transform 0.45s cubic-bezier(0.55, 0, 0.45, 1),
+        opacity   0.3s ease;
+    }
+    .name-label.enter-from-below {
+      transform: translateY(120%);
+      opacity: 0;
+      transition: none;
+    }
+
+    /* ── FEED ── */
+    #feedWrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      border-radius: clamp(10px, 1.2vh, 16px);
+      overflow: hidden;
+      background: rgba(255,255,255,0.04);
+      flex-shrink: 1;
+      min-height: 0;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.07),
+        0 12px 48px rgba(0,0,0,0.55);
+    }
+
+    #liveImage {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      opacity: 0;
+      transition: opacity 0.45s ease;
+    }
+    #liveImage.visible {
+      opacity: 1;
+    }
+
+    /* Corner brackets */
+    #feedWrap::before, #feedWrap::after {
+      content: "";
+      position: absolute;
+      width: clamp(14px, 2vh, 22px);
+      height: clamp(14px, 2vh, 22px);
+      border-color: rgba(255,255,255,0.2);
+      border-style: solid;
+      z-index: 4; pointer-events: none;
+    }
+    #feedWrap::before { top: 12px; left: 12px; border-width: 1.5px 0 0 1.5px; border-radius: 3px 0 0 0; }
+    #feedWrap::after  { bottom: 12px; right: 12px; border-width: 0 1.5px 1.5px 0; border-radius: 0 0 3px 0; }
+
+    /* LIVE pip */
+    #livePip {
+      position: absolute;
+      top: 12px; right: 12px;
+      display: flex;
+      align-items: center; gap: 5px;
+      background: var(--red);
+      padding: clamp(3px,0.5vh,6px) clamp(7px,1vh,12px);
+      border-radius: 5px;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(10px, 1.4vh, 16px);
+      letter-spacing: 1.5px;
+      z-index: 5;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    #livePip.show { opacity: 1; pointer-events: auto; }
+    .live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%; background: white;
+      animation: livePulse 1s ease-in-out infinite;
+    }
+
+    /* Empty state — starts visible, fades out when stream begins */
+    #emptyState {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 20px;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22,1,0.36,1);
+    }
+    #emptyState.hidden {
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+    }
+    .empty-label {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(14px, 2vh, 24px);
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.45);
+      animation: breathe 2s ease-in-out infinite;
+    }
+    #qrImage {
+      width: clamp(90px, 13vh, 170px);
+      height: auto; margin: clamp(8px,1.2vh,18px) 0;
+      border-radius: 8px; object-fit: contain;
+    }
+
+    /* Bad connection */
+    #badOverlay {
+      position: absolute; inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(13px, 1.8vh, 22px);
+      letter-spacing: 1.5px;
+      z-index: 5;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    #badOverlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .bad-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.45);
+      animation: breathe 0.9s ease-in-out infinite;
+    }
+
+    /* ── INFO PANEL ──
+       Expands downward below the feed pushing it up.
+       Uses max-height trick with a generous ceiling value. */
+    #infoPanel {
+      width: 100%;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(6px, 0.9vh, 12px);
+      overflow: hidden;
+      max-height: 0;
+      margin-top: 0;
+      /* Spring-style expand/collapse */
+      transition:
+        max-height   0.6s cubic-bezier(0.22, 1, 0.36, 1),
+        margin-top   0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    #infoPanel.has-content {
+      max-height: 55vh;
+      margin-top: clamp(8px, 1.2vh, 16px);
+    }
+
+    /* ── INFO CARDS ──
+       Each card starts invisible + shifted down.
+       Entrance: spring slide up + fade in.
+       Exit:     ease-in slide down + fade out (applied via .hiding class). */
+    .info-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: clamp(8px, 1vh, 14px);
+      padding: clamp(12px, 1.6vh, 22px) clamp(14px, 1.8vh, 24px);
+      display: none;
+      /* Default hidden state */
+      opacity: 0;
+      transform: translateY(22px);
+      /* Entrance timing — smooth spring */
+      transition:
+        opacity   0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .info-card.show {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* Exit state — applied briefly before display:none */
+    .info-card.hiding {
+      opacity: 0;
+      transform: translateY(14px);
+      transition:
+        opacity   0.35s ease-in,
+        transform 0.35s ease-in;
+    }
+
+    .card-eyebrow {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: clamp(9px, 1.1vh, 13px);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: clamp(4px, 0.6vh, 8px);
+    }
+    .card-body {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(16px, 2.2vh, 30px);
+      letter-spacing: 0.3px;
+      line-height: 1.15;
+    }
+
+    /* Poll bars */
+    #pollBars {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(6px, 0.9vh, 12px);
+      margin-top: clamp(6px, 0.9vh, 12px);
+    }
+    .bar-row { display: flex; flex-direction: column; gap: clamp(3px, 0.4vh, 5px); }
+    .bar-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .bar-label {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: clamp(13px, 1.8vh, 22px);
+      letter-spacing: 0.3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex: 1;
+    }
+    .bar-pct {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(13px, 1.8vh, 22px);
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .bar-track {
+      height: clamp(4px, 0.6vh, 8px);
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: var(--red);
+      border-radius: 99px;
+      transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      width: 0%;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes breathe   { 0%,100%{opacity:.4;} 50%{opacity:1;} }
+    @keyframes livePulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(.4);opacity:.4;} }
   </style>
 </head>
 <body>
 <div class="scene">
+  <div class="column">
 
-  <div class="wordmark">
-    <img src="assets/mestv.png" alt="MES TV">
-    <div class="wordmark-text">MANATEE CAM</div>
-  </div>
-
-  <div id="displayBox">
-    <img id="liveImage" alt="Live fan cam feed">
-
-    <div id="emptyState">
-      <div class="empty-label">SCAN TO JOIN</div>
-      <img id="qrImage" src="assets/qr3.png" alt="QR code to join">
-      <div class="empty-label">MANATEE CAM</div>
-    </div>
-
-    <div class="overlay-top">
-      <!-- Poll overlay (takes priority over trivia question when active) -->
-      <div id="pollOverlay">
-        <div id="pollOverlayQuestion"></div>
-        <div id="pollOverlayBars"></div>
+    <div class="header">
+      <div class="header-accent"></div>
+      <img src="assets/mestv.png" alt="MES TV">
+      <div class="header-title">MANATEE CAM</div>
+      <div id="liveNameSlot">
+        <span class="name-dot"></span>
+        <div class="name-window" id="nameWindow"></div>
       </div>
-      <!-- Trivia question pill (hidden while poll is showing) -->
-      <div class="overlay-pill" id="questionOverlay"></div>
     </div>
 
-    <div class="overlay-bottom-stack">
-      <div class="overlay-pill" id="classAnswerOverlay"></div>
-      <div class="overlay-pill" id="correctOverlay"></div>
+    <div id="feedWrap">
+      <img id="liveImage" alt="Live fan cam feed">
+      <div id="emptyState">
+        <div class="empty-label">SCAN TO JOIN</div>
+        <img id="qrImage" src="assets/qr3.png" alt="QR code">
+        <div class="empty-label">MANATEE CAM</div>
+      </div>
+      <div id="badOverlay">
+        <div class="bad-dot"></div>
+        <div>WEAK CONNECTION</div>
+      </div>
+      <div id="livePip">
+        <span class="live-dot"></span>LIVE
+      </div>
     </div>
 
-    <div id="badOverlay">
-      <div class="bad-dot"></div>
-      <div>WEAK CONNECTION</div>
+    <div id="infoPanel">
+      <div class="info-card" id="questionCard">
+        <div class="card-eyebrow" id="questionEyebrow">QUESTION</div>
+        <div class="card-body"    id="questionText"></div>
+      </div>
+      <div class="info-card" id="pollCard">
+        <div class="card-eyebrow">LIVE RESULTS</div>
+        <div id="pollBars"></div>
+      </div>
+      <div class="info-card" id="answerCard">
+        <div class="card-eyebrow">ANSWER</div>
+        <div class="card-body" id="answerText"></div>
+      </div>
+      <div class="info-card" id="classCard">
+        <div class="card-eyebrow">CLASS ANSWER</div>
+        <div class="card-body" id="classText"></div>
+      </div>
     </div>
+
   </div>
-
-  <div id="nameBadge"></div>
 </div>
 
 <script type="module">
 import { db } from "./firebase-config.js";
 import { ref, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
-/* ── ELEMENTS ── */
-const liveImage       = document.getElementById("liveImage");
-const emptyState      = document.getElementById("emptyState");
-const badOverlay      = document.getElementById("badOverlay");
-const nameBadge       = document.getElementById("nameBadge");
-const questionOverlay = document.getElementById("questionOverlay");
-const correctOverlay  = document.getElementById("correctOverlay");
-const classOverlay    = document.getElementById("classAnswerOverlay");
-const pollOverlay     = document.getElementById("pollOverlay");
-const pollOverlayQ    = document.getElementById("pollOverlayQuestion");
-const pollOverlayBars = document.getElementById("pollOverlayBars");
+const liveImage      = document.getElementById("liveImage");
+const emptyState     = document.getElementById("emptyState");
+const badOverlay     = document.getElementById("badOverlay");
+const liveNameSlot   = document.getElementById("liveNameSlot");
+const nameWindow     = document.getElementById("nameWindow");
+const livePip        = document.getElementById("livePip");
+const infoPanel      = document.getElementById("infoPanel");
+const questionCard   = document.getElementById("questionCard");
+const questionEyebrow= document.getElementById("questionEyebrow");
+const questionText   = document.getElementById("questionText");
+const pollCard       = document.getElementById("pollCard");
+const pollBars       = document.getElementById("pollBars");
+const answerCard     = document.getElementById("answerCard");
+const answerText     = document.getElementById("answerText");
+const classCard      = document.getElementById("classCard");
+const classText      = document.getElementById("classText");
 
-/* ── REFS ── */
 const activeUserRef  = ref(db, "live/activeUser");
 const frameRef       = ref(db, "live/frame");
 const triviaModeRef  = ref(db, "trivia/mode");
@@ -114,181 +457,252 @@ const pollsQRef      = ref(db, "polls/question");
 const pollsOptsRef   = ref(db, "polls/options");
 const pollsTotalsRef = ref(db, "polls/totals");
 
-/* ── STATE ── */
-let activeUser    = null;
-let lastFrameTime = 0;
-let streamActive  = false;
-let triviaActive  = false;
-let pollsActive   = false;
-let pollOptions   = {}; // loaded once, used by renderBars + question listener
+let activeUser  = null;
+let lastFrame   = 0;
+let streamOn    = false;
+let triviaOn    = false;
+let pollsOn     = false;
+let pollOptions = {};
 
 const TIMEOUT_MS = 2500;
+const visible    = new Set(); // tracks which card ids are shown
+
+/* ── CARD ANIMATION ── */
+function showCard(card, id) {
+  visible.add(id);
+  card.classList.remove("hiding");
+  card.style.display = "block";
+  card.offsetHeight; // reflow → ensures transform starts from translateY(22px)
+  card.classList.add("show");
+  infoPanel.classList.add("has-content");
+}
+
+function hideCard(card, id) {
+  if (!visible.has(id)) return;
+  visible.delete(id);
+  // Trigger exit animation
+  card.classList.add("hiding");
+  card.classList.remove("show");
+  setTimeout(() => {
+    if (!card.classList.contains("show")) {
+      card.classList.remove("hiding");
+      card.style.display = "none";
+    }
+    if (visible.size === 0) infoPanel.classList.remove("has-content");
+  }, 380);
+}
+
+/* ── FEED HELPERS ── */
+// emptyState uses .hidden to hide (it starts visible)
+// liveImage and badOverlay use .visible to show (they start hidden)
+function showEmpty()  { emptyState.classList.remove("hidden"); }
+function hideEmpty()  { emptyState.classList.add("hidden"); }
+function showFeed()   { liveImage.classList.add("visible"); }
+function hideFeed()   { liveImage.classList.remove("visible"); }
+function showBad()    { badOverlay.classList.add("visible"); }
+function hideBad()    { badOverlay.classList.remove("visible"); }
 
 /* ── STREAM ── */
-function startStream() {
-  if (streamActive) return;
-  streamActive = true;
+// Strategy: one persistent frame listener for the whole session.
+// On user switch we just update activeUser — the listener automatically
+// shows new frames as they arrive. No stop/start = no flicker.
+
+function ensureStream() {
+  if (streamOn) return;
+  streamOn = true;
   onValue(frameRef, snap => {
+    // Only show frames when someone is actually live
+    if (!activeUser) return;
     const jpeg = snap.val();
     if (!jpeg) return;
     liveImage.src = jpeg;
-    liveImage.style.display = "block";
-    emptyState.style.display = "none";
-    badOverlay.style.display = "none";
-    lastFrameTime = performance.now();
+    showFeed();
+    hideEmpty();
+    hideBad();
+    lastFrame = performance.now();
   });
 }
+
 function stopStream() {
-  if (!streamActive) return;
-  streamActive = false;
+  if (!streamOn) return;
+  streamOn = false;
   off(frameRef);
-  liveImage.style.display = "none";
-  liveImage.src = "";
-  badOverlay.style.display = "none";
-  emptyState.style.display = "flex";
+  hideFeed();
+  hideBad();
+  showEmpty();
+  setTimeout(() => { if (!streamOn) liveImage.src = ""; }, 500);
 }
 
 /* ── TRIVIA ── */
 function startTrivia() {
-  if (triviaActive) return;
-  triviaActive = true;
+  if (triviaOn) return;
+  triviaOn = true;
   onValue(triviaQRef, snap => {
     const d = snap.val() || {};
-    if (d.show && d.text) { questionOverlay.textContent = d.text; questionOverlay.classList.add("show"); }
-    else { questionOverlay.classList.remove("show"); }
+    if (d.show && d.text) {
+      questionEyebrow.textContent = "QUESTION";
+      questionText.textContent = d.text;
+      showCard(questionCard, "question");
+    } else {
+      hideCard(questionCard, "question");
+    }
   });
   onValue(triviaCRef, snap => {
     const d = snap.val() || {};
-    if (d.show && d.text) { correctOverlay.innerHTML = `<strong>ANSWER:</strong> ${d.text}`; correctOverlay.classList.add("show"); }
-    else { correctOverlay.classList.remove("show"); }
+    if (d.show && d.text) {
+      answerText.textContent = d.text;
+      showCard(answerCard, "answer");
+    } else {
+      hideCard(answerCard, "answer");
+    }
   });
   onValue(revealRef, snap => {
     const r = snap.val() || {};
     const key = Object.keys(r).find(k => r[k]?.show === true);
-    if (!key) { classOverlay.classList.remove("show"); return; }
+    if (!key) { hideCard(classCard, "class"); return; }
     onValue(ref(db, `trivia/answers/${key}`), aSnap => {
       const d = aSnap.val() || {};
-      if (d.answer) { classOverlay.innerHTML = `<strong>CLASS ANSWER:</strong> ${d.answer}`; classOverlay.classList.add("show"); }
-      else { classOverlay.classList.remove("show"); }
+      if (d.answer) { classText.textContent = d.answer; showCard(classCard, "class"); }
+      else hideCard(classCard, "class");
     }, { onlyOnce: true });
   });
 }
 function stopTrivia() {
-  if (!triviaActive) return;
-  triviaActive = false;
+  if (!triviaOn) return;
+  triviaOn = false;
   off(triviaQRef); off(triviaCRef); off(revealRef);
-  questionOverlay.classList.remove("show");
-  correctOverlay.classList.remove("show");
-  classOverlay.classList.remove("show");
+  hideCard(questionCard, "question");
+  hideCard(answerCard, "answer");
+  hideCard(classCard, "class");
 }
 
 /* ── POLLS ── */
 function renderBars(totals) {
-  // pollOptions is guaranteed populated before this is ever called
   const keys = Object.keys(pollOptions);
   if (!keys.length) return;
-
-  const totalVotes = keys.reduce((sum, k) => sum + (totals[k] || 0), 0);
-  pollOverlayBars.innerHTML = "";
-
-  const sorted = keys.sort((a, b) => (pollOptions[a]?.order ?? 0) - (pollOptions[b]?.order ?? 0));
+  const total = keys.reduce((s, k) => s + (totals[k] || 0), 0);
+  pollBars.innerHTML = "";
+  const sorted = [...keys].sort((a,b) => (pollOptions[a]?.order??0) - (pollOptions[b]?.order??0));
   for (const key of sorted) {
     const label = pollOptions[key]?.label || key;
     const votes = totals[key] || 0;
-    const pct   = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
-
+    const pct   = total > 0 ? Math.round((votes / total) * 100) : 0;
     const row = document.createElement("div");
-    row.className = "poll-bar-row";
+    row.className = "bar-row";
     row.innerHTML = `
-      <div class="poll-bar-label">${label}</div>
-      <div class="poll-bar-pct">${pct}%</div>
-      <div class="poll-bar-wrap"><div class="poll-bar-fill" style="width:${pct}%"></div></div>`;
-    pollOverlayBars.appendChild(row);
+      <div class="bar-top">
+        <span class="bar-label">${label}</span>
+        <span class="bar-pct">${pct}%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>`;
+    pollBars.appendChild(row);
   }
 }
-
 function startPolls() {
-  if (pollsActive) return;
-  pollsActive = true;
-
-  questionOverlay.classList.remove("show");
-
-  // Persistent options listener — always current, same fix as index.html
-  onValue(pollsOptsRef, optsSnap => {
-    pollOptions = optsSnap.val() || {};
-    // If bars are already showing, re-render with updated labels
-    if (pollOverlay.classList.contains("show")) {
-      onValue(pollsTotalsRef, snap => {
-        renderBars(snap.val() || {});
-      }, { onlyOnce: true });
+  if (pollsOn) return;
+  pollsOn = true;
+  onValue(pollsOptsRef, snap => {
+    pollOptions = snap.val() || {};
+    if (pollCard.classList.contains("show")) {
+      onValue(pollsTotalsRef, s => renderBars(s.val() || {}), { onlyOnce: true });
     }
   });
-
-  // Question controls show/hide
   onValue(pollsQRef, snap => {
     const d = snap.val() || {};
     if (d.show && d.text) {
-      pollOverlayQ.textContent = d.text;
-      pollOverlay.classList.add("show");
+      questionEyebrow.textContent = "POLL";
+      questionText.textContent = d.text;
+      showCard(questionCard, "question");
+      showCard(pollCard, "poll");
     } else {
-      pollOverlay.classList.remove("show");
-      pollOverlayBars.innerHTML = "";
+      hideCard(questionCard, "question");
+      hideCard(pollCard, "poll");
+      pollBars.innerHTML = "";
     }
   });
-
-  // Totals drive the live bar updates — pollOptions is always populated
-  // by the time this fires because control writes options before show:true
   onValue(pollsTotalsRef, snap => {
-    const totals = snap.val() || {};
-    if (pollOverlay.classList.contains("show")) renderBars(totals);
+    if (pollCard.classList.contains("show")) renderBars(snap.val() || {});
   });
 }
-
 function stopPolls() {
-  if (!pollsActive) return;
-  pollsActive = false;
-  off(pollsQRef);
-  off(pollsOptsRef);
-  off(pollsTotalsRef);
-  pollOverlay.classList.remove("show");
-  pollOverlayBars.innerHTML = "";
+  if (!pollsOn) return;
+  pollsOn = false;
+  off(pollsQRef); off(pollsOptsRef); off(pollsTotalsRef);
+  hideCard(questionCard, "question");
+  hideCard(pollCard, "poll");
+  pollBars.innerHTML = "";
   pollOptions = {};
 }
 
 /* ── GATES ── */
-onValue(triviaModeRef, snap => {
-  if (snap.val() === true) startTrivia(); else stopTrivia();
-});
-onValue(pollsModeRef, snap => {
-  if (snap.val() === true) startPolls(); else stopPolls();
-});
+onValue(triviaModeRef, snap => { snap.val()===true ? startTrivia() : stopTrivia(); });
+onValue(pollsModeRef,  snap => { snap.val()===true ? startPolls()  : stopPolls();  });
+
+/* ── SLOT MACHINE NAME FLIP ── */
+function flipName(newName) {
+  const existing = nameWindow.querySelector(".current");
+  if (!newName) {
+    if (existing) {
+      existing.classList.remove("current");
+      existing.classList.add("exit-up");
+      setTimeout(() => existing.remove(), 500);
+    }
+    setTimeout(() => liveNameSlot.classList.remove("show"), 300);
+    return;
+  }
+  const incoming = document.createElement("div");
+  incoming.className = "name-label enter-from-below";
+  incoming.textContent = newName;
+  nameWindow.appendChild(incoming);
+  liveNameSlot.classList.add("show");
+  incoming.offsetHeight; // force reflow so enter-from-below is applied
+  if (existing) {
+    existing.classList.remove("current");
+    existing.classList.add("exit-up");
+    setTimeout(() => existing.remove(), 500);
+  }
+  incoming.classList.remove("enter-from-below");
+  incoming.classList.add("current");
+}
 
 /* ── ACTIVE USER ── */
 onValue(activeUserRef, snap => {
   activeUser = snap.val();
-  lastFrameTime = performance.now();
-  if (!activeUser) { stopStream(); nameBadge.classList.remove("show"); return; }
+  livePip.classList.toggle("show", !!activeUser);
+
+  if (!activeUser) {
+    // No one live — stop stream, show empty state
+    stopStream();
+    flipName(null);
+    return;
+  }
+
+  // Reset frame timer so bad-connection check doesn't immediately fire
+  lastFrame = performance.now();
+
+  // Load name for slot machine flip
   onValue(ref(db, `participants/${activeUser}/name`), snap => {
-    const n = snap.val();
-    if (n) { nameBadge.textContent = n; nameBadge.classList.add("show"); }
-    else   { nameBadge.classList.remove("show"); }
+    flipName(snap.val() || null);
   }, { onlyOnce: true });
-  emptyState.style.display = "none";
-  startStream();
+
+  // Hide empty state immediately; the frame listener will show the feed
+  // as soon as a frame arrives — no timing gap, no flicker
+  hideEmpty();
+  ensureStream();
 });
 
 /* ── BAD CONNECTION ── */
 setInterval(() => {
-  if (!activeUser || !streamActive) return;
-  const stale = performance.now() - lastFrameTime > TIMEOUT_MS;
-  badOverlay.style.display = stale ? "flex" : "none";
-  if (!stale) liveImage.style.display = "block";
+  if (!activeUser || !streamOn) return;
+  const stale = performance.now() - lastFrame > TIMEOUT_MS;
+  if (stale) { hideFeed(); showBad(); }
+  else        { showFeed(); hideBad(); }
 }, 500);
 
 /* ── VISIBILITY ── */
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) { stopStream(); stopTrivia(); stopPolls(); }
-  else if (activeUser) { startStream(); }
+  else if (activeUser) { ensureStream(); }
 });
 </script>
 </body>
