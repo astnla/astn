@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #ff647c;
+      --bg: #0d1020;
       --panel: rgba(255,255,255,0.10);
       --panel-strong: rgba(255,255,255,0.16);
       --line: rgba(255,255,255,0.12);
@@ -476,13 +476,20 @@ els.sendPollBtn.onclick = async () => {
   if (!state.draftPollLocked || els.sendPollBtn.classList.contains("disabled")) return;
   const q = els.pollQuestion.value.trim();
   const opts = state.draftPollOptions.map(v=>v.trim()).filter(Boolean);
+  const optionsPayload = Object.fromEntries(opts.map((label,i) => [`opt${i+1}`,{label,order:i}]));
+  const totalsPayload  = Object.fromEntries(opts.map((_,i) => [`opt${i+1}`,0]));
+
+  // Step 1: write options + totals first, wait for confirmation
   await update(ref(db,"polls"), {
-    question: { text: q, show: true },
-    options:  Object.fromEntries(opts.map((label,i) => [`opt${i+1}`,{label,order:i}])),
+    options: optionsPayload,
     votes: null,
-    totals: Object.fromEntries(opts.map((_,i) => [`opt${i+1}`,0])),
-    status: "open"
+    totals: totalsPayload,
+    status: "open",
+    question: { text: q, show: false } // hidden until options are saved
   });
+
+  // Step 2: only NOW flip show:true — phones guaranteed to have options already
+  await update(ref(db,"polls/question"), { text: q, show: true });
 };
 els.resetPollBtn.onclick = async () => {
   await update(ref(db,"polls"), { question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" });

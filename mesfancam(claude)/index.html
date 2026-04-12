@@ -309,20 +309,18 @@ triviaSubmit.addEventListener("click", () => {
 });
 
 /* ── POLLS ── */
-// FIX: options must be loaded BEFORE we attach the question listener.
-// We do a one-time read of options first, then inside that callback
-// we start watching the question. This eliminates the race condition
-// where question fires before options are populated.
+// Strategy: keep a PERSISTENT options listener so currentOptions is always
+// up to date. The question listener then reads from currentOptions whenever
+// it fires — no race condition possible since both stay in sync continuously.
 
-let pollsQListener = null;
-let hasVoted = false;
+let currentOptions = {};  // always current, updated by persistent listener
+let hasVoted       = false;
+let pollsListening = false;
 
-function buildPollButtons(options) {
-  // Sort by order field then render buttons
+function buildPollButtons() {
   pollOptionsList.innerHTML = "";
-  const sorted = Object.entries(options)
+  const sorted = Object.entries(currentOptions)
     .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0));
-
   for (const [key, opt] of sorted) {
     const btn = document.createElement("button");
     btn.className = "poll-btn";
@@ -350,40 +348,41 @@ onValue(pollsModeRef, snap => {
   const on = snap.val() === true;
 
   if (!on) {
-    // Detach question listener, hide everything
-    if (pollsQListener) { off(pollsQRef); pollsQListener = null; }
+    if (pollsListening) { off(pollsOptsRef); off(pollsQRef); pollsListening = false; }
     pollBox.classList.remove("show");
     pollSubmitted.classList.remove("show");
     pollOptionsList.innerHTML = "";
+    currentOptions = {};
     hasVoted = false;
     return;
   }
 
-  // ── KEY FIX: read options once first, THEN watch the question ──
-  onValue(pollsOptsRef, optsSnap => {
-    const options = optsSnap.val() || {};
+  if (pollsListening) return; // already attached
+  pollsListening = true;
 
-    // Detach previous question listener if poll was re-sent
-    if (pollsQListener) { off(pollsQRef); pollsQListener = null; }
+  // Persistent options listener — always has the latest options in memory
+  onValue(pollsOptsRef, snap => {
+    currentOptions = snap.val() || {};
+  });
 
-    pollsQListener = onValue(pollsQRef, qSnap => {
-      const d = qSnap.val() || {};
-
-      if (d.show && d.text) {
-        hasVoted = false;
-        pollSubmitted.classList.remove("show");
-        pollQuestionText.textContent = d.text;
-        buildPollButtons(options);   // options guaranteed loaded here
-        pollBox.classList.add("show");
-      } else {
-        pollBox.classList.remove("show");
-        pollSubmitted.classList.remove("show");
-        pollOptionsList.innerHTML = "";
-        hasVoted = false;
-      }
-    });
-
-  }, { onlyOnce: true }); // one-time read — options don't change mid-poll
+  // Question listener — by the time show:true arrives, options are already
+  // written to Firebase first (control.html does a two-step write),
+  // so currentOptions will be populated when this fires
+  onValue(pollsQRef, snap => {
+    const d = snap.val() || {};
+    if (d.show && d.text) {
+      hasVoted = false;
+      pollSubmitted.classList.remove("show");
+      pollQuestionText.textContent = d.text;
+      buildPollButtons();
+      pollBox.classList.add("show");
+    } else {
+      pollBox.classList.remove("show");
+      pollSubmitted.classList.remove("show");
+      pollOptionsList.innerHTML = "";
+      hasVoted = false;
+    }
+  });
 });
 
 /* ── VISIBILITY ── */
