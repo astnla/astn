@@ -233,10 +233,13 @@ function startFrameLoop() {
     frameCtx.restore();
     if (!hasSignificantChange(frameCanvas)) return;
     const jpeg = frameCanvas.toDataURL("image/jpeg", 0.30);
+    // Guard: toDataURL returns "data:," if canvas is empty/invalid
+    if (!jpeg || !jpeg.startsWith("data:image")) { return; }
     lastSendTime = now;
     sending = true;
     set(ref(db, "live/frame"), jpeg)
-      .catch(() => {}).finally(() => { sending = false; });
+      .catch(e => console.warn("Frame write failed:", e))
+      .finally(() => { sending = false; });
   }
   loop();
 }
