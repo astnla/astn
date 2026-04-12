@@ -107,7 +107,7 @@
 
 <script type="module">
 import { db } from "./firebase-config.js";
-import { ref, update, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+import { ref, set, update, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
 /* ── SESSION CHECK ── */
 const name    = sessionStorage.getItem("fanCamName");
@@ -235,7 +235,7 @@ function startFrameLoop() {
     const jpeg = frameCanvas.toDataURL("image/jpeg", 0.30);
     lastSendTime = now;
     sending = true;
-    update(ref(db, "live/frame"), jpeg)
+    set(ref(db, "live/frame"), jpeg)
       .catch(() => {}).finally(() => { sending = false; });
   }
   loop();
