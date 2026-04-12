@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fan Cam Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1020;
+      --panel: rgba(255,255,255,0.10);
+      --panel-strong: rgba(255,255,255,0.16);
+      --line: rgba(255,255,255,0.12);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.68);
+      --accent: #ff3b57;
+      --accent-soft: rgba(255,59,87,0.18);
+      --good: #54d18a;
+      --warn: #ffd25a;
+      --danger: #ff647c;
+      --shadow: 0 20px 50px rgba(0,0,0,0.25);
+      --radius: 24px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Outfit", sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(255,59,87,0.35), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(84,209,138,0.12), transparent 20%),
+        linear-gradient(180deg, #121630 0%, #0d1020 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .shell { max-width: 1360px; margin: 0 auto; padding: 18px; }
+    .hero { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; margin-bottom: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(14px); }
+    .heroMain { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .eyebrow { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+    h1 { font-size: clamp(28px, 4vw, 46px); line-height: 0.95; }
+    .sub { color: var(--muted); max-width: 700px; font-size: 15px; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .stat { background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+    .statLabel { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .statValue { font-size: 28px; font-weight: 900; margin-top: 6px; }
+    .heroSide { padding: 18px; display: flex; flex-direction: column; gap: 12px; justify-content: space-between; }
+    .topActions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .pill { display: inline-flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid var(--line); font-size: 14px; font-weight: 700; }
+    .switch { appearance: none; width: 48px; height: 28px; background: rgba(255,255,255,0.15); border-radius: 999px; position: relative; cursor: pointer; transition: .2s ease; }
+    .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: .2s ease; }
+    .switch:checked { background: var(--accent); }
+    .switch:checked::after { transform: translateX(20px); }
+    button {
+      border: none; border-radius: 16px; background: rgba(255,255,255,0.08);
+      color: var(--text); padding: 12px 14px; font: inherit; font-weight: 800;
+      cursor: pointer; border: 1px solid var(--line); transition: .2s ease;
+    }
+    button:hover { transform: translateY(-1px); background: rgba(255,255,255,0.12); }
+    .accent { background: var(--accent); border-color: transparent; }
+    .accent:hover { background: #ff2747; }
+    .danger { background: rgba(255,100,124,0.14); border-color: rgba(255,100,124,0.28); color: var(--danger); }
+    .danger:hover { background: rgba(255,100,124,0.28); }
+    .ghost { background: transparent; }
+    .disabled { opacity: .42; pointer-events: none; }
+    .layout { display: grid; grid-template-columns: 380px 1fr; gap: 16px; align-items: start; }
+    .stack { display: grid; gap: 16px; }
+    .panel { padding: 18px; }
+    .panelHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
+    .panelTitle { font-size: 18px; font-weight: 900; }
+    .panelCopy { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .sectionSwitches { display: flex; gap: 8px; }
+    .seg { padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.06); border: 1px solid var(--line); font-size: 13px; font-weight: 800; }
+    .seg.active { background: var(--accent-soft); border-color: rgba(255,59,87,0.35); }
+    .featureBlock { display: none; gap: 10px; }
+    .featureBlock.active { display: grid; }
+    .input, textarea { width: 100%; border-radius: 16px; border: 1px solid var(--line); background: rgba(0,0,0,0.18); color: var(--text); padding: 14px; font: inherit; outline: none; }
+    textarea { min-height: 90px; resize: vertical; }
+    .row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+    .tinyRow { display: flex; gap: 8px; flex-wrap: wrap; }
+    .optionList { display: grid; gap: 8px; }
+    .optionRow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .participantHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; }
+    .participantGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .person { border-radius: 22px; overflow: hidden; border: 1px solid var(--line); background: rgba(255,255,255,0.06); display: flex; flex-direction: column; transition: .2s ease; }
+    .person.live { box-shadow: 0 0 0 2px rgba(255,59,87,.65) inset; }
+    .thumbWrap { position: relative; aspect-ratio: 3/4; background: rgba(0,0,0,0.22); }
+    .thumbWrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .liveBadge { position: absolute; top: 10px; left: 10px; display: none; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; background: rgba(255,255,255,0.92); color: var(--accent); }
+    .person.live .liveBadge { display: inline-flex; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(.55);opacity:.45;} }
+    .personBody { padding: 14px; display: grid; gap: 10px; flex: 1; }
+    .pname { font-size: 18px; font-weight: 900; }
+    .meta, .statusText { font-size: 12px; color: var(--muted); }
+    .statusPills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .miniPill { padding: 6px 8px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 11px; font-weight: 800; color: var(--muted); border: 1px solid var(--line); }
+    .miniPill.good { color: #09180f; background: var(--good); border-color: transparent; }
+    .miniPill.warn { color: #2c2300; background: var(--warn); border-color: transparent; }
+    .miniPill.hot  { color: white; background: var(--accent); border-color: transparent; }
+    .personActions { display: grid; gap: 8px; margin-top: auto; }
+    .empty { padding: 30px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 18px; }
+    @media (max-width: 1100px) { .hero, .layout { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 640px) { .shell { padding: 12px; } .stats { grid-template-columns: 1fr 1fr; } .participantGrid { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <section class="hero">
+    <div class="card heroMain">
+      <div class="eyebrow">manatee cam / control room</div>
+      <h1>fan cam.<br>control room.</h1>
+      <div class="sub">Live switching, trivia, and polls — all in one place. Tap a card to go live. Use the tools panel for trivia or polls.</div>
+      <div class="stats">
+        <div class="stat"><div class="statLabel">connected</div><div id="statMembers" class="statValue">0</div></div>
+        <div class="stat"><div class="statLabel">camera ready</div><div id="statReady" class="statValue">0</div></div>
+        <div class="stat"><div class="statLabel">live now</div><div id="statLive" class="statValue">—</div></div>
+        <div class="stat"><div class="statLabel">mode</div><div id="statMode" class="statValue">idle</div></div>
+      </div>
+    </div>
+    <div class="card heroSide">
+      <div class="topActions">
+        <label class="pill"><input class="switch" type="checkbox" id="autoLiveToggle"> auto live</label>
+        <button id="endSessionBtn" class="danger">end session</button>
+      </div>
+      <div class="panelCopy">Auto live rotates through everyone with their camera on. End session kicks everyone out and wipes the slate clean for next time.</div>
+    </div>
+  </section>
+
+  <section class="layout">
+    <div class="stack">
+      <div class="card panel">
+        <div class="panelHeader">
+          <div>
+            <div class="panelTitle">show tools</div>
+            <div class="panelCopy">Run one interactive tool at a time.</div>
+          </div>
+          <div class="sectionSwitches">
+            <button id="showTriviaBtn" class="seg active">trivia</button>
+            <button id="showPollsBtn" class="seg">polls</button>
+          </div>
+        </div>
+
+        <!-- TRIVIA -->
+        <div id="triviaBlock" class="featureBlock active">
+          <label class="pill"><input class="switch" type="checkbox" id="triviaToggle"> trivia on</label>
+          <textarea id="questionInput" placeholder="Type a question…"></textarea>
+          <div class="row">
+            <input id="correctInput" class="input" placeholder="Type the correct answer…">
+            <button id="saveAnswerBtn">enter</button>
+            <button id="sendQuestionBtn" class="accent disabled">send</button>
+          </div>
+          <div class="tinyRow">
+            <button id="revealCorrectBtn">show answer</button>
+            <button id="resetTriviaBtn" class="ghost">reset trivia</button>
+          </div>
+        </div>
+
+        <!-- POLLS -->
+        <div id="pollsBlock" class="featureBlock">
+          <label class="pill"><input class="switch" type="checkbox" id="pollsToggle"> polls on</label>
+          <textarea id="pollQuestion" placeholder="Type a poll question…"></textarea>
+          <div id="pollOptions" class="optionList"></div>
+          <div class="tinyRow">
+            <button id="addOptionBtn">add option</button>
+            <button id="lockPollBtn">enter</button>
+            <button id="sendPollBtn" class="accent disabled">send</button>
+            <button id="resetPollBtn" class="ghost">reset poll</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card panel">
+      <div class="participantHeader">
+        <div>
+          <div class="panelTitle">participants</div>
+          <div id="memberCount" class="panelCopy">0 connected</div>
+        </div>
+        <button id="clearLiveBtn" class="ghost">clear live</button>
+      </div>
+      <div id="participantGrid" class="participantGrid"></div>
+    </div>
+  </section>
+
+</div>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import {
+  ref, onValue, onChildAdded, onChildChanged, onChildRemoved,
+  update, set
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+const els = {
+  statMembers:      document.getElementById("statMembers"),
+  statReady:        document.getElementById("statReady"),
+  statLive:         document.getElementById("statLive"),
+  statMode:         document.getElementById("statMode"),
+  memberCount:      document.getElementById("memberCount"),
+  grid:             document.getElementById("participantGrid"),
+  autoLiveToggle:   document.getElementById("autoLiveToggle"),
+  endSessionBtn:    document.getElementById("endSessionBtn"),
+  clearLiveBtn:     document.getElementById("clearLiveBtn"),
+  showTriviaBtn:    document.getElementById("showTriviaBtn"),
+  showPollsBtn:     document.getElementById("showPollsBtn"),
+  triviaBlock:      document.getElementById("triviaBlock"),
+  pollsBlock:       document.getElementById("pollsBlock"),
+  triviaToggle:     document.getElementById("triviaToggle"),
+  questionInput:    document.getElementById("questionInput"),
+  correctInput:     document.getElementById("correctInput"),
+  saveAnswerBtn:    document.getElementById("saveAnswerBtn"),
+  sendQuestionBtn:  document.getElementById("sendQuestionBtn"),
+  revealCorrectBtn: document.getElementById("revealCorrectBtn"),
+  resetTriviaBtn:   document.getElementById("resetTriviaBtn"),
+  pollsToggle:      document.getElementById("pollsToggle"),
+  pollQuestion:     document.getElementById("pollQuestion"),
+  pollOptions:      document.getElementById("pollOptions"),
+  addOptionBtn:     document.getElementById("addOptionBtn"),
+  lockPollBtn:      document.getElementById("lockPollBtn"),
+  sendPollBtn:      document.getElementById("sendPollBtn"),
+  resetPollBtn:     document.getElementById("resetPollBtn")
+};
+
+const state = {
+  participants: {}, selfies: {}, answers: {}, reveals: {},
+  pollVotes: {}, pollTotals: {}, pollOptions: {},
+  currentLiveUser: null,
+  triviaMode: false, pollsMode: false,
+  triviaQuestionActive: false, triviaCorrect: "",
+  cardRefs: {},
+  autoLiveEnabled: false, autoLiveInterval: null,
+  autoCycle: [], autoIndex: 0,
+  draftPollLocked: false, draftPollOptions: []
+};
+
+/* ── TOOL TABS ── */
+function setTool(t) {
+  els.showTriviaBtn.classList.toggle("active", t === "trivia");
+  els.showPollsBtn.classList.toggle("active",  t === "polls");
+  els.triviaBlock.classList.toggle("active",   t === "trivia");
+  els.pollsBlock.classList.toggle("active",    t === "polls");
+}
+els.showTriviaBtn.onclick = () => setTool("trivia");
+els.showPollsBtn.onclick  = () => setTool("polls");
+
+/* ── STATS ── */
+function updateStats() {
+  const users = Object.values(state.participants);
+  const ready = users.filter(u => u?.cameraActive).length;
+  const liveName = state.currentLiveUser ? (state.participants[state.currentLiveUser]?.name || "—") : "—";
+  let mode = "idle";
+  if (state.pollsMode) mode = "polls";
+  else if (state.triviaMode) mode = "trivia";
+  else if (state.autoLiveEnabled) mode = "auto";
+  els.statMembers.textContent = users.length;
+  els.statReady.textContent   = ready;
+  els.statLive.textContent    = liveName;
+  els.statMode.textContent    = mode;
+  els.memberCount.textContent = `${users.length} connected · ${ready} camera ready`;
+  if (!users.length) els.grid.innerHTML = `<div class="empty">No participants yet.</div>`;
+}
+
+/* ── PARTICIPANT CARDS ── */
+function sortKey([uid, p]) {
+  return [Number(!!(state.answers[uid]?.answer || state.pollVotes[uid]?.label)), p?.joinedAt || 0];
+}
+
+function ensureCard(uid) {
+  if (state.cardRefs[uid]) return state.cardRefs[uid];
+  const card = document.createElement("div");
+  card.className = "person";
+  card.innerHTML = `
+    <div class="thumbWrap">
+      <img alt="">
+      <div class="liveBadge"><span class="dot"></span>LIVE</div>
+    </div>
+    <div class="personBody">
+      <div><div class="pname"></div><div class="meta"></div></div>
+      <div class="statusPills"></div>
+      <div class="statusText"></div>
+      <div class="personActions">
+        <button class="goLiveBtn accent">go live</button>
+        <button class="revealBtn">reveal answer</button>
+        <button class="hideBtn ghost">hide answer</button>
+        <button class="kickBtn danger">remove</button>
+      </div>
+    </div>`;
+  const c = {
+    root: card,
+    img:        card.querySelector("img"),
+    name:       card.querySelector(".pname"),
+    meta:       card.querySelector(".meta"),
+    pills:      card.querySelector(".statusPills"),
+    statusText: card.querySelector(".statusText"),
+    goLiveBtn:  card.querySelector(".goLiveBtn"),
+    revealBtn:  card.querySelector(".revealBtn"),
+    hideBtn:    card.querySelector(".hideBtn"),
+    kickBtn:    card.querySelector(".kickBtn")
+  };
+  c.goLiveBtn.onclick = async () => {
+    if (!state.participants[uid]?.cameraActive) return;
+    await update(ref(db, "live"), { activeUser: uid });
+  };
+  c.revealBtn.onclick = () => update(ref(db, `trivia/reveal/${uid}`), { show: true });
+  c.hideBtn.onclick   = () => update(ref(db, `trivia/reveal/${uid}`), { show: false });
+  c.kickBtn.onclick   = async () => {
+    const p = state.participants[uid];
+    if (!confirm(`Remove ${p?.name || uid}?`)) return;
+    const ops = [
+      set(ref(db, `participants/${uid}`), null),
+      set(ref(db, `selfies/${uid}`), null),
+      set(ref(db, `trivia/answers/${uid}`), null),
+      set(ref(db, `trivia/reveal/${uid}`), null),
+      set(ref(db, `polls/votes/${uid}`), null)
+    ];
+    if (state.currentLiveUser === uid) ops.push(
+      set(ref(db, "live/activeUser"), null),
+      set(ref(db, "live/frame"), null)
+    );
+    await Promise.all(ops);
+  };
+  state.cardRefs[uid] = c;
+  return c;
+}
+
+function patchCard(uid) {
+  const p = state.participants[uid];
+  const c = ensureCard(uid);
+  if (!p) return;
+  c.name.textContent = p.name || uid;
+  c.meta.textContent = p.joinedAt ? `joined ${new Date(p.joinedAt).toLocaleTimeString()}` : "just joined";
+  c.img.src = state.selfies[uid] || "";
+  c.root.classList.toggle("live", state.currentLiveUser === uid);
+
+  const pills = [p.cameraActive
+    ? `<span class="miniPill good">camera ready</span>`
+    : `<span class="miniPill">camera off</span>`];
+  const answer = state.answers[uid]?.answer;
+  const vote   = state.pollVotes[uid]?.label;
+  if (answer) {
+    const correct = state.triviaCorrect && answer.toLowerCase().trim() === state.triviaCorrect;
+    pills.push(`<span class="miniPill ${correct ? "good" : "warn"}">trivia sent</span>`);
+  }
+  if (vote) pills.push(`<span class="miniPill hot">poll sent</span>`);
+  c.pills.innerHTML = pills.join("");
+
+  c.statusText.textContent = vote ? `Voted: ${vote}`
+    : answer ? `Answer: ${answer}`
+    : p.cameraActive ? "Ready to go live." : "Waiting for camera…";
+
+  c.goLiveBtn.disabled = !p.cameraActive;
+  c.goLiveBtn.classList.toggle("disabled", !p.cameraActive);
+  c.goLiveBtn.textContent = !p.cameraActive ? "camera off"
+    : state.currentLiveUser === uid ? "live ●" : "go live";
+
+  const canReveal = state.triviaMode && state.triviaQuestionActive && !!answer;
+  const revealed  = state.reveals[uid]?.show === true;
+  c.revealBtn.style.display = state.triviaMode ? "block" : "none";
+  c.hideBtn.style.display   = state.triviaMode ? "block" : "none";
+  c.revealBtn.classList.toggle("disabled", !canReveal || revealed);
+  c.hideBtn.classList.toggle("disabled",   !canReveal || !revealed);
+}
+
+function syncOrder() {
+  const entries = Object.entries(state.participants)
+    .sort((a, b) => { const [as,aj] = sortKey(a); const [bs,bj] = sortKey(b); return bs-as || bj-aj; });
+  if (!entries.length) { els.grid.innerHTML = `<div class="empty">No participants yet.</div>`; return; }
+  els.grid.innerHTML = "";
+  for (const [uid] of entries) { const c = ensureCard(uid); patchCard(uid); els.grid.appendChild(c.root); }
+}
+
+function removeCard(uid) {
+  const c = state.cardRefs[uid];
+  if (c?.root?.parentNode) c.root.parentNode.removeChild(c.root);
+  delete state.cardRefs[uid];
+}
+
+/* ── AUTO LIVE ── */
+function rebuildCycle() {
+  const active = Object.entries(state.participants).filter(([,p]) => p?.cameraActive).map(([id]) => id);
+  for (let i = active.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [active[i],active[j]]=[active[j],active[i]]; }
+  state.autoCycle = active; state.autoIndex = 0;
+}
+function startAuto() {
+  stopAuto(); state.autoLiveEnabled = true; rebuildCycle();
+  state.autoLiveInterval = setInterval(async () => {
+    if (!Object.values(state.participants).some(p => p?.cameraActive)) return;
+    if (!state.autoCycle.length || state.autoIndex >= state.autoCycle.length) rebuildCycle();
+    const next = state.autoCycle[state.autoIndex++];
+    if (next) await update(ref(db, "live"), { activeUser: next });
+  }, 5000);
+  updateStats();
+}
+function stopAuto() {
+  state.autoLiveEnabled = false;
+  clearInterval(state.autoLiveInterval);
+  state.autoLiveInterval = null;
+  updateStats();
+}
+els.autoLiveToggle.onchange = () => els.autoLiveToggle.checked ? startAuto() : stopAuto();
+
+els.clearLiveBtn.onclick = async () => {
+  await Promise.all([set(ref(db,"live/activeUser"),null), set(ref(db,"live/frame"),null)]);
+};
+
+/* ── END SESSION ── */
+els.endSessionBtn.onclick = async () => {
+  if (!confirm("End the whole session and clear everyone out?")) return;
+  stopAuto();
+  els.autoLiveToggle.checked = false;
+  await Promise.all([
+    set(ref(db, "participants"), null),
+    set(ref(db, "selfies"), null),
+    set(ref(db, "live"), null),
+    set(ref(db, "trivia"), { mode: false, question: { text:"", show:false }, correct: { text:"", show:false }, answers: null, reveal: null }),
+    set(ref(db, "polls"),  { mode: false, question: { text:"", show:false }, options: null, votes: null, totals: null, status: "idle" }),
+    set(ref(db, "meta/resetFlag"), Date.now())
+  ]);
+  state.participants = {}; state.selfies = {}; state.answers = {};
+  state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
+  els.grid.innerHTML = `<div class="empty">Session ended. Ready for next time.</div>`;
+  els.questionInput.value = ""; els.correctInput.value = "";
+  els.triviaToggle.checked = false; els.pollsToggle.checked = false;
+  updateStats();
+};
+
+/* ── TRIVIA ── */
+function updateSendState() {
+  const ready = !!els.questionInput.value.trim() && !!els.correctInput.value.trim();
+  els.sendQuestionBtn.classList.toggle("disabled", !ready);
+}
+els.questionInput.addEventListener("input", updateSendState);
+els.correctInput.addEventListener("input", updateSendState);
+els.triviaToggle.onchange = () => update(ref(db,"trivia"), { mode: els.triviaToggle.checked });
+els.saveAnswerBtn.onclick = () => {
+  const a = els.correctInput.value.trim(); if (!a) return;
+  update(ref(db,"trivia"), { correct: { text: a, show: false } }); updateSendState();
+};
+els.sendQuestionBtn.onclick = () => {
+  const t = els.questionInput.value.trim();
+  if (!t || els.sendQuestionBtn.classList.contains("disabled")) return;
+  update(ref(db,"trivia"), { question: { text: t, show: true } });
+};
+els.revealCorrectBtn.onclick = () => {
+  const a = els.correctInput.value.trim(); if (!a) return;
+  update(ref(db,"trivia"), { correct: { text: a, show: true } });
+};
+els.resetTriviaBtn.onclick = async () => {
+  await update(ref(db,"trivia"), { question:{text:"",show:false}, correct:{text:"",show:false}, answers:null });
+  await set(ref(db,"trivia/reveal"), { __reset: Date.now() });
+  els.questionInput.value = ""; els.correctInput.value = ""; updateSendState();
+};
+
+/* ── POLLS ── */
+function renderPollDraft() {
+  els.pollOptions.innerHTML = "";
+  state.draftPollOptions.forEach((value, i) => {
+    const row = document.createElement("div");
+    row.className = "optionRow";
+    row.innerHTML = `<input class="input" placeholder="Option ${i+1}" value="${value.replace(/"/g,"&quot;")}"><button ${state.draftPollOptions.length<=2?'class="disabled"':""}>remove</button>`;
+    row.querySelector("input").oninput = e => { state.draftPollOptions[i]=e.target.value; state.draftPollLocked=false; els.sendPollBtn.classList.add("disabled"); };
+    row.querySelector("button").onclick = () => { if(state.draftPollOptions.length<=2)return; state.draftPollOptions.splice(i,1); state.draftPollLocked=false; els.sendPollBtn.classList.add("disabled"); renderPollDraft(); };
+    els.pollOptions.appendChild(row);
+  });
+}
+state.draftPollOptions = ["", ""]; renderPollDraft();
+els.pollsToggle.onchange = async () => update(ref(db,"polls"), { mode: els.pollsToggle.checked });
+els.addOptionBtn.onclick = () => { state.draftPollOptions.push(""); state.draftPollLocked=false; els.sendPollBtn.classList.add("disabled"); renderPollDraft(); };
+els.lockPollBtn.onclick = () => {
+  const q = els.pollQuestion.value.trim();
+  const opts = state.draftPollOptions.map(v=>v.trim()).filter(Boolean);
+  if (!q || opts.length < 2) return alert("Add a question and at least two options.");
+  state.draftPollLocked = true; els.sendPollBtn.classList.remove("disabled");
+};
+els.sendPollBtn.onclick = async () => {
+  if (!state.draftPollLocked || els.sendPollBtn.classList.contains("disabled")) return;
+  const q = els.pollQuestion.value.trim();
+  const opts = state.draftPollOptions.map(v=>v.trim()).filter(Boolean);
+  await update(ref(db,"polls"), {
+    question: { text: q, show: true },
+    options:  Object.fromEntries(opts.map((label,i) => [`opt${i+1}`,{label,order:i}])),
+    votes: null,
+    totals: Object.fromEntries(opts.map((_,i) => [`opt${i+1}`,0])),
+    status: "open"
+  });
+};
+els.resetPollBtn.onclick = async () => {
+  await update(ref(db,"polls"), { question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" });
+  els.pollQuestion.value=""; state.draftPollOptions=["",""]; state.draftPollLocked=false;
+  els.sendPollBtn.classList.add("disabled"); renderPollDraft();
+};
+
+/* ── LISTENERS ── */
+onValue(ref(db,"trivia/mode"),    snap => { state.triviaMode=snap.val()===true; els.triviaToggle.checked=state.triviaMode; updateStats(); Object.keys(state.participants).forEach(patchCard); });
+onValue(ref(db,"trivia/question"),snap => { const q=snap.val()||{}; state.triviaQuestionActive=q.show===true&&!!q.text; Object.keys(state.participants).forEach(patchCard); });
+onValue(ref(db,"trivia/correct"), snap => { const v=snap.val()||{}; state.triviaCorrect=v.text?v.text.toLowerCase().trim():""; if(v.text&&!document.activeElement?.isSameNode(els.correctInput))els.correctInput.value=v.text; Object.keys(state.participants).forEach(patchCard); });
+onValue(ref(db,"trivia/answers"), snap => { state.answers=snap.val()||{}; syncOrder(); });
+onValue(ref(db,"trivia/reveal"),  snap => { state.reveals=snap.val()||{}; Object.keys(state.participants).forEach(patchCard); });
+onValue(ref(db,"polls/mode"),     snap => { state.pollsMode=snap.val()===true; els.pollsToggle.checked=state.pollsMode; updateStats(); });
+onValue(ref(db,"polls/options"),  snap => { state.pollOptions=snap.val()||{}; });
+onValue(ref(db,"polls/votes"),    snap => { state.pollVotes=snap.val()||{}; syncOrder(); });
+onValue(ref(db,"polls/totals"),   snap => { state.pollTotals=snap.val()||{}; });
+onValue(ref(db,"live/activeUser"),snap => { state.currentLiveUser=snap.val()||null; updateStats(); Object.keys(state.participants).forEach(patchCard); });
+
+onChildAdded(ref(db,"participants"),   snap => { state.participants[snap.key]=snap.val()||{}; ensureCard(snap.key); syncOrder(); if(state.autoLiveEnabled)rebuildCycle(); updateStats(); });
+onChildChanged(ref(db,"participants"), snap => { state.participants[snap.key]=snap.val()||{}; patchCard(snap.key); if(state.autoLiveEnabled)rebuildCycle(); updateStats(); });
+onChildRemoved(ref(db,"participants"), snap => { delete state.participants[snap.key]; removeCard(snap.key); if(state.autoLiveEnabled)rebuildCycle(); updateStats(); if(!Object.keys(state.participants).length)els.grid.innerHTML=`<div class="empty">No participants yet.</div>`; });
+onChildAdded(ref(db,"selfies"),   snap => { state.selfies[snap.key]=snap.val(); if(state.participants[snap.key])patchCard(snap.key); });
+onChildChanged(ref(db,"selfies"), snap => { state.selfies[snap.key]=snap.val(); if(state.participants[snap.key])patchCard(snap.key); });
+onChildRemoved(ref(db,"selfies"), snap => { delete state.selfies[snap.key]; if(state.participants[snap.key])patchCard(snap.key); });
+
+updateSendState();
+updateStats();
+</script>
+</body>
+</html>
