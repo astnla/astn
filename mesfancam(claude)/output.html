@@ -211,32 +211,37 @@ function startPolls() {
   if (pollsActive) return;
   pollsActive = true;
 
-  // Hide trivia question while poll is showing
   questionOverlay.classList.remove("show");
 
-  // ── KEY FIX: load options once first, then attach question + totals listeners ──
+  // Persistent options listener — always current, same fix as index.html
   onValue(pollsOptsRef, optsSnap => {
     pollOptions = optsSnap.val() || {};
+    // If bars are already showing, re-render with updated labels
+    if (pollOverlay.classList.contains("show")) {
+      onValue(pollsTotalsRef, snap => {
+        renderBars(snap.val() || {});
+      }, { onlyOnce: true });
+    }
+  });
 
-    // Watch question to show/hide overlay
-    onValue(pollsQRef, snap => {
-      const d = snap.val() || {};
-      if (d.show && d.text) {
-        pollOverlayQ.textContent = d.text;
-        pollOverlay.classList.add("show");
-      } else {
-        pollOverlay.classList.remove("show");
-        pollOverlayBars.innerHTML = "";
-      }
-    });
+  // Question controls show/hide
+  onValue(pollsQRef, snap => {
+    const d = snap.val() || {};
+    if (d.show && d.text) {
+      pollOverlayQ.textContent = d.text;
+      pollOverlay.classList.add("show");
+    } else {
+      pollOverlay.classList.remove("show");
+      pollOverlayBars.innerHTML = "";
+    }
+  });
 
-    // Watch totals — options already loaded so renderBars works immediately
-    onValue(pollsTotalsRef, snap => {
-      const totals = snap.val() || {};
-      if (pollOverlay.classList.contains("show")) renderBars(totals);
-    });
-
-  }, { onlyOnce: true }); // options are set once per poll, no need to re-listen
+  // Totals drive the live bar updates — pollOptions is always populated
+  // by the time this fires because control writes options before show:true
+  onValue(pollsTotalsRef, snap => {
+    const totals = snap.val() || {};
+    if (pollOverlay.classList.contains("show")) renderBars(totals);
+  });
 }
 
 function stopPolls() {
