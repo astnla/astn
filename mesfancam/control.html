@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>CONTROL — MANATEE CAM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red: #DA1A32;
+      --navy: #00031F;
+      --white: #fff;
+      --surface: #f5f4f1;
+      --card-bg: #ffffff;
+      --muted: #8a8a8a;
+      --border: rgba(0,0,0,0.1);
+      --green: #1a9e5f;
+      --amber: #c97d10;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: "DM Sans", sans-serif;
+      background: var(--surface);
+      color: var(--navy);
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: sticky; top:0; z-index:20;
+      background: var(--red);
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px;
+    }
+    .topbar-left {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900; font-size: 20px; letter-spacing: 1.5px;
+      color: var(--navy);
+    }
+    .topbar-right { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+    /* Status pill */
+    .status-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 13px; font-weight: 500; color: white;
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: rgba(255,255,255,0.4);
+    }
+    .status-dot.live { background: white; animation: livePulse 1s ease-in-out infinite; }
+    @keyframes livePulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(0.45);opacity:0.5;} }
+
+    /* Toggle switches */
+    .toggle-wrap {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 13px; font-weight: 500; color: white;
+      cursor: pointer; user-select: none;
+    }
+    .switch {
+      position: relative; width: 36px; height: 20px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 10px; transition: background 0.2s; flex-shrink:0;
+    }
+    .switch input { display:none; }
+    .switch input:checked + .knob { transform: translateX(16px); }
+    .switch input:checked ~ .switch { background: white; }
+    .knob {
+      position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px; background: white;
+      border-radius: 50%; transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-wrap input:checked + .knob { transform: translateX(16px); }
+
+    /* Simple switch that actually works */
+    .sw { position:relative; width:36px; height:20px; flex-shrink:0; }
+    .sw input { opacity:0; width:0; height:0; }
+    .sw-track {
+      position:absolute; inset:0;
+      background:rgba(255,255,255,0.25); border-radius:10px;
+      cursor:pointer; transition:background 0.2s;
+    }
+    .sw-track::after {
+      content:""; position:absolute;
+      top:2px; left:2px; width:16px; height:16px;
+      background:white; border-radius:50%;
+      transition:transform 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.2);
+    }
+    .sw input:checked + .sw-track { background:rgba(255,255,255,0.85); }
+    .sw input:checked + .sw-track::after { transform:translateX(16px); }
+
+    .toggle-label { font-size:13px; font-weight:500; color:white; cursor:pointer; user-select:none; }
+
+    /* End button */
+    #endBtn {
+      display: none;
+      padding: 6px 14px;
+      background: rgba(0,0,0,0.3); color: white;
+      border: none; border-radius: 6px;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700; font-size: 15px; letter-spacing: 1px;
+      cursor: pointer; transition: background 0.15s;
+    }
+    #endBtn:hover { background: rgba(0,0,0,0.5); }
+
+    /* ── TRIVIA PANEL ── */
+    #triviaPanel {
+      display: none;
+      background: #c41728;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+    #triviaPanel.show { display: block; }
+
+    .trivia-title {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900; font-size: 16px; letter-spacing: 1px;
+      color: white; margin-bottom: 10px;
+    }
+
+    .trivia-row { display:flex; gap:8px; margin-bottom:8px; }
+    .trivia-row:last-child { margin-bottom:0; }
+
+    .trivia-input {
+      flex:1; padding:9px 12px;
+      border-radius:7px; border:none;
+      background:rgba(255,255,255,0.15); color:white;
+      font-family:"DM Sans",sans-serif; font-size:14px;
+      outline:none; transition:background 0.2s;
+    }
+    .trivia-input::placeholder { color:rgba(255,255,255,0.4); }
+    .trivia-input:focus { background:rgba(255,255,255,0.22); }
+
+    .trivia-btn {
+      padding:9px 14px;
+      border-radius:7px; border:none;
+      background:var(--navy); color:white;
+      font-family:"Barlow Condensed",sans-serif;
+      font-weight:700; font-size:14px; letter-spacing:0.5px;
+      cursor:pointer; transition:opacity 0.15s; white-space:nowrap;
+    }
+    .trivia-btn:active { opacity:0.7; }
+    .trivia-btn.ghost {
+      background:rgba(255,255,255,0.15); color:white;
+    }
+    .trivia-btn:disabled { opacity:0.35; pointer-events:none; }
+
+    /* ── MAIN CONTENT ── */
+    .content {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px 12px 80px;
+    }
+
+    /* Member count bar */
+    .count-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .count-label {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700; font-size: 16px; letter-spacing: 0.5px;
+      color: var(--muted);
+    }
+
+    /* ── GRID ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      transition: box-shadow 0.2s;
+      border: 1.5px solid transparent;
+    }
+    .card.is-live { border-color: var(--red); box-shadow: 0 0 0 3px rgba(218,26,50,0.12); }
+    .card.correct { border-color: var(--green); background: #f0fdf6; }
+    .card.wrong   { border-color: var(--amber); background: #fffbf0; }
+
+    .thumb {
+      width:100%; aspect-ratio:3/4;
+      object-fit:cover; display:block;
+      background: var(--surface);
+    }
+
+    .card-body {
+      padding: 10px;
+      display:flex; flex-direction:column; gap:6px;
+      flex:1;
+    }
+
+    .card-name {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700; font-size: 16px; letter-spacing: 0.3px;
+      color: var(--navy);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-time {
+      font-size: 11px; color: var(--muted);
+    }
+    .card-answer {
+      font-size: 12px; font-weight: 500;
+      color: var(--navy); padding: 4px 7px;
+      background: var(--surface); border-radius: 5px;
+    }
+
+    /* ── CARD BUTTONS ── */
+    .card-btn {
+      width:100%; padding:8px;
+      border:none; border-radius:7px;
+      font-family:"Barlow Condensed",sans-serif;
+      font-weight:700; font-size:14px; letter-spacing:0.5px;
+      cursor:pointer; transition:opacity 0.15s, transform 0.1s;
+    }
+    .card-btn:active { transform:scale(0.97); }
+    .card-btn.go-live { background:var(--navy); color:white; }
+    .card-btn.is-live { background:var(--red); color:white; }
+    .card-btn.cam-off { background:var(--surface); color:var(--muted); pointer-events:none; }
+    .card-btn.kick    { background:transparent; color:var(--muted); font-size:13px; border:1px solid var(--border); }
+    .card-btn.kick:hover { background:var(--surface); }
+    .card-btn.reveal  { background:var(--surface); color:var(--navy); font-size:13px; }
+    .card-btn.reveal.active { background:var(--navy); color:white; }
+    .card-btn:disabled { opacity:0.3; pointer-events:none; }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .empty strong {
+      display: block;
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 22px; font-weight: 700; letter-spacing: 1px;
+      color: var(--navy); margin-bottom: 6px;
+    }
+
+    /* ── AUTO LIVE INTERVAL ── */
+    #autoIntervalRow {
+      display:none;
+      align-items:center; gap:8px;
+      font-size:13px; color:white;
+    }
+    #autoIntervalRow.show { display:flex; }
+    #autoIntervalRow input[type=range] { width:80px; }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">CONTROL ROOM</div>
+  <div class="topbar-right">
+
+    <div class="status-pill">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">STANDBY</span>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer">
+      <span class="sw">
+        <input type="checkbox" id="autoToggle">
+        <span class="sw-track"></span>
+      </span>
+      <span class="toggle-label">AUTO</span>
+    </label>
+
+    <div id="autoIntervalRow">
+      <input type="range" id="autoInterval" min="3" max="15" value="5" step="1">
+      <span id="autoIntervalVal">5s</span>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer">
+      <span class="sw">
+        <input type="checkbox" id="triviaToggle">
+        <span class="sw-track"></span>
+      </span>
+      <span class="toggle-label">TRIVIA</span>
+    </label>
+
+    <button id="endBtn">END SESSION</button>
+  </div>
+</header>
+
+<div id="triviaPanel">
+  <div class="trivia-title">TRIVIA</div>
+  <div class="trivia-row">
+    <input class="trivia-input" id="questionInput" placeholder="Question text…">
+    <button class="trivia-btn" id="showQuestionBtn">SHOW</button>
+    <button class="trivia-btn ghost" id="resetTriviaBtn">RESET</button>
+  </div>
+  <div class="trivia-row">
+    <input class="trivia-input" id="answerInput" placeholder="Correct answer…">
+    <button class="trivia-btn" id="setAnswerBtn">SET</button>
+    <button class="trivia-btn" id="showAnswerBtn" disabled>REVEAL</button>
+  </div>
+</div>
+
+<main class="content">
+  <div class="count-bar">
+    <span class="count-label" id="countLabel">NO PARTICIPANTS</span>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import {
+  ref, onValue, onChildAdded, onChildRemoved,
+  set, update, off
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+/* ── REFS ── */
+const participantsRef = ref(db, "participants");
+const liveRef         = ref(db, "live/activeUser");
+const selfiesRef      = ref(db, "selfies");
+const triviaRef       = ref(db, "trivia");
+const triviaModeRef   = ref(db, "trivia/mode");
+const triviaQRef      = ref(db, "trivia/question");
+const triviaCorrectRef= ref(db, "trivia/correct");
+const triviaAnswersRef= ref(db, "trivia/answers");
+const triviaRevealRef = ref(db, "trivia/reveal");
+
+/* ── STATE ── */
+let participants = {};
+let selfieCache  = {};
+let answers      = {};
+let correctAnswer= "";
+let revealState  = {};
+let currentLive  = null;
+let triviaOn     = false;
+let questionActive = false;
+let autoEnabled  = false;
+let autoInterval = null;
+let autoCycle    = [];
+let autoIdx      = 0;
+let autoSecs     = 5;
+
+/* ── ELEMENTS ── */
+const grid          = document.getElementById("grid");
+const countLabel    = document.getElementById("countLabel");
+const endBtn        = document.getElementById("endBtn");
+const statusDot     = document.getElementById("statusDot");
+const statusText    = document.getElementById("statusText");
+const triviaPanel   = document.getElementById("triviaPanel");
+const autoToggle    = document.getElementById("autoToggle");
+const autoIntervalRow = document.getElementById("autoIntervalRow");
+const autoIntervalSlider = document.getElementById("autoInterval");
+const autoIntervalVal = document.getElementById("autoIntervalVal");
+const triviaToggle  = document.getElementById("triviaToggle");
+const questionInput = document.getElementById("questionInput");
+const answerInput   = document.getElementById("answerInput");
+const showQuestionBtn = document.getElementById("showQuestionBtn");
+const resetTriviaBtn  = document.getElementById("resetTriviaBtn");
+const setAnswerBtn    = document.getElementById("setAnswerBtn");
+const showAnswerBtn   = document.getElementById("showAnswerBtn");
+
+/* ── DEBOUNCE ── */
+let buildTimer = null;
+function scheduleBuild() {
+  clearTimeout(buildTimer);
+  buildTimer = setTimeout(buildGrid, 60);
+}
+
+/* ── STATUS BAR ── */
+function setStatus(liveId) {
+  if (liveId) {
+    const p = participants[liveId];
+    statusText.textContent = p ? p.name.toUpperCase() : "LIVE";
+    statusDot.classList.add("live");
+  } else {
+    statusText.textContent = "STANDBY";
+    statusDot.classList.remove("live");
+  }
+}
+
+/* ── AUTO LIVE ── */
+function shuffle(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+function rebuildCycle() {
+  autoCycle = shuffle(Object.entries(participants).filter(([,p]) => p?.cameraActive).map(([id]) => id));
+  autoIdx = 0;
+}
+function startAuto() {
+  stopAuto();
+  autoEnabled = true;
+  rebuildCycle();
+  autoInterval = setInterval(() => {
+    const active = Object.entries(participants).filter(([,p]) => p?.cameraActive).map(([id]) => id);
+    if (!active.length) return;
+    if (!autoCycle.length || autoIdx >= autoCycle.length) rebuildCycle();
+    const next = autoCycle[autoIdx++];
+    if (next) update(ref(db, "live"), { activeUser: next });
+  }, autoSecs * 1000);
+}
+function stopAuto() {
+  autoEnabled = false;
+  clearInterval(autoInterval);
+  autoInterval = null;
+}
+
+autoToggle.addEventListener("change", () => {
+  if (autoToggle.checked) { rebuildCycle(); startAuto(); autoIntervalRow.classList.add("show"); }
+  else { stopAuto(); autoIntervalRow.classList.remove("show"); }
+});
+autoIntervalSlider.addEventListener("input", () => {
+  autoSecs = parseInt(autoIntervalSlider.value);
+  autoIntervalVal.textContent = autoSecs + "s";
+  if (autoEnabled) startAuto();
+});
+
+/* ── TRIVIA TOGGLE ── */
+triviaToggle.addEventListener("change", () => {
+  update(triviaRef, { mode: triviaToggle.checked });
+});
+onValue(triviaModeRef, snap => {
+  triviaOn = snap.val() === true;
+  triviaToggle.checked = triviaOn;
+  triviaPanel.classList.toggle("show", triviaOn);
+  scheduleBuild();
+});
+
+/* ── TRIVIA CONTROLS ── */
+showQuestionBtn.addEventListener("click", () => {
+  const q = questionInput.value.trim();
+  if (!q) return;
+  questionActive = true;
+  update(triviaRef, { question: { text: q, show: true } });
+  scheduleBuild();
+});
+
+resetTriviaBtn.addEventListener("click", async () => {
+  if (!confirm("Reset trivia? This clears all answers.")) return;
+  await update(triviaRef, {
+    question: { text:"", show:false },
+    correct:  { text:"", show:false },
+    answers: null
+  });
+  await set(triviaRevealRef, { __reset: Date.now() });
+  questionInput.value = "";
+  answerInput.value = "";
+  questionActive = false;
+  showAnswerBtn.disabled = true;
+  scheduleBuild();
+});
+
+setAnswerBtn.addEventListener("click", () => {
+  const a = answerInput.value.trim();
+  if (!a) return;
+  update(triviaRef, { correct: { text: a, show: false } });
+  showAnswerBtn.disabled = false;
+});
+
+showAnswerBtn.addEventListener("click", () => {
+  update(triviaRef, { correct: { text: answerInput.value.trim(), show: true } });
+});
+
+onValue(triviaAnswersRef, snap => { answers = snap.val() || {}; scheduleBuild(); });
+onValue(triviaCorrectRef, snap => {
+  const d = snap.val() || {};
+  correctAnswer = d.text ? d.text.toLowerCase().trim() : "";
+  scheduleBuild();
+});
+onValue(triviaQRef, snap => {
+  const q = snap.val();
+  questionActive = !!(q?.show && q?.text);
+  scheduleBuild();
+});
+onValue(triviaRevealRef, snap => { revealState = snap.val() || {}; scheduleBuild(); });
+
+/* ── SELFIES — download each ONCE ── */
+onChildAdded(selfiesRef, snap => { selfieCache[snap.key] = snap.val(); scheduleBuild(); });
+onChildRemoved(selfiesRef, snap => { delete selfieCache[snap.key]; scheduleBuild(); });
+
+/* ── PARTICIPANTS ── */
+onValue(participantsRef, snap => {
+  participants = snap.val() || {};
+  if (autoEnabled) rebuildCycle();
+  scheduleBuild();
+});
+
+/* ── LIVE USER ── */
+onValue(liveRef, snap => {
+  currentLive = snap.val();
+  setStatus(currentLive);
+  scheduleBuild();
+});
+
+/* ── END SESSION ── */
+endBtn.addEventListener("click", async () => {
+  if (!confirm("End the session and reset everything?")) return;
+  stopAuto();
+  autoToggle.checked = false;
+  autoIntervalRow.classList.remove("show");
+
+  await Promise.all([
+    set(participantsRef, null),
+    set(ref(db, "selfies"), null),
+    set(ref(db, "live"), null),
+    update(triviaRef, {
+      mode: false,
+      question:{ text:"", show:false },
+      correct:{ text:"", show:false },
+      answers: null
+    }),
+    set(triviaRevealRef, { __reset: Date.now() })
+  ]);
+
+  participants = {}; selfieCache = {}; answers = {};
+  currentLive = null; questionActive = false;
+  triviaToggle.checked = false;
+  triviaPanel.classList.remove("show");
+  questionInput.value = ""; answerInput.value = "";
+  showAnswerBtn.disabled = true;
+  setStatus(null);
+  scheduleBuild();
+});
+
+/* ── GO LIVE ── */
+function goLive(uid) {
+  update(ref(db, "live"), { activeUser: uid });
+}
+
+/* ── BUILD GRID ── */
+function buildGrid() {
+  const keys = Object.keys(participants);
+  countLabel.textContent = keys.length ? `${keys.length} CONNECTED` : "NO PARTICIPANTS";
+  endBtn.style.display = keys.length ? "inline-block" : "none";
+
+  if (!keys.length) {
+    grid.innerHTML = `<div class="empty"><strong>WAITING FOR FANS</strong>Share the QR code to get started</div>`;
+    return;
+  }
+
+  // Sort: camera-on first, then by join time
+  const sorted = Object.entries(participants).sort((a,b) => {
+    const aOn = a[1]?.cameraActive ? 1 : 0;
+    const bOn = b[1]?.cameraActive ? 1 : 0;
+    if (aOn !== bOn) return bOn - aOn;
+    return (b[1].joinedAt||0) - (a[1].joinedAt||0);
+  });
+
+  grid.innerHTML = "";
+
+  for (const [uid, p] of sorted) {
+    const isLive = currentLive === uid;
+    const hasAnswer = !!(answers[uid]?.answer);
+    const userAns = hasAnswer ? answers[uid].answer.toLowerCase().trim() : "";
+    const isCorrect = hasAnswer && correctAnswer && userAns === correctAnswer;
+
+    const card = document.createElement("div");
+    card.className = "card" + (isLive?" is-live":"") + (hasAnswer?(isCorrect?" correct":" wrong"):"");
+
+    // Thumb
+    const img = document.createElement("img");
+    img.className = "thumb";
+    img.src = selfieCache[uid] || "";
+    img.alt = p.name || uid;
+
+    const body = document.createElement("div");
+    body.className = "card-body";
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "card-name";
+    nameEl.textContent = p.name || uid;
+
+    const timeEl = document.createElement("div");
+    timeEl.className = "card-time";
+    if (p.joinedAt) timeEl.textContent = new Date(p.joinedAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+
+    body.appendChild(nameEl);
+    body.appendChild(timeEl);
+
+    if (hasAnswer) {
+      const ansEl = document.createElement("div");
+      ansEl.className = "card-answer";
+      ansEl.textContent = answers[uid].answer;
+      body.appendChild(ansEl);
+    }
+
+    // Live button
+    const liveBtn = document.createElement("button");
+    liveBtn.className = "card-btn";
+    if (!p.cameraActive) {
+      liveBtn.textContent = "CAM OFF";
+      liveBtn.className += " cam-off";
+    } else if (isLive) {
+      liveBtn.textContent = "● LIVE";
+      liveBtn.className += " is-live";
+      liveBtn.onclick = () => update(ref(db, "live"), { activeUser: null });
+    } else {
+      liveBtn.textContent = "GO LIVE";
+      liveBtn.className += " go-live";
+      liveBtn.onclick = () => goLive(uid);
+    }
+    body.appendChild(liveBtn);
+
+    // Trivia reveal/hide
+    if (triviaOn && questionActive && hasAnswer) {
+      const isRevealed = revealState[uid]?.show === true;
+      const revBtn = document.createElement("button");
+      revBtn.className = "card-btn reveal" + (isRevealed?" active":"");
+      revBtn.textContent = isRevealed ? "HIDE ANSWER" : "SHOW ANSWER";
+      revBtn.onclick = () => update(ref(db, `trivia/reveal/${uid}`), { show: !isRevealed });
+      body.appendChild(revBtn);
+    }
+
+    // Kick
+    const kickBtn = document.createElement("button");
+    kickBtn.className = "card-btn kick";
+    kickBtn.textContent = "REMOVE";
+    kickBtn.onclick = async () => {
+      if (!confirm(`Remove ${p.name || uid}?`)) return;
+      const ops = [
+        set(ref(db, `participants/${uid}`), null),
+        set(ref(db, `selfies/${uid}`), null),
+        set(ref(db, `trivia/answers/${uid}`), null),
+        set(ref(db, `trivia/reveal/${uid}`), null),
+      ];
+      if (currentLive === uid) ops.push(set(ref(db, "live/activeUser"), null), set(ref(db, "live/frame"), null));
+      await Promise.all(ops);
+    };
+    body.appendChild(kickBtn);
+
+    card.appendChild(img);
+    card.appendChild(body);
+    grid.appendChild(card);
+  }
+}
+</script>
+</body>
+</html>

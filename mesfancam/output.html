@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>FEED — MANATEE CAM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red: #DA1A32;
+      --navy: #00031F;
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    html, body {
+      height: 100%; overflow: hidden;
+      background: var(--red);
+      font-family: "DM Sans", sans-serif;
+    }
+
+    /* ── FULL SCREEN WRAPPER ── */
+    .scene {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transform: translateY(-1.5%);
+    }
+
+    /* ── WORDMARK ── */
+    .wordmark {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 10px;
+    }
+    .wordmark img {
+      width: 52px; height: 52px;
+      object-fit: contain; border-radius: 8px;
+    }
+    .wordmark-text {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900; font-size: clamp(20px, 2vw, 28px);
+      letter-spacing: 2px; color: var(--navy);
+    }
+
+    /* ── DISPLAY BOX ── */
+    #displayBox {
+      position: relative;
+      width: clamp(300px, 28vw, 520px);
+      aspect-ratio: 3/4;
+      background: rgba(0,0,0,0.2);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* Corner brackets for style */
+    #displayBox::before, #displayBox::after {
+      content:""; position:absolute;
+      width:clamp(16px,2vw,24px); height:clamp(16px,2vw,24px);
+      border-color:rgba(255,255,255,0.3); border-style:solid;
+      z-index:5; pointer-events:none;
+    }
+    #displayBox::before { top:10px; left:10px; border-width:2px 0 0 2px; border-radius:3px 0 0 0; }
+    #displayBox::after  { bottom:10px; right:10px; border-width:0 2px 2px 0; border-radius:0 0 3px 0; }
+
+    /* Live feed image */
+    #liveImage {
+      width:100%; height:100%;
+      object-fit:cover;
+      display:none;
+      /* Smooth the 8fps → don't use CSS transitions on src changes, browser handles it */
+    }
+
+    /* ── EMPTY STATE ── */
+    #emptyState {
+      position:absolute; inset:0;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:0; text-align:center; padding:16px;
+      color:white;
+    }
+    .empty-label {
+      font-family:"Barlow Condensed",sans-serif;
+      font-weight:900; font-size:clamp(18px,2.5vw,26px);
+      letter-spacing:2px;
+      animation:breathe 1.8s ease-in-out infinite;
+    }
+    @keyframes breathe { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
+
+    #qrImage {
+      width:clamp(120px,14vw,180px);
+      height:auto; object-fit:contain;
+      margin:10px 0;
+      border-radius:8px;
+    }
+
+    /* ── BAD CONNECTION ── */
+    #badOverlay {
+      position:absolute; inset:0;
+      display:none;
+      align-items:center; justify-content:center; text-align:center;
+      background:rgba(0,0,0,0.5);
+      backdrop-filter:blur(6px);
+      color:white;
+      font-family:"Barlow Condensed",sans-serif;
+      font-weight:900; font-size:clamp(16px,2vw,22px);
+      letter-spacing:1.5px;
+      z-index:10;
+      flex-direction:column; gap:8px;
+    }
+    .bad-dot {
+      width:10px; height:10px; border-radius:50%;
+      background:rgba(255,255,255,0.5);
+      animation:breathe 0.8s ease-in-out infinite;
+    }
+
+    /* ── OVERLAYS (trivia/polls) ── */
+    .overlay-top {
+      position:absolute;
+      top:10px; left:50%; transform:translateX(-50%);
+      width:92%; z-index:8;
+    }
+    .overlay-bottom-stack {
+      position:absolute;
+      bottom:10px; left:50%; transform:translateX(-50%);
+      width:92%;
+      display:flex; flex-direction:column; gap:6px;
+      z-index:8; pointer-events:none;
+    }
+
+    .overlay-pill {
+      background:rgba(0,0,0,0.55);
+      backdrop-filter:blur(6px);
+      border-radius:8px;
+      color:white;
+      text-align:center;
+      padding:clamp(7px,0.8vw,13px) clamp(10px,1vw,16px);
+      font-size:clamp(13px,1.4vw,19px);
+      font-weight:500;
+      display:none;
+      border:1px solid rgba(255,255,255,0.1);
+    }
+    .overlay-pill.show { display:block; }
+    .overlay-pill strong {
+      font-family:"Barlow Condensed",sans-serif;
+      font-weight:900; letter-spacing:0.5px;
+    }
+
+    /* ── NAME BADGE ── */
+    #nameBadge {
+      display:none;
+      margin-top:10px;
+      font-family:"Barlow Condensed",sans-serif;
+      font-weight:900; font-size:clamp(16px,2vw,22px);
+      letter-spacing:2px; color:white;
+      animation:breathe 2s ease-in-out infinite;
+      text-align:center;
+    }
+    #nameBadge.show { display:block; }
+  </style>
+</head>
+<body>
+
+<div class="scene">
+
+  <div class="wordmark">
+    <img src="assets/mestv.png" alt="MES TV">
+    <div class="wordmark-text">MANATEE CAM</div>
+  </div>
+
+  <div id="displayBox">
+
+    <img id="liveImage" alt="Live fan cam feed">
+
+    <div id="emptyState">
+      <div class="empty-label">SCAN TO JOIN</div>
+      <img id="qrImage" src="assets/qr3.png" alt="QR code to join">
+      <div class="empty-label">MANATEE CAM</div>
+    </div>
+
+    <!-- Trivia overlays -->
+    <div class="overlay-top">
+      <div class="overlay-pill" id="questionOverlay"></div>
+    </div>
+    <div class="overlay-bottom-stack">
+      <div class="overlay-pill" id="classAnswerOverlay"></div>
+      <div class="overlay-pill" id="correctOverlay"></div>
+    </div>
+
+    <!-- Bad connection -->
+    <div id="badOverlay">
+      <div class="bad-dot"></div>
+      <div>WEAK CONNECTION</div>
+    </div>
+
+  </div>
+
+  <div id="nameBadge"></div>
+
+</div>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import { ref, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+/* ── ELEMENTS ── */
+const liveImage       = document.getElementById("liveImage");
+const emptyState      = document.getElementById("emptyState");
+const badOverlay      = document.getElementById("badOverlay");
+const nameBadge       = document.getElementById("nameBadge");
+const questionOverlay = document.getElementById("questionOverlay");
+const correctOverlay  = document.getElementById("correctOverlay");
+const classOverlay    = document.getElementById("classAnswerOverlay");
+
+/* ── REFS ── */
+const activeUserRef = ref(db, "live/activeUser");
+const frameRef      = ref(db, "live/frame");
+const triviaModeRef = ref(db, "trivia/mode");
+const triviaQRef    = ref(db, "trivia/question");
+const triviaCRef    = ref(db, "trivia/correct");
+const revealRef     = ref(db, "trivia/reveal");
+
+/* ── STATE ── */
+let activeUser    = null;
+let lastFrameTime = 0;
+let streamActive  = false;
+let triviaActive  = false;
+
+const TIMEOUT_MS  = 2500;
+
+/* ── STREAM LISTENERS — only active when someone is live ── */
+function startStream() {
+  if (streamActive) return;
+  streamActive = true;
+
+  onValue(frameRef, snap => {
+    const jpeg = snap.val();
+    if (!jpeg) return;
+    liveImage.src = jpeg;
+    liveImage.style.display = "block";
+    emptyState.style.display = "none";
+    badOverlay.style.display = "none";
+    lastFrameTime = performance.now();
+  });
+}
+
+function stopStream() {
+  if (!streamActive) return;
+  streamActive = false;
+  off(frameRef);
+
+  liveImage.style.display = "none";
+  liveImage.src = "";           // release memory
+  badOverlay.style.display = "none";
+  emptyState.style.display = "flex";
+}
+
+/* ── TRIVIA LISTENERS — only active when trivia mode is on ── */
+function startTrivia() {
+  if (triviaActive) return;
+  triviaActive = true;
+
+  onValue(triviaQRef, snap => {
+    const d = snap.val() || {};
+    if (d.show && d.text) {
+      questionOverlay.textContent = d.text;
+      questionOverlay.classList.add("show");
+    } else {
+      questionOverlay.classList.remove("show");
+    }
+  });
+
+  onValue(triviaCRef, snap => {
+    const d = snap.val() || {};
+    if (d.show && d.text) {
+      correctOverlay.innerHTML = `<strong>ANSWER:</strong> ${d.text}`;
+      correctOverlay.classList.add("show");
+    } else {
+      correctOverlay.classList.remove("show");
+    }
+  });
+
+  onValue(revealRef, snap => {
+    const r = snap.val() || {};
+    const key = Object.keys(r).find(k => r[k]?.show === true);
+    if (!key) { classOverlay.classList.remove("show"); return; }
+
+    // One-time read of the specific answer
+    onValue(ref(db, `trivia/answers/${key}`), aSnap => {
+      const d = aSnap.val() || {};
+      if (d.answer) {
+        classOverlay.innerHTML = `<strong>CLASS ANSWER:</strong> ${d.answer}`;
+        classOverlay.classList.add("show");
+      } else {
+        classOverlay.classList.remove("show");
+      }
+    }, { onlyOnce: true });
+  });
+}
+
+function stopTrivia() {
+  if (!triviaActive) return;
+  triviaActive = false;
+  off(triviaQRef);
+  off(triviaCRef);
+  off(revealRef);
+  questionOverlay.classList.remove("show");
+  correctOverlay.classList.remove("show");
+  classOverlay.classList.remove("show");
+}
+
+/* ── TRIVIA MODE GATE ── */
+onValue(triviaModeRef, snap => {
+  if (snap.val() === true) startTrivia();
+  else stopTrivia();
+});
+
+/* ── ACTIVE USER — the master switch ── */
+onValue(activeUserRef, snap => {
+  activeUser = snap.val();
+  lastFrameTime = performance.now();
+
+  if (!activeUser) {
+    stopStream();
+    nameBadge.classList.remove("show");
+    return;
+  }
+
+  // Load name (one-time read — tiny)
+  onValue(ref(db, `participants/${activeUser}/name`), snap => {
+    const n = snap.val();
+    if (n) { nameBadge.textContent = n; nameBadge.classList.add("show"); }
+    else   { nameBadge.classList.remove("show"); }
+  }, { onlyOnce: true });
+
+  emptyState.style.display = "none";
+  startStream();
+});
+
+/* ── BAD CONNECTION CHECK ── */
+// Only runs when someone is live — lightweight 500ms interval
+setInterval(() => {
+  if (!activeUser || !streamActive) return;
+  const stale = performance.now() - lastFrameTime > TIMEOUT_MS;
+  badOverlay.style.display = stale ? "flex" : "none";
+  if (!stale) liveImage.style.display = "block";
+}, 500);
+
+/* ── VISIBILITY — detach ALL listeners when tab is hidden (OBS scene switch) ── */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopStream();
+    stopTrivia();
+  } else if (activeUser) {
+    startStream();
+  }
+});
+</script>
+</body>
+</html>
