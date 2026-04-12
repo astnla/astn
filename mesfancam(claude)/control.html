@@ -478,17 +478,15 @@ els.sendPollBtn.onclick = async () => {
   const opts = state.draftPollOptions.map(v=>v.trim()).filter(Boolean);
   const optionsPayload = Object.fromEntries(opts.map((label,i) => [`opt${i+1}`,{label,order:i}]));
   const totalsPayload  = Object.fromEntries(opts.map((_,i) => [`opt${i+1}`,0]));
-
-  // Step 1: write options + totals first, wait for confirmation
+  // Step 1: write options + reset votes/totals, question hidden
   await update(ref(db,"polls"), {
     options: optionsPayload,
     votes: null,
     totals: totalsPayload,
     status: "open",
-    question: { text: q, show: false } // hidden until options are saved
+    question: { text: q, show: false }
   });
-
-  // Step 2: only NOW flip show:true — phones guaranteed to have options already
+  // Step 2: flip show:true only after options are confirmed saved
   await update(ref(db,"polls/question"), { text: q, show: true });
 };
 els.resetPollBtn.onclick = async () => {
@@ -505,7 +503,19 @@ onValue(ref(db,"trivia/answers"), snap => { state.answers=snap.val()||{}; syncOr
 onValue(ref(db,"trivia/reveal"),  snap => { state.reveals=snap.val()||{}; Object.keys(state.participants).forEach(patchCard); });
 onValue(ref(db,"polls/mode"),     snap => { state.pollsMode=snap.val()===true; els.pollsToggle.checked=state.pollsMode; updateStats(); });
 onValue(ref(db,"polls/options"),  snap => { state.pollOptions=snap.val()||{}; });
-onValue(ref(db,"polls/votes"),    snap => { state.pollVotes=snap.val()||{}; syncOrder(); });
+onValue(ref(db,"polls/votes"), snap => {
+  state.pollVotes = snap.val() || {};
+  syncOrder();
+  // Tally votes and write totals back so output.html bars update live
+  const options = state.pollOptions || {};
+  const optKeys = Object.keys(options);
+  if (!optKeys.length) return;
+  const totals = Object.fromEntries(optKeys.map(k => [k, 0]));
+  Object.values(state.pollVotes).forEach(v => {
+    if (v?.optionKey && totals.hasOwnProperty(v.optionKey)) totals[v.optionKey]++;
+  });
+  update(ref(db,"polls/totals"), totals).catch(() => {});
+});
 onValue(ref(db,"polls/totals"),   snap => { state.pollTotals=snap.val()||{}; });
 onValue(ref(db,"live/activeUser"),snap => { state.currentLiveUser=snap.val()||null; updateStats(); Object.keys(state.participants).forEach(patchCard); });
 

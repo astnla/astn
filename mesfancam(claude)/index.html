@@ -309,11 +309,16 @@ triviaSubmit.addEventListener("click", () => {
 });
 
 /* ── POLLS ── */
-// Strategy: keep a PERSISTENT options listener so currentOptions is always
-// up to date. The question listener then reads from currentOptions whenever
-// it fires — no race condition possible since both stay in sync continuously.
+// Two-listener approach:
+// 1. Persistent options listener keeps currentOptions always fresh.
+// 2. Question listener calls buildPollButtons() which reads currentOptions.
+// Control page writes options BEFORE flipping show:true, so by the time
+// the question listener fires, currentOptions is already populated.
+// On reset: pollsListening stays true but currentOptions is wiped to {}
+// by the options listener when Firebase clears options — so a new poll
+// send re-populates currentOptions before show:true flips again.
 
-let currentOptions = {};  // always current, updated by persistent listener
+let currentOptions = {};
 let hasVoted       = false;
 let pollsListening = false;
 
@@ -348,7 +353,12 @@ onValue(pollsModeRef, snap => {
   const on = snap.val() === true;
 
   if (!on) {
-    if (pollsListening) { off(pollsOptsRef); off(pollsQRef); pollsListening = false; }
+    // Polls turned off — detach everything and reset
+    if (pollsListening) {
+      off(pollsOptsRef);
+      off(pollsQRef);
+      pollsListening = false;
+    }
     pollBox.classList.remove("show");
     pollSubmitted.classList.remove("show");
     pollOptionsList.innerHTML = "";
@@ -357,17 +367,18 @@ onValue(pollsModeRef, snap => {
     return;
   }
 
-  if (pollsListening) return; // already attached
+  if (pollsListening) return; // already attached, persistent listeners handle updates
   pollsListening = true;
 
-  // Persistent options listener — always has the latest options in memory
+  // Persistent options listener — updates currentOptions any time options change.
+  // This means on reset (options set to null) currentOptions goes to {},
+  // and on new poll send (options written before show:true) it repopulates
+  // before the question listener fires.
   onValue(pollsOptsRef, snap => {
     currentOptions = snap.val() || {};
   });
 
-  // Question listener — by the time show:true arrives, options are already
-  // written to Firebase first (control.html does a two-step write),
-  // so currentOptions will be populated when this fires
+  // Question listener — reads from currentOptions which is always current
   onValue(pollsQRef, snap => {
     const d = snap.val() || {};
     if (d.show && d.text) {
@@ -377,6 +388,7 @@ onValue(pollsModeRef, snap => {
       buildPollButtons();
       pollBox.classList.add("show");
     } else {
+      // Question hidden (reset) — clear UI, stay listening for next poll
       pollBox.classList.remove("show");
       pollSubmitted.classList.remove("show");
       pollOptionsList.innerHTML = "";
