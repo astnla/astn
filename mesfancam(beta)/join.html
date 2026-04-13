@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>JOIN — MANATEE CAM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red: #DA1A32;
+      --navy: #00031F;
+      --white: #ffffff;
+      --dim: rgba(0,0,0,0.18);
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    html, body {
+      height: 100%;
+      min-height: 100vh;
+      background: var(--red);
+      font-family: "DM Sans", sans-serif;
+      color: var(--white);
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    /* ── LAYOUT ── */
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: env(safe-area-inset-top,16px) 24px env(safe-area-inset-bottom,16px);
+      gap: 0;
+    }
+
+    /* ── WORDMARK ── */
+    .wordmark {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 28px;
+      animation: fadeDown 0.5s ease both;
+    }
+    .wordmark img {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .wordmark-text {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: 26px;
+      letter-spacing: 2px;
+      color: var(--navy);
+    }
+
+    /* ── VIEWFINDER ── */
+    .viewfinder {
+      position: relative;
+      width: min(80vw, 300px);
+      aspect-ratio: 3/4;
+      background: var(--dim);
+      border-radius: 12px;
+      overflow: hidden;
+      animation: fadeUp 0.5s 0.1s ease both;
+    }
+
+    #preview {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      display: none;
+    }
+    #canvasOutput {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .cam-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      gap: 10px;
+      transition: background 0.2s;
+    }
+    .cam-overlay:active { background: rgba(255,255,255,0.05); }
+
+    .cam-icon {
+      width: 44px; height: 44px;
+      border: 2.5px solid rgba(255,255,255,0.7);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cam-icon svg { width: 20px; height: 20px; stroke: white; fill: none; }
+
+    .cam-label {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.85);
+      text-align: center;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity:0.55; }
+      50% { opacity:1; }
+    }
+
+    /* corner brackets */
+    .viewfinder::before, .viewfinder::after {
+      content: "";
+      position: absolute;
+      width: 20px; height: 20px;
+      border-color: rgba(255,255,255,0.4);
+      border-style: solid;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .viewfinder::before { top:10px; left:10px; border-width:2px 0 0 2px; border-radius:3px 0 0 0; }
+    .viewfinder::after  { bottom:10px; right:10px; border-width:0 2px 2px 0; border-radius:0 0 3px 0; }
+
+    /* ── BOTTOM AREA ── */
+    .bottom {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-top: 24px;
+      width: min(80vw, 300px);
+      animation: fadeUp 0.5s 0.2s ease both;
+    }
+
+    /* Shutter */
+    #snapBtn {
+      width: 68px; height: 68px;
+      border-radius: 50%;
+      background: white;
+      border: 4px solid rgba(255,255,255,0.35);
+      cursor: pointer;
+      transition: transform 0.12s, opacity 0.2s;
+      outline: none;
+    }
+    #snapBtn:active { transform: scale(0.93); }
+    #snapBtn.disabled { opacity: 0.3; pointer-events: none; }
+
+    /* Name input */
+    #nameInput {
+      display: none;
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid rgba(255,255,255,0.5);
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: 24px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: white;
+      text-align: center;
+      outline: none;
+      padding: 6px 0;
+      transition: border-color 0.2s;
+    }
+    #nameInput::placeholder { color: rgba(255,255,255,0.3); }
+    #nameInput:focus { border-bottom-color: white; }
+
+    /* Action row */
+    .action-row {
+      display: none;
+      gap: 12px;
+      width: 100%;
+    }
+    .action-row.visible { display: flex; }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-ghost { background: rgba(255,255,255,0.15); color: white; }
+    .btn-solid { background: var(--navy); color: white; }
+    .btn-solid.dim { opacity: 0.35; pointer-events: none; }
+
+    /* ── WIFI OVERLAY ── */
+    #wifiOverlay {
+      position: fixed;
+      inset: 0;
+      background: var(--red);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+      gap: 12px;
+    }
+    #wifiOverlay.show { opacity: 1; pointer-events: auto; }
+
+    .wifi-ssid {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: 32px;
+      letter-spacing: 3px;
+      color: var(--navy);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    .wifi-msg {
+      font-size: 15px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.75);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:none; } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+  </style>
+</head>
+<body>
+
+<!-- WiFi notice -->
+<div id="wifiOverlay">
+  <div class="wifi-ssid">CCPS</div>
+  <div class="wifi-msg">Make sure you're connected<br>to the school Wi-Fi first</div>
+</div>
+
+<div class="page">
+
+  <div class="wordmark">
+    <img src="assets/mestv.png" alt="MES TV">
+    <div class="wordmark-text">MANATEE CAM</div>
+  </div>
+
+  <div class="viewfinder" id="viewfinder">
+    <video id="preview" autoplay playsinline muted></video>
+    <canvas id="canvasOutput"></canvas>
+    <div class="cam-overlay" id="camOverlay">
+      <div class="cam-icon">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>
+      </div>
+      <span class="cam-label" id="camLabel">TAP TO ENABLE CAMERA</span>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <button id="snapBtn" class="disabled" aria-label="Take selfie"></button>
+    <input id="nameInput" type="text" placeholder="YOUR NAME" maxlength="30" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="action-row" id="actionRow">
+      <button class="btn btn-ghost" id="retakeBtn">RETAKE</button>
+      <button class="btn btn-solid dim" id="continueBtn">CONTINUE</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import { ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+/* ── WIFI OVERLAY ── */
+const wifiOverlay = document.getElementById("wifiOverlay");
+requestAnimationFrame(() => wifiOverlay.classList.add("show"));
+setTimeout(() => {
+  wifiOverlay.classList.remove("show");
+  setTimeout(() => wifiOverlay.remove(), 500);
+}, 5000);
+
+/* ── RESET FLAG (only listen once, then immediately detach) ── */
+let resetHandled = false;
+const resetRef = ref(db, "meta/resetFlag");
+const unsubReset = onValue(resetRef, async snap => {
+  if (snap.exists() && !resetHandled) {
+    resetHandled = true;
+    unsubReset(); // detach immediately
+    sessionStorage.clear();
+    await set(resetRef, null);
+    location.reload();
+  } else {
+    unsubReset(); // nothing to do, detach
+  }
+});
+
+/* ── ELEMENTS ── */
+const preview      = document.getElementById("preview");
+const canvas       = document.getElementById("canvasOutput");
+const camOverlay   = document.getElementById("camOverlay");
+const camLabel     = document.getElementById("camLabel");
+const snapBtn      = document.getElementById("snapBtn");
+const retakeBtn    = document.getElementById("retakeBtn");
+const continueBtn  = document.getElementById("continueBtn");
+const actionRow    = document.getElementById("actionRow");
+const nameInput    = document.getElementById("nameInput");
+
+let stream = null;
+let cameraReady = false;
+
+/* ── CAMERA ── */
+async function startCamera() {
+  camLabel.textContent = "ENABLING…";
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false
+    });
+    preview.srcObject = stream;
+    preview.style.display = "block";
+    canvas.style.display = "none";
+    camOverlay.style.display = "none";
+    snapBtn.classList.remove("disabled");
+    cameraReady = true;
+  } catch(e) {
+    camLabel.textContent = e.name === "NotAllowedError" ? "CAMERA BLOCKED — TAP TO RETRY" : "CAMERA ERROR — TAP TO RETRY";
+    cameraReady = false;
+  }
+}
+
+camOverlay.addEventListener("click", startCamera);
+
+/* ── SNAP ── */
+snapBtn.addEventListener("click", () => {
+  if (!cameraReady) return;
+
+  const ctx = canvas.getContext("2d");
+  canvas.width = preview.videoWidth;
+  canvas.height = preview.videoHeight;
+  ctx.save();
+  ctx.scale(-1, 1);
+  ctx.drawImage(preview, -canvas.width, 0, canvas.width, canvas.height);
+  ctx.restore();
+
+  preview.style.display = "none";
+  canvas.style.display = "block";
+  if (stream) stream.getTracks().forEach(t => t.stop());
+
+  nameInput.style.display = "block";
+  actionRow.classList.add("visible");
+  snapBtn.style.display = "none";
+  setTimeout(() => nameInput.focus(), 50);
+});
+
+/* ── RETAKE ── */
+retakeBtn.addEventListener("click", () => {
+  nameInput.style.display = "none";
+  nameInput.value = "";
+  actionRow.classList.remove("visible");
+  snapBtn.style.display = "";
+  snapBtn.classList.add("disabled");
+  canvas.style.display = "none";
+  camOverlay.style.display = "flex";
+  camLabel.textContent = "TAP TO ENABLE CAMERA";
+  continueBtn.classList.add("dim");
+  cameraReady = false;
+});
+
+/* ── NAME VALIDATION ── */
+nameInput.addEventListener("input", () => {
+  let v = nameInput.value.replace(/[^a-zA-Z0-9 ]/g, "").toUpperCase();
+  if (v.startsWith(" ")) v = v.trimStart();
+  nameInput.value = v;
+  const valid = /[A-Z0-9]/.test(v.trim());
+  continueBtn.classList.toggle("dim", !valid);
+});
+
+/* ── COMPRESS SELFIE ── */
+function compressSelfie(canvas, maxPx = 360, quality = 0.55) {
+  return new Promise(resolve => {
+    const tmp = document.createElement("canvas");
+    let { width: w, height: h } = canvas;
+    if (w > h && w > maxPx) { h = Math.round(h * maxPx / w); w = maxPx; }
+    else if (h > maxPx)     { w = Math.round(w * maxPx / h); h = maxPx; }
+    tmp.width = w; tmp.height = h;
+    tmp.getContext("2d").drawImage(canvas, 0, 0, w, h);
+    tmp.toBlob(blob => {
+      const r = new FileReader();
+      r.onloadend = () => resolve(r.result);
+      r.readAsDataURL(blob || tmp.toBlob(() => {}, "image/jpeg", quality));
+    }, "image/webp", quality);
+  });
+}
+
+/* ── CONTINUE ── */
+continueBtn.addEventListener("click", async () => {
+  const name = nameInput.value.trim();
+  if (!/[A-Z0-9]/.test(name)) return;
+
+  continueBtn.classList.add("dim");
+  continueBtn.textContent = "SAVING…";
+  retakeBtn.style.pointerEvents = "none";
+
+  const safeName = name.replace(/[^A-Z0-9]/gi, "").replace(/ /g, "_");
+  const userKey = safeName + "_" + Date.now();
+
+  try {
+    const selfieData = await compressSelfie(canvas);
+    await Promise.all([
+      set(ref(db, "selfies/" + userKey), selfieData),
+      set(ref(db, "participants/" + userKey), {
+        name,
+        joinedAt: Date.now(),
+        cameraActive: false
+      })
+    ]);
+    sessionStorage.setItem("fanCamName", name);
+    sessionStorage.setItem("fanCamUserKey", userKey);
+    window.location.href = "index.html";
+  } catch(err) {
+    continueBtn.textContent = "ERROR — TRY AGAIN";
+    continueBtn.classList.remove("dim");
+    retakeBtn.style.pointerEvents = "";
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>LIVE FEED</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red:  #DA1A32;
+      --navy: #ff6600;
+      --card: rgba(17, 17, 17, 0.82);
+      --muted: rgba(255,255,255,0.55);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: "DM Sans", sans-serif;
+  color: #fff;
+  background: #ff0033;
+  animation: bgShift 30s linear infinite;
+}
+
+@keyframes bgShift {
+  0%   { background-color: #ff0033; }  /* red */
+  16%  { background-color: #ff6600; }  /* orange */
+  32%  { background-color: #fff700; }  /* yellow */
+  48%  { background-color: #33ff9c; }  /* green */
+  64%  { background-color: #3341ff; }  /* blue */
+  80%  { background-color: #ff00f7; }  /* pink */
+
+  /* 👇 smooth transition BACK to red */
+  100% { background-color: #ff0033; }
+}
+
+    /* ── SCENE ── */
+    .scene {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* Stage is a flex row: feed column on left, drawing panel slides in from right */
+    }
+
+    /* Stage wraps column + draw panel side by side */
+    .stage {
+      display: flex;
+      align-items: center;
+      gap: clamp(16px, 2vw, 36px);
+      max-height: 100vh;
+      /* Transition so feed column shifts left smoothly when draw panel opens */
+      transition: gap 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* ── COLUMN — feed side ── */
+    .column {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      width: min(56vh, calc(100vw - clamp(48px, 8vw, 160px)));
+      max-height: 100vh;
+      padding: clamp(14px, 2.5vh, 40px) 0;
+      flex-shrink: 0;
+      transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    /* When drawing panel is open, shrink feed column slightly */
+    .stage.draw-open .column {
+      width: min(40vh, calc(55vw - clamp(24px, 4vw, 80px)));
+    }
+
+    /* ── DRAWING SIDE PANEL ── */
+    #drawPanel {
+      flex-shrink: 0;
+      /* Match feed height — same aspect drives the width */
+      width: min(40vh, calc(40vw - clamp(24px, 4vw, 80px)));
+      max-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 1vh, 14px);
+      padding: clamp(14px, 2.5vh, 40px) 0;
+      /* Slide in from right */
+      transform: translateX(calc(100% + clamp(16px, 2vw, 36px)));
+      opacity: 0;
+      pointer-events: none;
+      transition:
+        transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity   0.4s ease;
+      /* Keep it in flow but visually hidden — avoids layout jump */
+      width: 0;
+      overflow: hidden;
+    }
+    #drawPanel.show {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+      width: min(40vh, calc(40vw - clamp(24px, 4vw, 80px)));
+      overflow: visible;
+    }
+
+    /* Drawing panel card */
+    #drawPanelCard {
+      background: rgba(255,255,255,0.95);
+      border-radius: clamp(10px, 1.2vh, 16px);
+      overflow: hidden;
+      flex-shrink: 1;
+      min-height: 0;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+    }
+    #drawPanelEyebrow {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(11px, 1.4vh, 16px);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--red);
+      padding: clamp(8px, 1vh, 14px) clamp(10px, 1.2vh, 16px) clamp(4px, 0.5vh, 8px);
+      flex-shrink: 0;
+    }
+    #drawPanelImg {
+      width: 100%;
+      flex: 1;
+      object-fit: contain;
+      display: block;
+      background: white;
+    }
+
+    /* ── HEADER ── */
+    .header {
+        font-family: 'Krona One', sans-serif;
+
+      display: flex;
+      align-items: center;
+      gap: clamp(8px, 1vh, 14px);
+      margin-bottom: clamp(10px, 1.5vh, 20px);
+      flex-shrink: 0;
+    }
+    .header-accent {
+      width: 3px;
+      height: clamp(22px, 3vh, 36px);
+      background: var(--red);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .header img {
+      width: clamp(30px, 4vh, 48px);
+      height: clamp(30px, 4vh, 48px);
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    .header-title {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(18px, 2.4vh, 32px);
+      letter-spacing: 2.5px;
+      color: white;
+    }
+
+    /* ── HEADER TITLE fills available space ── */
+    .header-title { flex: 1; }
+
+    /* ── LIVE NAME SLOT (right side of header) ── */
+    #liveNameSlot {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: clamp(6px, 0.8vh, 10px);
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    #liveNameSlot.show { opacity: 1; }
+
+    .name-dot {
+      display: inline-block;
+      width: clamp(6px, 0.8vh, 9px);
+      height: clamp(6px, 0.8vh, 9px);
+      border-radius: 50%;
+      background: var(--red);
+      flex-shrink: 0;
+      margin-right: clamp(5px, 0.6vh, 8px);
+      vertical-align: middle;
+      animation: livePulse 1s ease-in-out infinite;
+    }
+
+    /* Clip window — one name visible at a time.
+       Uses overflow:hidden for the slot machine clip.
+       Labels stack vertically via translateY so the window
+       only needs to be tall enough for one line. Width is
+       driven by the label content naturally. */
+    .name-window {
+      height: clamp(18px, 2.4vh, 30px);
+      overflow: hidden;
+      position: relative;
+      max-width: clamp(140px, 22vw, 340px);
+      /* Flex column so labels stack — only visible one shows through clip */
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: flex-end;
+    }
+
+    .name-label {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(14px, 1.9vh, 26px);
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.9);
+      white-space: nowrap;
+      line-height: 1;
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    .name-label.current {
+      transform: translateY(0);
+      opacity: 1;
+      transition:
+        transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity   0.4s ease;
+    }
+    .name-label.exit-up {
+      transform: translateY(-120%);
+      opacity: 0;
+      transition:
+        transform 0.45s cubic-bezier(0.55, 0, 0.45, 1),
+        opacity   0.3s ease;
+    }
+    .name-label.enter-from-below {
+      transform: translateY(120%);
+      opacity: 0;
+      transition: none;
+    }
+
+    /* ── FEED ── */
+    #feedWrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      border-radius: clamp(10px, 1.2vh, 16px);
+      overflow: hidden;
+      background: rgba(255,255,255,0.04);
+      flex-shrink: 1;
+      min-height: 0;
+      /* isolation ensures absolute children fill correctly */
+      isolation: isolate;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.07),
+        0 12px 48px rgba(0,0,0,0.55);
+    }
+
+    #liveImage {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.45s ease;
+    }
+    #liveImage.visible {
+      opacity: 1;
+    }
+
+    /* LIVE pip */
+    #livePip {
+      position: absolute;
+      top: 12px; right: 12px;
+      display: flex;
+      align-items: center; gap: 5px;
+      background: var(--red);
+      padding: clamp(3px,0.5vh,6px) clamp(7px,1vh,12px);
+      border-radius: 5px;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(10px, 1.4vh, 16px);
+      letter-spacing: 1.5px;
+      z-index: 5;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    #livePip.show { opacity: 1; pointer-events: auto; }
+    .live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%; background: white;
+      animation: livePulse 1s ease-in-out infinite;
+    }
+
+    /* Empty state — starts visible, fades out when stream begins */
+    #emptyState {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 20px;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22,1,0.36,1);
+    }
+    #emptyState.hidden {
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+    }
+    .empty-label {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(14px, 2vh, 24px);
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.45);
+      animation: breathe 2s ease-in-out infinite;
+    }
+    #qrImage {
+      width: clamp(90px, 13vh, 170px);
+      height: auto; margin: clamp(8px,1.2vh,18px) 0;
+      border-radius: 8px; object-fit: contain;
+    }
+
+    /* Bad connection */
+    #badOverlay {
+      position: absolute; inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(13px, 1.8vh, 22px);
+      letter-spacing: 1.5px;
+      z-index: 5;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    #badOverlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .bad-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.45);
+      animation: breathe 0.9s ease-in-out infinite;
+    }
+
+    /* ── INFO PANEL ──
+       Expands downward below the feed pushing it up.
+       Uses max-height trick with a generous ceiling value. */
+    #infoPanel {
+      width: 100%;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(6px, 0.9vh, 12px);
+      overflow: hidden;
+      max-height: 0;
+      margin-top: 0;
+      /* Spring-style expand/collapse */
+      transition:
+        max-height   0.6s cubic-bezier(0.22, 1, 0.36, 1),
+        margin-top   0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    #infoPanel.has-content {
+      max-height: 55vh;
+      margin-top: clamp(8px, 1.2vh, 16px);
+    }
+
+    /* ── INFO CARDS ──
+       Each card starts invisible + shifted down.
+       Entrance: spring slide up + fade in.
+       Exit:     ease-in slide down + fade out (applied via .hiding class). */
+    .info-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: clamp(8px, 1vh, 14px);
+      padding: clamp(12px, 1.6vh, 22px) clamp(14px, 1.8vh, 24px);
+      display: none;
+      /* Default hidden state */
+      opacity: 0;
+      transform: translateY(22px);
+      /* Entrance timing — smooth spring */
+      transition:
+        opacity   0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .info-card.show {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* Exit state — applied briefly before display:none */
+    .info-card.hiding {
+      opacity: 0;
+      transform: translateY(14px);
+      transition:
+        opacity   0.35s ease-in,
+        transform 0.35s ease-in;
+    }
+
+    .card-eyebrow {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: clamp(9px, 1.1vh, 13px);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: clamp(4px, 0.6vh, 8px);
+    }
+    .card-body {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(16px, 2.2vh, 30px);
+      letter-spacing: 0.3px;
+      line-height: 1.15;
+    }
+
+    /* Poll bars */
+    #pollBars {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(6px, 0.9vh, 12px);
+      margin-top: clamp(6px, 0.9vh, 12px);
+    }
+    .bar-row { display: flex; flex-direction: column; gap: clamp(3px, 0.4vh, 5px); }
+    .bar-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .bar-label {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: clamp(13px, 1.8vh, 22px);
+      letter-spacing: 0.3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex: 1;
+    }
+    .bar-pct {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(13px, 1.8vh, 22px);
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .bar-track {
+      height: clamp(4px, 0.6vh, 8px);
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: var(--red);
+      border-radius: 99px;
+      transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      width: 0%;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes breathe   { 0%,100%{opacity:.4;} 50%{opacity:1;} }
+    @keyframes livePulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(.4);opacity:.4;} }
+
+    /* ── SKRIBBL ── */
+    #skribblGuessLayer {
+      position: absolute; inset: 0;
+      pointer-events: none; overflow: hidden;
+      z-index: 10;
+    }
+    .floating-guess {
+      position: absolute;
+      left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white;
+      padding: clamp(6px,0.8vh,10px) clamp(10px,1.2vh,16px);
+      border-radius: 99px;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: clamp(13px, 1.6vh, 20px);
+      white-space: nowrap;
+      animation: floatUp 3.5s ease-out forwards;
+    }
+    .floating-guess.correct {
+      background: rgba(84,209,138,0.85);
+      color: #09180f;
+      font-size: clamp(16px, 2vh, 26px);
+      font-weight: 900;
+    }
+    @keyframes floatUp {
+      0%   { bottom: 5%; opacity: 1; transform: translateX(-50%) translateY(0) rotate(0deg); }
+      60%  { opacity: 1; }
+      100% { bottom: 80%; opacity: 0; transform: translateX(calc(-50% + var(--drift))) translateY(0) rotate(var(--spin)); }
+    }
+
+    /* Winner banner over feed */
+    #skribblWinnerOverlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+      z-index: 8;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.4s ease;
+      flex-direction: column; gap: 8px; text-align: center; padding: 20px;
+    }
+    #skribblWinnerOverlay.show { opacity: 1; }
+    #skribblWinnerOverlay .win-label {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(20px, 2.8vh, 36px);
+      letter-spacing: 1px;
+      color: var(--good, #54d18a);
+    }
+    #skribblWinnerOverlay .win-name {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: clamp(14px, 1.8vh, 22px);
+      color: rgba(255,255,255,0.8);
+    }
+  </style>
+</head>
+<body>
+<div class="scene">
+  <div class="stage" id="stage">
+  <div class="column">
+
+    <div class="header">
+      <div class="header-accent"></div>
+      <img src="assets/mestv.png" alt="MES TV">
+      <div class="header-title">MANATEE CAM</div>
+      <div id="liveNameSlot">
+        <div class="name-window" id="nameWindow"></div>
+      </div>
+    </div>
+
+    <div id="feedWrap">
+      <img id="liveImage" alt="Live fan cam feed">
+      <div id="emptyState">
+        <div class="empty-label">SCAN TO JOIN</div>
+        <img id="qrImage" src="assets/qr.png" alt="QR code">
+        <div class="empty-label">MANATEE CAM</div>
+      </div>
+      <div id="badOverlay">
+        <div class="bad-dot"></div>
+        <div>WEAK CONNECTION</div>
+      </div>
+      <div id="livePip">
+        <span class="live-dot"></span>LIVE
+      </div>
+      <!-- Floating guesses layer -->
+      <div id="skribblGuessLayer"></div>
+      <!-- Winner overlay -->
+      <div id="skribblWinnerOverlay">
+        <div class="win-label">🎉 CORRECT!</div>
+        <div class="win-name" id="skribblWinName"></div>
+      </div>
+    </div>
+
+    <div id="infoPanel">
+      <div class="info-card" id="questionCard">
+        <div class="card-eyebrow" id="questionEyebrow">QUESTION</div>
+        <div class="card-body"    id="questionText"></div>
+      </div>
+      <div class="info-card" id="pollCard">
+        <div class="card-eyebrow">LIVE RESULTS</div>
+        <div id="pollBars"></div>
+      </div>
+      <div class="info-card" id="answerCard">
+        <div class="card-eyebrow">ANSWER</div>
+        <div class="card-body" id="answerText"></div>
+      </div>
+      <div class="info-card" id="classCard">
+        <div class="card-eyebrow">CLASS ANSWER</div>
+        <div class="card-body" id="classText"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Drawing side panel — slides in from right (shared by draw reveal + skribbl live) -->
+  <div id="drawPanel">
+    <div id="drawPanelCard">
+      <div id="drawPanelEyebrow">DRAWING</div>
+      <!-- Static reveal image (draw mode) -->
+      <img id="drawPanelImg" alt="student drawing" style="display:none;">
+      <!-- Live canvas stream (skribbl mode) -->
+      <img id="skribblLiveImg" alt="live drawing" style="width:100%;flex:1;object-fit:contain;display:none;background:white;">
+    </div>
+  </div>
+
+  </div><!-- /stage -->
+</div>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import { ref, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+const liveImage      = document.getElementById("liveImage");
+const emptyState     = document.getElementById("emptyState");
+const badOverlay     = document.getElementById("badOverlay");
+const liveNameSlot   = document.getElementById("liveNameSlot");
+const nameWindow     = document.getElementById("nameWindow");
+const livePip        = document.getElementById("livePip");
+const infoPanel      = document.getElementById("infoPanel");
+const questionCard   = document.getElementById("questionCard");
+const questionEyebrow= document.getElementById("questionEyebrow");
+const questionText   = document.getElementById("questionText");
+const pollCard       = document.getElementById("pollCard");
+const pollBars       = document.getElementById("pollBars");
+const answerCard     = document.getElementById("answerCard");
+const answerText     = document.getElementById("answerText");
+const classCard        = document.getElementById("classCard");
+const classText        = document.getElementById("classText");
+const stage              = document.getElementById("stage");
+const drawPanel          = document.getElementById("drawPanel");
+const drawPanelEyebrow   = document.getElementById("drawPanelEyebrow");
+const drawPanelImg       = document.getElementById("drawPanelImg");
+const skribblLiveImg     = document.getElementById("skribblLiveImg");
+const skribblGuessLayer  = document.getElementById("skribblGuessLayer");
+const skribblWinnerOverlay = document.getElementById("skribblWinnerOverlay");
+const skribblWinName     = document.getElementById("skribblWinName");
+
+const activeUserRef  = ref(db, "live/activeUser");
+const frameRef       = ref(db, "live/frame");
+const heartbeatRef   = ref(db, "live/heartbeat");
+const triviaModeRef  = ref(db, "trivia/mode");
+const triviaQRef     = ref(db, "trivia/question");
+const triviaCRef     = ref(db, "trivia/correct");
+const revealRef      = ref(db, "trivia/reveal");
+const pollsModeRef   = ref(db, "polls/mode");
+const pollsQRef      = ref(db, "polls/question");
+const pollsOptsRef   = ref(db, "polls/options");
+const pollsTotalsRef = ref(db, "polls/totals");
+const drawModeRef      = ref(db, "drawing/mode");
+const drawRevealRef    = ref(db, "drawing/reveal");
+const drawSubRef       = ref(db, "drawing/submissions");
+const skribblModeRef   = ref(db, "skribbl/mode");
+const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
+const skribblGuessRef  = ref(db, "skribbl/guesses");
+const skribblWinnerRef = ref(db, "skribbl/winner");
+
+let activeUser     = null;
+let lastFrame      = 0;
+let lastHeartbeat  = 0;
+let streamOn       = false;
+let triviaOn    = false;
+let pollsOn     = false;
+let pollOptions = {};
+
+const TIMEOUT_MS = 2500;
+const visible    = new Set(); // tracks which card ids are shown
+
+/* ── CARD ANIMATION ── */
+function showCard(card, id) {
+  visible.add(id);
+  card.classList.remove("hiding");
+  card.style.display = "block";
+  card.offsetHeight; // reflow → ensures transform starts from translateY(22px)
+  card.classList.add("show");
+  infoPanel.classList.add("has-content");
+}
+
+function hideCard(card, id) {
+  if (!visible.has(id)) return;
+  visible.delete(id);
+  // Trigger exit animation
+  card.classList.add("hiding");
+  card.classList.remove("show");
+  setTimeout(() => {
+    if (!card.classList.contains("show")) {
+      card.classList.remove("hiding");
+      card.style.display = "none";
+    }
+    if (visible.size === 0) infoPanel.classList.remove("has-content");
+  }, 380);
+}
+
+/* ── FEED HELPERS ── */
+// emptyState uses .hidden to hide (it starts visible)
+// liveImage and badOverlay use .visible to show (they start hidden)
+function showEmpty()  { emptyState.classList.remove("hidden"); }
+function hideEmpty()  { emptyState.classList.add("hidden"); }
+function showFeed()   { liveImage.classList.add("visible"); }
+function hideFeed()   { liveImage.classList.remove("visible"); }
+function showBad()    { badOverlay.classList.add("visible"); }
+function hideBad()    { badOverlay.classList.remove("visible"); }
+
+/* ── STREAM ── */
+// Strategy: one persistent frame listener for the whole session.
+// On user switch we just update activeUser — the listener automatically
+// shows new frames as they arrive. No stop/start = no flicker.
+
+function ensureStream() {
+  if (streamOn) return;
+  streamOn = true;
+  // Heartbeat listener — updated independently of pixel diff skipping
+  onValue(heartbeatRef, snap => {
+    if (snap.val()) lastHeartbeat = performance.now();
+  });
+  onValue(frameRef, snap => {
+    // Only show frames when someone is actually live
+    if (!activeUser) return;
+    const val = snap.val();
+    // Must be a non-empty string starting with data: to be a valid frame
+    if (!val || typeof val !== "string" || !val.startsWith("data:")) return;
+    liveImage.src = val;
+    showFeed();
+    hideEmpty();
+    hideBad();
+    lastFrame = performance.now();
+  });
+}
+
+function stopStream() {
+  if (!streamOn) return;
+  streamOn = false;
+  off(frameRef);
+  hideFeed();
+  hideBad();
+  showEmpty();
+  setTimeout(() => { if (!streamOn) liveImage.src = ""; }, 500);
+}
+
+/* ── TRIVIA ── */
+function startTrivia() {
+  if (triviaOn) return;
+  triviaOn = true;
+  onValue(triviaQRef, snap => {
+    const d = snap.val() || {};
+    if (d.show && d.text) {
+      questionEyebrow.textContent = "QUESTION";
+      questionText.textContent = d.text;
+      showCard(questionCard, "question");
+    } else {
+      hideCard(questionCard, "question");
+    }
+  });
+  onValue(triviaCRef, snap => {
+    const d = snap.val() || {};
+    if (d.show && d.text) {
+      answerText.textContent = d.text;
+      showCard(answerCard, "answer");
+    } else {
+      hideCard(answerCard, "answer");
+    }
+  });
+  onValue(revealRef, snap => {
+    const r = snap.val() || {};
+    const key = Object.keys(r).find(k => r[k]?.show === true);
+    if (!key) { hideCard(classCard, "class"); return; }
+    onValue(ref(db, `trivia/answers/${key}`), aSnap => {
+      const d = aSnap.val() || {};
+      if (d.answer) { classText.textContent = d.answer; showCard(classCard, "class"); }
+      else hideCard(classCard, "class");
+    }, { onlyOnce: true });
+  });
+}
+function stopTrivia() {
+  if (!triviaOn) return;
+  triviaOn = false;
+  off(triviaQRef); off(triviaCRef); off(revealRef);
+  hideCard(questionCard, "question");
+  hideCard(answerCard, "answer");
+  hideCard(classCard, "class");
+}
+
+/* ── POLLS ── */
+function renderBars(totals) {
+  const keys = Object.keys(pollOptions);
+  if (!keys.length) return;
+  const total = keys.reduce((s, k) => s + (totals[k] || 0), 0);
+  pollBars.innerHTML = "";
+  const sorted = [...keys].sort((a,b) => (pollOptions[a]?.order??0) - (pollOptions[b]?.order??0));
+  for (const key of sorted) {
+    const label = pollOptions[key]?.label || key;
+    const votes = totals[key] || 0;
+    const pct   = total > 0 ? Math.round((votes / total) * 100) : 0;
+    const row = document.createElement("div");
+    row.className = "bar-row";
+    row.innerHTML = `
+      <div class="bar-top">
+        <span class="bar-label">${label}</span>
+        <span class="bar-pct">${pct}%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>`;
+    pollBars.appendChild(row);
+  }
+}
+function startPolls() {
+  if (pollsOn) return;
+  pollsOn = true;
+  let latestTotals = {};
+
+  // Persistent options — always current before question shows
+  onValue(pollsOptsRef, snap => {
+    pollOptions = snap.val() || {};
+    // If poll is already showing (e.g. output page opened mid-poll), re-render immediately
+    if (pollCard.classList.contains("show")) renderBars(latestTotals);
+  });
+
+  // Totals — cache latest value and render if poll is visible
+  onValue(pollsTotalsRef, snap => {
+    latestTotals = snap.val() || {};
+    if (pollCard.classList.contains("show")) renderBars(latestTotals);
+  });
+
+  // Question controls visibility — render bars immediately on show
+  onValue(pollsQRef, snap => {
+    const d = snap.val() || {};
+    if (d.show && d.text) {
+      questionEyebrow.textContent = "POLL";
+      questionText.textContent = d.text;
+      showCard(questionCard, "question");
+      showCard(pollCard, "poll");
+      // Render bars right away using whatever totals we already have
+      renderBars(latestTotals);
+    } else {
+      hideCard(questionCard, "question");
+      hideCard(pollCard, "poll");
+      pollBars.innerHTML = "";
+    }
+  });
+}
+function stopPolls() {
+  if (!pollsOn) return;
+  pollsOn = false;
+  off(pollsQRef); off(pollsOptsRef); off(pollsTotalsRef);
+  hideCard(questionCard, "question");
+  hideCard(pollCard, "poll");
+  pollBars.innerHTML = "";
+  pollOptions = {};
+}
+
+/* ── DRAWING SIDE PANEL ── */
+let drawSubs = {};
+
+function showDrawPanel(imgSrc, label) {
+  drawPanelEyebrow.textContent = label || "DRAWING";
+  drawPanelImg.src = imgSrc;
+  stage.classList.add("draw-open");
+  drawPanel.classList.add("show");
+}
+function hideDrawPanel() {
+  stage.classList.remove("draw-open");
+  drawPanel.classList.remove("show");
+  setTimeout(() => { if (!drawPanel.classList.contains("show")) drawPanelImg.src = ""; }, 500);
+}
+
+onValue(drawModeRef, snap => {
+  if (!snap.val()) { hideDrawPanel(); drawSubs = {}; }
+});
+onValue(drawSubRef, snap => { drawSubs = snap.val() || {}; });
+onValue(drawRevealRef, snap => {
+  const r = snap.val() || {};
+  const key = Object.keys(r).find(k => r[k]?.show === true);
+  if (!key || !drawSubs[key]?.data) { hideDrawPanel(); return; }
+  showDrawPanel(drawSubs[key].data, "DRAWING");
+});
+
+/* ── SKRIBBL SIDE PANEL ── */
+let skribblOn = false;
+let floatCount = 0;
+
+function spawnFloatingGuess(text, correct) {
+  const el = document.createElement("div");
+  el.className = "floating-guess" + (correct ? " correct" : "");
+  el.textContent = (correct ? "✓ " : "") + text;
+  const drift = (Math.random() - 0.5) * 60;
+  const spin  = (Math.random() - 0.5) * 12;
+  el.style.setProperty("--drift", drift + "px");
+  el.style.setProperty("--spin",  spin  + "deg");
+  el.style.bottom = "5%";
+  skribblGuessLayer.appendChild(el);
+  setTimeout(() => el.remove(), 3600);
+}
+
+onValue(skribblModeRef, snap => {
+  skribblOn = snap.val() === true;
+  if (!skribblOn) {
+    // Hide skribbl panel and clear
+    skribblLiveImg.style.display = "none";
+    skribblLiveImg.src = "";
+    skribblGuessLayer.innerHTML = "";
+    skribblWinnerOverlay.classList.remove("show");
+    // Only collapse panel if draw reveal isn't also showing
+    if (!drawPanel.classList.contains("show")) return;
+    if (!drawPanelImg.src || drawPanelImg.style.display === "none") hideDrawPanel();
+  }
+});
+
+// Live canvas stream from drawer
+onValue(skribblLiveRef, snap => {
+  const val = snap.val();
+  if (!skribblOn) return;
+  if (val && typeof val === "string" && val.startsWith("data:")) {
+    skribblLiveImg.src = val;
+    skribblLiveImg.style.display = "block";
+    drawPanelImg.style.display = "none";
+    drawPanelEyebrow.textContent = "🎨 LIVE DRAWING";
+    stage.classList.add("draw-open");
+    drawPanel.classList.add("show");
+  }
+});
+
+// Floating guesses
+const seenGuesses = new Set();
+onValue(skribblGuessRef, snap => {
+  if (!skribblOn) return;
+  const all = snap.val() || {};
+  Object.entries(all).forEach(([key, g]) => {
+    if (seenGuesses.has(key)) return;
+    seenGuesses.add(key);
+    spawnFloatingGuess(`${g.name}: ${g.text}`, false);
+  });
+});
+
+// Winner
+onValue(skribblWinnerRef, snap => {
+  const w = snap.val();
+  if (!w || !skribblOn) return;
+  spawnFloatingGuess(`${w.name}: ${w.text}`, true);
+  skribblWinName.textContent = `${w.name} guessed it!`;
+  skribblWinnerOverlay.classList.add("show");
+  // Clear guess floats after winner
+  setTimeout(() => skribblGuessLayer.innerHTML = "", 500);
+});
+
+/* ── GATES ── */
+onValue(triviaModeRef, snap => { snap.val()===true ? startTrivia() : stopTrivia(); });
+onValue(pollsModeRef,  snap => { snap.val()===true ? startPolls()  : stopPolls();  });
+
+/* ── SLOT MACHINE NAME FLIP ── */
+function flipName(newName) {
+  const existing = nameWindow.querySelector(".current");
+  if (!newName) {
+    if (existing) {
+      existing.classList.remove("current");
+      existing.classList.add("exit-up");
+      setTimeout(() => existing.remove(), 500);
+    }
+    setTimeout(() => liveNameSlot.classList.remove("show"), 300);
+    return;
+  }
+  const incoming = document.createElement("div");
+  incoming.className = "name-label enter-from-below";
+  incoming.innerHTML = `<span class="name-dot"></span>${newName}`;
+  nameWindow.appendChild(incoming);
+  liveNameSlot.classList.add("show");
+  incoming.offsetHeight; // force reflow so enter-from-below is applied
+  if (existing) {
+    existing.classList.remove("current");
+    existing.classList.add("exit-up");
+    setTimeout(() => existing.remove(), 500);
+  }
+  incoming.classList.remove("enter-from-below");
+  incoming.classList.add("current");
+}
+
+/* ── ACTIVE USER ── */
+onValue(activeUserRef, snap => {
+  activeUser = snap.val();
+  livePip.classList.toggle("show", !!activeUser);
+
+  if (!activeUser) {
+    // No one live — stop stream, show empty state
+    stopStream();
+    flipName(null);
+    return;
+  }
+
+  // Reset timers so bad-connection check doesn't immediately fire on switch
+  lastFrame     = performance.now();
+  lastHeartbeat = performance.now();
+
+  // Load name for slot machine flip
+  onValue(ref(db, `participants/${activeUser}/name`), snap => {
+    flipName(snap.val() || null);
+  }, { onlyOnce: true });
+
+  // Hide empty state immediately; the frame listener will show the feed
+  // as soon as a frame arrives — no timing gap, no flicker
+  hideEmpty();
+  ensureStream();
+});
+
+/* ── BAD CONNECTION ── */
+// Use heartbeat (not frame time) so pixel diff skipping doesn't false-trigger.
+// Heartbeat fires every 3s from the phone; 8s timeout gives 2+ missed beats before alarm.
+const HB_TIMEOUT_MS = 8000;
+setInterval(() => {
+  if (!activeUser || !streamOn) return;
+  const stale = lastHeartbeat > 0 && performance.now() - lastHeartbeat > HB_TIMEOUT_MS;
+  if (stale) { hideFeed(); showBad(); }
+  else        { showFeed(); hideBad(); }
+}, 500);
+
+/* ── VISIBILITY ── */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { stopStream(); stopTrivia(); stopPolls(); }
+  else if (activeUser) { ensureStream(); }
+});
+</script>
+</body>
+</html>

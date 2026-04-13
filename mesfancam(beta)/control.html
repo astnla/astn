@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CONTROL ROOM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --line: rgba(255,255,255,0.10);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.55);
+      --accent: #ff9d3b;
+      --accent-soft: rgba(255,157,59,0.18);
+      --good: #54d18a;
+      --warn: #ffd25a;
+      --danger: #ff647c;
+      --gold: #FFD700;
+      --silver: #C0C0C0;
+      --bronze: #CD7F32;
+      --radius: 22px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Outfit", sans-serif;
+      background: #0a0a0a;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .shell { max-width: 1400px; margin: 0 auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+
+    /* ── CARDS ── */
+    .card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      backdrop-filter: blur(14px);
+    }
+    .panel { padding: 18px; }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+    }
+    .topbar-brand {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      flex: 1;
+    }
+    .topbar-brand span { color: var(--accent); }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 10px;
+      padding: 14px 18px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 14px;
+    }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+    .stat-value { font-size: 22px; font-weight: 900; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Winner highlight stat */
+    .stat.winner-stat { border-color: var(--gold); background: rgba(255,215,0,0.08); }
+    .stat.winner-stat .stat-value { color: var(--gold); }
+
+    /* ── MAIN LAYOUT ── */
+    .layout { display: grid; grid-template-columns: 360px 1fr; gap: 14px; align-items: start; }
+
+    /* ── TOOLS PANEL ── */
+    .seg-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .seg {
+      padding: 12px 10px; border-radius: 14px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--line);
+      font-size: 13px; font-weight: 800; text-align: center; cursor: pointer;
+      transition: .2s ease;
+    }
+    .seg:hover { background: rgba(255,255,255,0.10); }
+    .seg.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+      color: var(--accent);
+    }
+    .seg.idle-active { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.22); }
+
+    .tool-intro { font-size: 13px; color: var(--muted); line-height: 1.5; padding: 4px 2px; }
+
+    /* Collapsible shell */
+    .feature-shell {
+      overflow: hidden; max-height: 0; opacity: 0;
+      transition: max-height .3s ease, opacity .22s ease, margin-top .3s ease;
+      margin-top: 0;
+    }
+    .feature-shell.open { max-height: 1000px; opacity: 1; margin-top: 8px; }
+
+    .feature-block {
+      display: grid; gap: 10px; padding: 14px;
+      border-radius: 18px; background: rgba(0,0,0,0.2);
+      border: 1px solid var(--line);
+    }
+
+    /* ── INPUTS ── */
+    .input, textarea {
+      width: 100%; border-radius: 14px; border: 1px solid var(--line);
+      background: rgba(0,0,0,0.22); color: var(--text); padding: 13px 14px;
+      font: inherit; outline: none; transition: border-color .2s;
+    }
+    .input:focus, textarea:focus { border-color: rgba(255,255,255,0.3); }
+    textarea { min-height: 72px; resize: vertical; }
+
+    /* ── BUTTONS ── */
+    button {
+      border: none; border-radius: 14px; background: rgba(255,255,255,0.08);
+      color: var(--text); padding: 12px 16px; font: inherit; font-weight: 800;
+      cursor: pointer; border: 1px solid var(--line); transition: .18s ease;
+      white-space: nowrap;
+    }
+    button:hover { background: rgba(255,255,255,0.13); transform: translateY(-1px); }
+    button:active { transform: scale(0.97); }
+    .btn-accent { background: var(--accent); border-color: transparent; color: #000; }
+    .btn-accent:hover { opacity: 0.88; }
+    .btn-danger { background: rgba(255,100,124,0.14); border-color: rgba(255,100,124,0.28); color: var(--danger); }
+    .btn-danger:hover { background: rgba(255,100,124,0.28); }
+    .btn-ghost { background: transparent; }
+    .disabled { opacity: .38; pointer-events: none; }
+
+    /* Sent flash */
+    .btn-sent { background: var(--good) !important; color: #09180f !important; border-color: transparent !important; transition: none !important; }
+
+    /* Send row */
+    .send-row { display: flex; gap: 8px; }
+    .send-row .input { flex: 1; }
+
+    /* Poll options */
+    .option-list { display: grid; gap: 8px; }
+    .option-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+
+    .add-option-bar {
+      width: 100%; display: block; text-align: center;
+      padding: 12px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.15);
+      font-size: 13px; font-weight: 800; color: var(--muted); cursor: pointer;
+      transition: .2s;
+    }
+    .add-option-bar:hover { background: rgba(255,255,255,0.10); color: var(--text); }
+
+    /* Reveal row */
+    .reveal-row { display: flex; gap: 8px; align-items: center; }
+    .reveal-row .input { flex: 1; }
+    .reveal-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+
+    /* ── PARTICIPANTS PANEL ── */
+    .participant-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .participant-bar-left { flex: 1; }
+    .participant-count { font-size: 15px; font-weight: 900; }
+    .participant-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .participant-bar-right { display: flex; gap: 8px; align-items: center; }
+
+    /* Auto live toggle pill */
+    .auto-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 14px; border-radius: 999px;
+      background: rgba(255,255,255,0.07); border: 1px solid var(--line);
+      font-size: 13px; font-weight: 800; cursor: pointer; user-select: none;
+      transition: .2s;
+    }
+    .auto-pill.on { background: rgba(84,209,138,0.15); border-color: var(--good); color: var(--good); }
+    .switch {
+      appearance: none; width: 40px; height: 22px;
+      background: rgba(255,255,255,0.15); border-radius: 999px;
+      position: relative; cursor: pointer; transition: .2s;
+    }
+    .switch::after {
+      content: ""; position: absolute; top: 2px; left: 2px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff; transition: .2s;
+    }
+    .switch:checked { background: var(--good); }
+    .switch:checked::after { transform: translateX(18px); }
+
+    /* ── PARTICIPANT GRID ── */
+    .pgrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      padding: 14px 18px 18px;
+    }
+
+    .person {
+      border-radius: 20px; overflow: hidden;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      display: flex; flex-direction: column;
+      transition: .2s ease;
+      position: relative;
+    }
+    .person.live { box-shadow: 0 0 0 2px rgba(255,59,87,.7) inset; }
+    /* When this person is live, their go-live button becomes a non-interactive indicator */
+    .person.live .goLiveBtn {
+      background: rgba(255,59,87,0.15) !important;
+      border-color: rgba(255,59,87,0.4) !important;
+      color: #ff647c !important;
+      cursor: default !important;
+      pointer-events: none !important;
+      transform: none !important;
+      opacity: 1 !important;
+    }
+    .person.cam-off { opacity: 0.45; }
+    .person.correct { border-color: var(--good); background: rgba(84,209,138,0.06); }
+    .person.wrong   { border-color: rgba(255,210,90,0.4); }
+
+    /* Rank badge */
+    .rank-badge {
+      position: absolute; top: 8px; left: 8px;
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 900;
+      z-index: 3; display: none;
+    }
+    .rank-badge.r1 { background: var(--gold); color: #000; display: flex; }
+    .rank-badge.r2 { background: var(--silver); color: #000; display: flex; }
+    .rank-badge.r3 { background: var(--bronze); color: #fff; display: flex; }
+
+    .thumb-wrap { position: relative; aspect-ratio: 3/4; background: rgba(0,0,0,0.22); }
+    .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .live-badge {
+      position: absolute; top: 8px; right: 8px;
+      display: none; align-items: center; gap: 5px;
+      padding: 5px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 900;
+      background: rgba(255,255,255,0.92); color: #DA1A32;
+    }
+    .person.live .live-badge { display: inline-flex; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #DA1A32; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(.4);opacity:.4;} }
+
+    .person-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .pname { font-size: 16px; font-weight: 900; }
+    .pmeta { font-size: 11px; color: var(--muted); }
+    .pills { display: flex; gap: 5px; flex-wrap: wrap; }
+    .pill-tag {
+      padding: 4px 8px; border-radius: 999px;
+      font-size: 10px; font-weight: 800;
+      background: rgba(255,255,255,.07); border: 1px solid var(--line); color: var(--muted);
+    }
+    .pill-tag.good { background: var(--good); border-color: transparent; color: #09180f; }
+    .pill-tag.warn { background: var(--warn); border-color: transparent; color: #2c2300; }
+    .pill-tag.hot  { background: var(--accent); border-color: transparent; color: #000; }
+    .status-text { font-size: 11px; color: var(--muted); }
+
+    .person-actions { display: grid; gap: 6px; margin-top: auto; }
+
+    .empty { padding: 30px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 18px; }
+
+    @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) { .stats-row { grid-template-columns: 1fr 1fr; } .pgrid { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <div class="card topbar">
+    <div class="topbar-brand">MANATEE <span>CAM</span> — CONTROL ROOM</div>
+    <button id="endSessionBtn" class="btn-danger" style="font-size:13px;padding:10px 16px;">END SESSION</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="card stats-row">
+    <div class="stat">
+      <div class="stat-label">connected</div>
+      <div class="stat-value" id="statMembers">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">camera ready</div>
+      <div class="stat-value" id="statReady">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">live now</div>
+      <div class="stat-value" id="statLive">—</div>
+    </div>
+    <div class="stat" id="winnerStat" style="display:none">
+      <div class="stat-label">🥇 1st place</div>
+      <div class="stat-value" id="statWinner">—</div>
+    </div>
+    <div class="stat" id="modeStat" style="display:block">
+      <div class="stat-label">mode</div>
+      <div class="stat-value" id="statMode">idle</div>
+    </div>
+  </div>
+
+  <!-- MAIN LAYOUT -->
+  <div class="layout">
+
+    <!-- LEFT: TOOLS -->
+    <div class="card panel">
+      <div class="panelTitle" style="font-size:16px;font-weight:900;margin-bottom:12px;">Activities</div>
+
+      <div class="seg-row" style="grid-template-columns:repeat(5,1fr);">
+        <button id="showNoneBtn" class="seg idle-active active">OFF</button>
+        <button id="showTriviaBtn" class="seg">TRIVIA</button>
+        <button id="showPollsBtn" class="seg">POLLS</button>
+        <button id="showDrawBtn" class="seg">DRAW</button>
+        <button id="showSkribblBtn" class="seg">SKRIBBL</button>
+      </div>
+
+      <p id="toolIntro" class="tool-intro">Nothing active yet, pick an activity!</p>
+
+      <!-- hidden toggles for Firebase -->
+      <input style="display:none" type="checkbox" id="triviaToggle">
+      <input style="display:none" type="checkbox" id="pollsToggle">
+
+      <!-- TRIVIA -->
+      <div id="triviaShell" class="feature-shell">
+        <div class="feature-block">
+
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">question</div>
+          <textarea id="questionInput" placeholder="Type your trivia question…"></textarea>
+
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;">correct answer</div>
+          <div class="send-row">
+            <input id="correctInput" class="input" placeholder="Type the answer…">
+            <button id="sendQuestionBtn" class="btn-accent disabled" style="font-size:13px;">SEND</button>
+          </div>
+
+          <div class="reveal-row" style="margin-top:4px;">
+            <button id="revealCorrectBtn" class="disabled" style="font-size:12px;">SHOW ANSWER</button>
+            <button id="resetTriviaBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">RESET</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- POLLS -->
+      <div id="pollsShell" class="feature-shell">
+        <div class="feature-block">
+
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">poll question</div>
+          <textarea id="pollQuestion" placeholder="Type your poll question…"></textarea>
+
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;">options</div>
+          <div id="pollOptions" class="option-list"></div>
+          <button id="addOptionBtn" class="add-option-bar" style="font-size:13px;">+ ADD OPTION</button>
+
+          <div class="send-row" style="margin-top:4px;">
+            <button id="sendPollBtn" class="btn-accent disabled" style="flex:1;font-size:13px;">SEND</button>
+            <button id="resetPollBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">RESET</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- DRAW -->
+      <div id="drawShell" class="feature-shell">
+        <div class="feature-block">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">drawing prompt</div>
+          <textarea id="drawPromptInput" placeholder="e.g. Manatee wearing sunglasses…" style="min-height:60px;"></textarea>
+          <div class="send-row" style="margin-top:4px;">
+            <button id="sendDrawBtn" class="btn-accent disabled" style="flex:1;font-size:14px;">SEND</button>
+            <button id="timesUpBtn" class="btn-ghost disabled" style="font-size:13px;" title="Auto-submit drawings for anyone who hasn't sent yet">⏱ TIME'S UP</button>
+            <button id="resetDrawBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">RESET</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SKRIBBL -->
+      <div id="skribblShell" class="feature-shell">
+        <div class="feature-block">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">drawer</div>
+          <select id="skribblDrawerSelect" class="input" style="cursor:pointer;">
+            <option value="">— pick a participant —</option>
+          </select>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">secret word</div>
+          <div class="send-row">
+            <input id="skribblWordInput" class="input" placeholder="e.g. Manatee…">
+            <button id="startSkribblBtn" class="btn-accent disabled" style="font-size:13px;">START</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">live guesses</div>
+          <div id="skribblGuessList" style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px;background:rgba(0,0,0,0.15);border-radius:12px;border:1px solid var(--line);">
+            <div style="color:var(--muted);font-size:12px;text-align:center;">Waiting for guesses…</div>
+          </div>
+          <div id="skribblWinnerBanner" style="display:none;padding:10px;border-radius:12px;background:rgba(84,209,138,0.15);border:1px solid var(--good);color:var(--good);font-weight:900;font-size:14px;text-align:center;"></div>
+          <button id="endSkribblBtn" class="btn-danger disabled" style="font-size:13px;">END ROUND</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: PARTICIPANTS -->
+    <div class="card" style="overflow:hidden;">
+      <div class="participant-bar">
+        <div class="participant-bar-left">
+          <div class="participant-count" id="memberCount">0 connected</div>
+          <div class="participant-sub" id="memberSub">waiting for people to join</div>
+        </div>
+        <div class="participant-bar-right">
+          <label class="auto-pill" id="autoPill">
+            <input class="switch" type="checkbox" id="autoLiveToggle">
+            AUTO LIVE
+          </label>
+          <button id="clearLiveBtn" class="btn-ghost" style="font-size:12px;padding:8px 12px;">clear live</button>
+        </div>
+      </div>
+      <div class="pgrid" id="participantGrid">
+        <div class="empty">No participants yet.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import {
+  ref, onValue, onChildAdded, onChildChanged, onChildRemoved,
+  update, set
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+/* ── ELEMENTS ── */
+const els = {
+  statMembers:    document.getElementById("statMembers"),
+  statReady:      document.getElementById("statReady"),
+  statLive:       document.getElementById("statLive"),
+  statMode:       document.getElementById("statMode"),
+  statWinner:     document.getElementById("statWinner"),
+  winnerStat:     document.getElementById("winnerStat"),
+  modeStat:       document.getElementById("modeStat"),
+  memberCount:    document.getElementById("memberCount"),
+  memberSub:      document.getElementById("memberSub"),
+  grid:           document.getElementById("participantGrid"),
+  autoLiveToggle: document.getElementById("autoLiveToggle"),
+  autoPill:       document.getElementById("autoPill"),
+  endSessionBtn:  document.getElementById("endSessionBtn"),
+  clearLiveBtn:   document.getElementById("clearLiveBtn"),
+  showDrawBtn:    document.getElementById("showDrawBtn"),
+  drawShell:      document.getElementById("drawShell"),
+  showSkribblBtn:     document.getElementById("showSkribblBtn"),
+  skribblShell:       document.getElementById("skribblShell"),
+  skribblDrawerSelect:document.getElementById("skribblDrawerSelect"),
+  skribblWordInput:   document.getElementById("skribblWordInput"),
+  startSkribblBtn:    document.getElementById("startSkribblBtn"),
+  skribblGuessList:   document.getElementById("skribblGuessList"),
+  skribblWinnerBanner:document.getElementById("skribblWinnerBanner"),
+  endSkribblBtn:      document.getElementById("endSkribblBtn"),
+  drawPromptInput:document.getElementById("drawPromptInput"),
+  sendDrawBtn:    document.getElementById("sendDrawBtn"),
+  timesUpBtn:     document.getElementById("timesUpBtn"),
+  resetDrawBtn:   document.getElementById("resetDrawBtn"),
+  showNoneBtn:    document.getElementById("showNoneBtn"),
+  showTriviaBtn:  document.getElementById("showTriviaBtn"),
+  showPollsBtn:   document.getElementById("showPollsBtn"),
+  toolIntro:      document.getElementById("toolIntro"),
+  triviaShell:    document.getElementById("triviaShell"),
+  pollsShell:     document.getElementById("pollsShell"),
+  triviaToggle:   document.getElementById("triviaToggle"),
+  pollsToggle:    document.getElementById("pollsToggle"),
+  questionInput:  document.getElementById("questionInput"),
+  correctInput:   document.getElementById("correctInput"),
+  sendQuestionBtn:document.getElementById("sendQuestionBtn"),
+  revealCorrectBtn:document.getElementById("revealCorrectBtn"),
+  resetTriviaBtn: document.getElementById("resetTriviaBtn"),
+  pollQuestion:   document.getElementById("pollQuestion"),
+  pollOptions:    document.getElementById("pollOptions"),
+  addOptionBtn:   document.getElementById("addOptionBtn"),
+  sendPollBtn:    document.getElementById("sendPollBtn"),
+  resetPollBtn:   document.getElementById("resetPollBtn"),
+};
+
+/* ── STATE ── */
+const state = {
+  participants: {}, selfies: {}, answers: {}, reveals: {},
+  pollVotes: {}, pollTotals: {}, pollOptions: {},
+  currentLiveUser: null,
+  triviaMode: false, pollsMode: false, drawMode: false,
+  drawSubmissions: {}, drawReveals: {},
+  skribblMode: false, skribblWord: "",
+  triviaQuestionActive: false, triviaCorrect: "",
+  cardRefs: {},
+  autoLiveEnabled: false, autoLiveInterval: null,
+  autoCycle: [], autoIndex: 0,
+  draftPollOptions: [],
+};
+
+/* ── TOOL TABS ── */
+let currentTool = "none";
+
+function setTool(t) {
+  currentTool = t;
+  els.showNoneBtn.classList.toggle("active",   t === "none");
+  els.showNoneBtn.classList.toggle("idle-active", t === "none");
+  els.showTriviaBtn.classList.toggle("active", t === "trivia");
+  els.showPollsBtn.classList.toggle("active",  t === "polls");
+  els.triviaShell.classList.toggle("open",  t === "trivia");
+  els.pollsShell.classList.toggle("open",   t === "polls");
+  els.drawShell.classList.toggle("open",    t === "draw");
+  els.skribblShell.classList.toggle("open", t === "skribbl");
+  els.toolIntro.style.display = t === "none" ? "block" : "none";
+  els.showDrawBtn.classList.toggle("active", t === "draw");
+}
+
+async function activateNone() {
+  await Promise.all([
+    update(ref(db,"trivia"),   { mode: false }),
+    update(ref(db,"polls"),    { mode: false }),
+    update(ref(db,"drawing"),  { mode: false }),
+    set(ref(db,"skribbl/mode"), false),
+  ]);
+  setTool("none");
+}
+async function activateTrivia() {
+  await update(ref(db,"polls"),  { mode: false });
+  await update(ref(db,"trivia"), { mode: true });
+  setTool("trivia");
+}
+async function activatePolls() {
+  await update(ref(db,"trivia"), { mode: false });
+  await update(ref(db,"polls"),  { mode: true });
+  setTool("polls");
+}
+
+async function activateDraw() {
+  await Promise.all([
+    update(ref(db,"trivia"), { mode: false }),
+    update(ref(db,"polls"),  { mode: false }),
+    update(ref(db,"drawing"), { mode: true }),
+  ]);
+  setTool("draw");
+}
+els.showNoneBtn.onclick   = activateNone;
+els.showTriviaBtn.onclick = activateTrivia;
+els.showPollsBtn.onclick  = activatePolls;
+els.showDrawBtn.onclick   = activateDraw;
+
+async function activateSkribbl() {
+  await Promise.all([
+    update(ref(db,"trivia"),  { mode: false }),
+    update(ref(db,"polls"),   { mode: false }),
+    update(ref(db,"drawing"), { mode: false }),
+  ]);
+  setTool("skribbl");
+}
+els.showSkribblBtn.onclick = activateSkribbl;
+
+/* ── STATS ── */
+function updateStats() {
+  const users = Object.values(state.participants);
+  const ready = users.filter(u => u?.cameraActive).length;
+  const liveName = state.currentLiveUser
+    ? (state.participants[state.currentLiveUser]?.name || "—") : "—";
+  let mode = "idle";
+  if (state.pollsMode)  mode = "polls";
+  else if (state.triviaMode) mode = "trivia";
+  else if (state.drawMode) mode = "draw";
+  else if (state.autoLiveEnabled) mode = "auto";
+
+  els.statMembers.textContent = users.length;
+  els.statReady.textContent   = ready;
+  els.statLive.textContent    = liveName;
+  els.statMode.textContent    = mode;
+  els.memberCount.textContent = `${users.length} connected`;
+  els.memberSub.textContent   = `${ready} camera ready`;
+
+  if (!users.length) els.grid.innerHTML = `<div class="empty">No participants yet.</div>`;
+}
+
+/* ── WINNER CALCULATION ── */
+// Returns sorted array of { uid, name, ts } for correct answers, ordered by submission time
+function getWinners() {
+  if (!state.triviaCorrect) return [];
+  return Object.entries(state.answers)
+    .filter(([, a]) => a?.answer?.toLowerCase().trim() === state.triviaCorrect)
+    .sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0))
+    .map(([uid, a]) => ({ uid, name: state.participants[uid]?.name || uid, ts: a.timestamp }));
+}
+
+function updateWinnerStat() {
+  const winners = getWinners();
+  if (winners.length && state.triviaCorrect) {
+    els.winnerStat.style.display = "block";
+    els.modeStat.style.display   = "none";
+    els.statWinner.textContent   = winners[0].name;
+    els.winnerStat.classList.add("winner-stat");
+  } else {
+    els.winnerStat.style.display = "none";
+    els.modeStat.style.display   = "block";
+  }
+}
+
+/* ── SORT KEY ── */
+// Priority: correct (by time) > wrong > no answer > cam off
+function sortKey([uid, p]) {
+  const answer  = state.answers[uid]?.answer;
+  const vote    = state.pollVotes[uid]?.label;
+  const hasAnswer = !!(answer || vote);
+  const correct = answer && state.triviaCorrect && answer.toLowerCase().trim() === state.triviaCorrect;
+  const camOn   = !!p?.cameraActive;
+
+  if (correct) return [4, -(state.answers[uid]?.timestamp || 0)]; // correct: sort by time asc
+  if (hasAnswer) return [3, -(p?.joinedAt || 0)];
+  if (camOn)    return [2, -(p?.joinedAt || 0)];
+  return         [1, -(p?.joinedAt || 0)];
+}
+
+/* ── PARTICIPANT CARDS ── */
+function ensureCard(uid) {
+  if (state.cardRefs[uid]) return state.cardRefs[uid];
+
+  const card = document.createElement("div");
+  card.className = "person";
+  card.innerHTML = `
+    <div class="thumb-wrap">
+      <img alt="">
+      <div class="rank-badge" data-rank></div>
+      <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+      <!-- Drawing thumbnail — bottom-right corner of selfie image -->
+      <div class="draw-corner" style="display:none;position:absolute;bottom:6px;right:6px;width:42%;aspect-ratio:1/1;border-radius:8px;overflow:hidden;border:2px solid white;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.4);z-index:4;">
+        <img class="draw-thumb-img" alt="" style="width:100%;height:100%;object-fit:contain;display:block;">
+      </div>
+    </div>
+    <div class="person-body">
+      <div class="pname"></div>
+      <div class="pmeta"></div>
+      <div class="pills"></div>
+      <div class="status-text"></div>
+      <div class="person-actions">
+        <button class="goLiveBtn btn-accent">go live</button>
+        <button class="toggleRevealBtn" style="display:none;">reveal answer</button>
+        <button class="toggleDrawBtn btn-accent" style="display:none;">show drawing</button>
+        <button class="kickBtn btn-danger">remove</button>
+      </div>
+    </div>`;
+
+  const c = {
+    root:        card,
+    img:         card.querySelector("img"),
+    rankBadge:   card.querySelector(".rank-badge"),
+    name:        card.querySelector(".pname"),
+    meta:        card.querySelector(".pmeta"),
+    pills:       card.querySelector(".pills"),
+    statusText:  card.querySelector(".status-text"),
+    drawCorner:  card.querySelector(".draw-corner"),
+    drawThumbImg:card.querySelector(".draw-thumb-img"),
+    goLiveBtn:   card.querySelector(".goLiveBtn"),
+    toggleRevealBtn: card.querySelector(".toggleRevealBtn"),
+    toggleDrawBtn:   card.querySelector(".toggleDrawBtn"),
+    kickBtn:     card.querySelector(".kickBtn"),
+  };
+
+  c.goLiveBtn.onclick = async () => {
+    if (!state.participants[uid]?.cameraActive) return;
+    await update(ref(db, "live"), { activeUser: uid });
+  };
+  c.toggleRevealBtn.onclick = () => {
+    const revealed = state.reveals[uid]?.show === true;
+    update(ref(db, `trivia/reveal/${uid}`), { show: !revealed });
+  };
+  c.toggleDrawBtn.onclick = () => {
+    const drawRevealed = state.drawReveals[uid]?.show === true;
+    set(ref(db, `drawing/reveal/${uid}`), { show: !drawRevealed });
+  };
+  c.kickBtn.onclick   = async () => {
+    const p = state.participants[uid];
+    if (!confirm(`Remove ${p?.name || uid}?`)) return;
+    const ops = [
+      set(ref(db, `participants/${uid}`), null),
+      set(ref(db, `selfies/${uid}`), null),
+      set(ref(db, `trivia/answers/${uid}`), null),
+      set(ref(db, `trivia/reveal/${uid}`), null),
+      set(ref(db, `polls/votes/${uid}`), null),
+    ];
+    if (state.currentLiveUser === uid) {
+      ops.push(set(ref(db, "live/activeUser"), null), set(ref(db, "live/frame"), null));
+    }
+    await Promise.all(ops);
+  };
+
+  state.cardRefs[uid] = c;
+  return c;
+}
+
+function patchCard(uid) {
+  const p = state.participants[uid];
+  const c = ensureCard(uid);
+  if (!p) return;
+
+  c.img.src = state.selfies[uid] || "";
+  c.name.textContent = p.name || uid;
+  c.meta.textContent = p.joinedAt ? `joined ${new Date(p.joinedAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}` : "";
+  c.root.classList.toggle("live", state.currentLiveUser === uid);
+  c.root.classList.toggle("cam-off", !p.cameraActive);
+
+  const answer = state.answers[uid]?.answer;
+  const vote   = state.pollVotes[uid]?.label;
+  const correct = answer && state.triviaCorrect && answer.toLowerCase().trim() === state.triviaCorrect;
+
+  c.root.classList.toggle("correct", !!correct);
+  c.root.classList.toggle("wrong",   !!(answer && state.triviaCorrect && !correct));
+
+  // Rank badge
+  const winners = getWinners();
+  const rank = winners.findIndex(w => w.uid === uid);
+  c.rankBadge.className = "rank-badge";
+  if (rank === 0) { c.rankBadge.classList.add("r1"); c.rankBadge.textContent = "🥇"; }
+  else if (rank === 1) { c.rankBadge.classList.add("r2"); c.rankBadge.textContent = "🥈"; }
+  else if (rank === 2) { c.rankBadge.classList.add("r3"); c.rankBadge.textContent = "🥉"; }
+
+  // Pills
+  const pills = [];
+  pills.push(p.cameraActive
+    ? `<span class="pill-tag good">cam ready</span>`
+    : `<span class="pill-tag">cam off</span>`);
+  if (answer) {
+    pills.push(`<span class="pill-tag ${correct ? "good" : "warn"}">${correct ? "✓ correct" : "✗ wrong"}</span>`);
+  }
+  if (vote) pills.push(`<span class="pill-tag hot">voted</span>`);
+  c.pills.innerHTML = pills.join("");
+
+  // Status text
+  if (vote)        c.statusText.textContent = `Poll: ${vote}`;
+  else if (answer) c.statusText.textContent = `Answer: ${answer}`;
+  else if (p.cameraActive) c.statusText.textContent = "Ready to go live";
+  else c.statusText.textContent = "Camera off";
+
+  // Go live button
+  c.goLiveBtn.disabled = !p.cameraActive;
+  c.goLiveBtn.classList.toggle("disabled", !p.cameraActive);
+  c.goLiveBtn.textContent = !p.cameraActive ? "cam off"
+    : state.currentLiveUser === uid ? "● live" : "go live";
+
+  // Reveal toggle (trivia only) — single button, label switches
+  const canReveal = state.triviaMode && state.triviaQuestionActive && !!answer;
+  const revealed  = state.reveals[uid]?.show === true;
+  if (state.triviaMode) {
+    c.toggleRevealBtn.style.display = "";
+    c.toggleRevealBtn.textContent   = revealed ? "hide answer" : "reveal answer";
+    c.toggleRevealBtn.classList.toggle("disabled", !canReveal);
+    c.toggleRevealBtn.className = `toggleRevealBtn ${revealed ? "btn-ghost" : ""}`;
+    if (!canReveal) c.toggleRevealBtn.classList.add("disabled");
+  } else {
+    c.toggleRevealBtn.style.display = "none";
+  }
+
+  // Drawing corner thumbnail + single toggle button
+  const drawing      = state.drawSubmissions[uid];
+  const drawRevealed = state.drawReveals[uid]?.show === true;
+  if (drawing?.data && state.drawMode) {
+    c.drawCorner.style.display     = "";
+    c.drawThumbImg.src             = drawing.data;
+    c.toggleDrawBtn.style.display  = "";
+    c.toggleDrawBtn.textContent    = drawRevealed ? "hide drawing" : "show drawing";
+    c.toggleDrawBtn.className      = `toggleDrawBtn ${drawRevealed ? "btn-ghost" : "btn-accent"}`;
+  } else {
+    c.drawCorner.style.display    = "none";
+    c.toggleDrawBtn.style.display = "none";
+  }
+}
+
+function syncOrder() {
+  const entries = Object.entries(state.participants)
+    .sort((a, b) => {
+      const [ap, at] = sortKey(a);
+      const [bp, bt] = sortKey(b);
+      if (bp !== ap) return bp - ap;
+      return at - bt; // lower timestamp = faster = higher rank
+    });
+  if (!entries.length) {
+    els.grid.innerHTML = `<div class="empty">No participants yet.</div>`;
+    return;
+  }
+  const empty = els.grid.querySelector(".empty");
+  if (empty) empty.remove();
+  for (const [uid] of entries) {
+    const c = ensureCard(uid);
+    patchCard(uid);
+    els.grid.appendChild(c.root); // moves existing node — in-place sort, no re-download
+  }
+}
+
+function removeCard(uid) {
+  const c = state.cardRefs[uid];
+  if (c?.root?.parentNode) c.root.parentNode.removeChild(c.root);
+  delete state.cardRefs[uid];
+}
+
+/* ── AUTO LIVE ── */
+function rebuildCycle() {
+  const active = Object.entries(state.participants)
+    .filter(([, p]) => p?.cameraActive).map(([id]) => id);
+  for (let i = active.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [active[i], active[j]] = [active[j], active[i]];
+  }
+  state.autoCycle = active; state.autoIndex = 0;
+}
+function startAuto() {
+  stopAuto(); state.autoLiveEnabled = true; rebuildCycle();
+  state.autoLiveInterval = setInterval(async () => {
+    if (!Object.values(state.participants).some(p => p?.cameraActive)) return;
+    if (!state.autoCycle.length || state.autoIndex >= state.autoCycle.length) rebuildCycle();
+    const next = state.autoCycle[state.autoIndex++];
+    if (next) await update(ref(db, "live"), { activeUser: next });
+  }, 5000);
+  els.autoPill.classList.add("on");
+  updateStats();
+}
+function stopAuto() {
+  state.autoLiveEnabled = false;
+  clearInterval(state.autoLiveInterval);
+  state.autoLiveInterval = null;
+  els.autoPill.classList.remove("on");
+  updateStats();
+}
+els.autoLiveToggle.onchange = () => els.autoLiveToggle.checked ? startAuto() : stopAuto();
+
+els.clearLiveBtn.onclick = async () => {
+  await Promise.all([set(ref(db,"live/activeUser"),null), set(ref(db,"live/frame"),null)]);
+};
+
+/* ── END SESSION ── */
+els.endSessionBtn.onclick = async () => {
+  if (!confirm("End the whole session and remove everyone?")) return;
+  stopAuto();
+  els.autoLiveToggle.checked = false;
+  await Promise.all([
+    set(ref(db,"participants"), null),
+    set(ref(db,"selfies"), null),
+    set(ref(db,"live"), null),
+    set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
+    set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
+    set(ref(db,"meta/resetFlag"), Date.now()),
+    set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
+  ]);
+  state.participants = {}; state.selfies = {}; state.answers = {};
+  state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
+  els.grid.innerHTML = `<div class="empty">Session ended. Ready for next time.</div>`;
+  els.questionInput.value = ""; els.correctInput.value = "";
+  els.pollQuestion.value = ""; state.draftPollOptions = ["",""]; renderPollDraft();
+  updateStats(); updateWinnerStat();
+};
+
+/* ── SENT FLASH ── */
+function flashSent(btn) {
+  btn.classList.add("btn-sent");
+  btn.textContent = "SENT";
+  setTimeout(() => {
+    btn.classList.remove("btn-sent");
+    if (btn === els.sendQuestionBtn) btn.textContent = "SEND";
+    else if (btn === els.sendPollBtn) btn.textContent = "SEND";
+    else if (btn === els.sendDrawBtn) btn.textContent = "SEND";
+  }, 1800);
+}
+
+/* ── TRIVIA ── */
+function updateSendState() {
+  const ready = !!els.questionInput.value.trim() && !!els.correctInput.value.trim();
+  els.sendQuestionBtn.classList.toggle("disabled", !ready);
+}
+els.questionInput.addEventListener("input", updateSendState);
+els.correctInput.addEventListener("input", updateSendState);
+
+els.sendQuestionBtn.onclick = async () => {
+  const q = els.questionInput.value.trim();
+  const a = els.correctInput.value.trim();
+  if (!q || !a) return;
+  // Write answer first (hidden), then show question
+  await update(ref(db,"trivia"), { correct: { text: a, show: false } });
+  await update(ref(db,"trivia"), { question: { text: q, show: true } });
+  flashSent(els.sendQuestionBtn);
+  els.revealCorrectBtn.classList.remove("disabled");
+};
+
+els.revealCorrectBtn.onclick = async () => {
+  const a = els.correctInput.value.trim(); if (!a) return;
+  await update(ref(db,"trivia"), { correct: { text: a, show: true } });
+};
+
+els.resetTriviaBtn.onclick = async () => {
+  await update(ref(db,"trivia"), { question:{text:"",show:false}, correct:{text:"",show:false}, answers:null });
+  await set(ref(db,"trivia/reveal"), { __reset: Date.now() });
+  els.questionInput.value = ""; els.correctInput.value = "";
+  els.revealCorrectBtn.classList.add("disabled");
+  updateSendState();
+  updateWinnerStat();
+  syncOrder();
+};
+
+/* ── POLLS ── */
+function renderPollDraft() {
+  els.pollOptions.innerHTML = "";
+  state.draftPollOptions.forEach((value, i) => {
+    const row = document.createElement("div");
+    row.className = "option-row";
+    row.innerHTML = `<input class="input" placeholder="Option ${i+1}" value="${value.replace(/"/g,"&quot;")}"><button ${state.draftPollOptions.length<=2?'class="disabled"':""} style="font-size:12px;padding:10px 12px;">×</button>`;
+    row.querySelector("input").oninput  = e => { state.draftPollOptions[i] = e.target.value; updatePollSend(); };
+    row.querySelector("button").onclick = () => {
+      if (state.draftPollOptions.length <= 2) return;
+      state.draftPollOptions.splice(i, 1); renderPollDraft(); updatePollSend();
+    };
+    els.pollOptions.appendChild(row);
+  });
+}
+function updatePollSend() {
+  const q    = els.pollQuestion.value.trim();
+  const opts = state.draftPollOptions.map(v => v.trim()).filter(Boolean);
+  els.sendPollBtn.classList.toggle("disabled", !q || opts.length < 2);
+}
+state.draftPollOptions = ["", ""]; renderPollDraft();
+els.pollQuestion.addEventListener("input", updatePollSend);
+els.addOptionBtn.onclick = () => { state.draftPollOptions.push(""); renderPollDraft(); updatePollSend(); };
+
+els.sendPollBtn.onclick = async () => {
+  const q    = els.pollQuestion.value.trim();
+  const opts = state.draftPollOptions.map(v => v.trim()).filter(Boolean);
+  if (!q || opts.length < 2) return;
+  const optionsPayload = Object.fromEntries(opts.map((label, i) => [`opt${i+1}`, { label, order: i }]));
+  const totalsPayload  = Object.fromEntries(opts.map((_, i) => [`opt${i+1}`, 0]));
+  await update(ref(db,"polls"), { options: optionsPayload, votes: null, totals: totalsPayload, status: "open", question: { text: q, show: false } });
+  await update(ref(db,"polls/question"), { text: q, show: true });
+  flashSent(els.sendPollBtn);
+};
+
+els.resetPollBtn.onclick = async () => {
+  await update(ref(db,"polls"), { question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" });
+  els.pollQuestion.value = ""; state.draftPollOptions = ["",""]; renderPollDraft(); updatePollSend();
+};
+
+/* ── DRAWING CONTROLS ── */
+els.drawPromptInput.addEventListener("input", () => {
+  els.sendDrawBtn.classList.toggle("disabled", !els.drawPromptInput.value.trim());
+});
+els.sendDrawBtn.onclick = async () => {
+  const text = els.drawPromptInput.value.trim();
+  if (!text) return;
+  await update(ref(db,"drawing"), { prompt: { text, show: true } });
+  flashSent(els.sendDrawBtn);
+  els.timesUpBtn.classList.remove("disabled");
+};
+
+els.timesUpBtn.onclick = async () => {
+  if (els.timesUpBtn.classList.contains("disabled")) return;
+  // For every participant who has camera on but hasn't submitted a drawing yet,
+  // write a blank white canvas submission so their card shows something
+  const blankCanvas = document.createElement("canvas");
+  blankCanvas.width = 480; blankCanvas.height = 640;
+  const bCtx = blankCanvas.getContext("2d");
+  bCtx.fillStyle = "white"; bCtx.fillRect(0, 0, 480, 640);
+  // Write a "times up" label on blank canvas
+  bCtx.fillStyle = "#ccc";
+  bCtx.font = "bold 48px sans-serif";
+  bCtx.textAlign = "center";
+  bCtx.fillText("TIME'S UP", 240, 340);
+  const blankPng = blankCanvas.toDataURL("image/png");
+  const ts = Date.now();
+  // Signal index.html to auto-submit, and fill in blanks for non-submitters
+  const ops = [];
+  ops.push(set(ref(db,"drawing/timesUp"), ts));
+  // Fill blank for any participant who hasn't submitted
+  Object.keys(state.participants).forEach(uid => {
+    if (!state.drawSubmissions[uid]) {
+      ops.push(set(ref(db, `drawing/submissions/${uid}`), { data: blankPng, timestamp: ts, timesUp: true }));
+    }
+  });
+  await Promise.all(ops);
+  els.timesUpBtn.classList.add("disabled");
+  els.timesUpBtn.textContent = "SUBMITTED";
+};
+els.resetDrawBtn.onclick = async () => {
+  await update(ref(db,"drawing"), { prompt: { text:"", show:false }, submissions: null, reveal: null, timesUp: null });
+  els.drawPromptInput.value = "";
+  els.sendDrawBtn.classList.add("disabled");
+  els.timesUpBtn.classList.add("disabled");
+  els.timesUpBtn.textContent = "⏱ TIME'S UP";
+  state.drawSubmissions = {}; state.drawReveals = {};
+  // Clear corner thumbnails
+  Object.keys(state.cardRefs).forEach(uid => {
+    const c = state.cardRefs[uid];
+    if (c?.drawCorner) { c.drawCorner.style.display = "none"; c.drawThumbImg.src = ""; }
+    if (c?.showDrawBtn) c.showDrawBtn.style.display = "none";
+    if (c?.hideDrawBtn) c.hideDrawBtn.style.display = "none";
+  });
+  Object.keys(state.participants).forEach(patchCard);
+};
+
+/* ── FIREBASE LISTENERS ── */
+onValue(ref(db,"trivia/mode"), snap => {
+  state.triviaMode = snap.val() === true;
+  els.triviaToggle.checked = state.triviaMode;
+  if (state.triviaMode) setTool("trivia");
+  else if (!state.pollsMode) setTool("none");
+  updateStats();
+  Object.keys(state.participants).forEach(patchCard);
+});
+
+onValue(ref(db,"trivia/question"), snap => {
+  const q = snap.val() || {};
+  state.triviaQuestionActive = q.show === true && !!q.text;
+  Object.keys(state.participants).forEach(patchCard);
+});
+
+onValue(ref(db,"trivia/correct"), snap => {
+  const v = snap.val() || {};
+  state.triviaCorrect = v.text ? v.text.toLowerCase().trim() : "";
+  if (v.text && !document.activeElement?.isSameNode(els.correctInput)) els.correctInput.value = v.text;
+  if (v.text) els.revealCorrectBtn.classList.remove("disabled");
+  updateWinnerStat();
+  Object.keys(state.participants).forEach(patchCard);
+});
+
+onValue(ref(db,"trivia/answers"), snap => {
+  state.answers = snap.val() || {};
+  updateWinnerStat();
+  syncOrder();
+});
+
+onValue(ref(db,"trivia/reveal"), snap => {
+  state.reveals = snap.val() || {};
+  Object.keys(state.participants).forEach(patchCard);
+});
+
+onValue(ref(db,"polls/mode"), snap => {
+  state.pollsMode = snap.val() === true;
+  els.pollsToggle.checked = state.pollsMode;
+  if (state.pollsMode) setTool("polls");
+  else if (!state.triviaMode) setTool("none");
+  updateStats();
+});
+
+onValue(ref(db,"polls/options"), snap => { state.pollOptions = snap.val() || {}; });
+
+onValue(ref(db,"polls/votes"), snap => {
+  state.pollVotes = snap.val() || {};
+  syncOrder();
+  // Tally and write totals
+  const options = state.pollOptions || {};
+  const optKeys = Object.keys(options);
+  if (!optKeys.length) return;
+  const totals = Object.fromEntries(optKeys.map(k => [k, 0]));
+  Object.values(state.pollVotes).forEach(v => {
+    if (v?.optionKey && totals.hasOwnProperty(v.optionKey)) totals[v.optionKey]++;
+  });
+  update(ref(db,"polls/totals"), totals).catch(() => {});
+});
+
+onValue(ref(db,"polls/totals"),    snap => { state.pollTotals = snap.val() || {}; });
+onValue(ref(db,"live/activeUser"), snap => {
+  state.currentLiveUser = snap.val() || null;
+  updateStats();
+  Object.keys(state.participants).forEach(patchCard);
+});
+
+onChildAdded(ref(db,"participants"),   snap => {
+  state.participants[snap.key] = snap.val() || {};
+  ensureCard(snap.key); syncOrder();
+  if (state.autoLiveEnabled) rebuildCycle();
+  updateStats();
+  rebuildDrawerSelect();
+});
+onChildChanged(ref(db,"participants"), snap => {
+  state.participants[snap.key] = snap.val() || {};
+  patchCard(snap.key);
+  if (state.autoLiveEnabled) rebuildCycle();
+  updateStats();
+});
+onChildRemoved(ref(db,"participants"), snap => {
+  delete state.participants[snap.key];
+  removeCard(snap.key);
+  if (state.autoLiveEnabled) rebuildCycle();
+  updateStats();
+  if (!Object.keys(state.participants).length) els.grid.innerHTML = `<div class="empty">No participants yet.</div>`;
+});
+
+onChildAdded(ref(db,"selfies"),   snap => { state.selfies[snap.key] = snap.val(); if (state.participants[snap.key]) patchCard(snap.key); });
+onChildChanged(ref(db,"selfies"), snap => { state.selfies[snap.key] = snap.val(); if (state.participants[snap.key]) patchCard(snap.key); });
+onChildRemoved(ref(db,"selfies"), snap => { delete state.selfies[snap.key]; if (state.participants[snap.key]) patchCard(snap.key); });
+
+/* ── SKRIBBL CONTROLS ── */
+function rebuildDrawerSelect() {
+  const sel = els.skribblDrawerSelect;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— pick a participant —</option>';
+  Object.entries(state.participants).forEach(([uid, p]) => {
+    const opt = document.createElement("option");
+    opt.value = uid; opt.textContent = p.name || uid;
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+}
+
+els.skribblDrawerSelect.addEventListener("change", updateSkribblStart);
+els.skribblWordInput.addEventListener("input", updateSkribblStart);
+function updateSkribblStart() {
+  const ready = !!els.skribblDrawerSelect.value && !!els.skribblWordInput.value.trim();
+  els.startSkribblBtn.classList.toggle("disabled", !ready);
+}
+
+els.startSkribblBtn.onclick = async () => {
+  const drawerKey = els.skribblDrawerSelect.value;
+  const word      = els.skribblWordInput.value.trim().toLowerCase();
+  if (!drawerKey || !word) return;
+  state.skribblWord = word;
+  // Clear previous round data
+  await Promise.all([
+    set(ref(db,"skribbl/guesses"), null),
+    set(ref(db,"skribbl/winner"),  null),
+    set(ref(db,"skribbl/liveCanvas"), null),
+  ]);
+  // Write mode + drawer + prompt (prompt only goes to drawer via index.html listener)
+  await Promise.all([
+    set(ref(db,"skribbl/mode"),   true),
+    set(ref(db,"skribbl/drawer"), drawerKey),
+    set(ref(db,"skribbl/word"),   word),  // for control page answer checking
+    set(ref(db,"skribbl/prompt"), { text: word, show: true }),
+  ]);
+  els.endSkribblBtn.classList.remove("disabled");
+  els.skribblWinnerBanner.style.display = "none";
+  els.skribblGuessList.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;">Waiting for guesses…</div>';
+};
+
+els.endSkribblBtn.onclick = async () => {
+  state.skribblWord = "";
+  await Promise.all([
+    set(ref(db,"skribbl/mode"),   false),
+    set(ref(db,"skribbl/drawer"), null),
+    set(ref(db,"skribbl/prompt"), { text:"", show:false }),
+    set(ref(db,"skribbl/guesses"), null),
+    set(ref(db,"skribbl/winner"),  null),
+    set(ref(db,"skribbl/liveCanvas"), null),
+    set(ref(db,"skribbl/word"), null),
+  ]);
+  els.endSkribblBtn.classList.add("disabled");
+  els.skribblWordInput.value = "";
+  els.skribblDrawerSelect.value = "";
+  els.skribblWinnerBanner.style.display = "none";
+  els.skribblGuessList.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;">Waiting for guesses…</div>';
+  updateSkribblStart();
+};
+
+// Listen to guesses — check each one against the secret word
+onValue(ref(db,"skribbl/word"), snap => { state.skribblWord = snap.val() || ""; });
+
+onChildAdded(ref(db,"skribbl/guesses"), snap => {
+  const g = snap.val();
+  if (!g) return;
+  const correct = state.skribblWord && g.text?.toLowerCase().trim() === state.skribblWord;
+
+  // Add to guess list
+  const item = document.createElement("div");
+  item.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;background:${correct ? "rgba(84,209,138,0.15)" : "rgba(255,255,255,0.05)"};border:1px solid ${correct ? "var(--good)" : "var(--line)"};font-size:13px;`;
+  item.innerHTML = `<span style="font-weight:700;">${g.name || "?"}</span><span style="color:${correct ? "var(--good)" : "var(--muted)"};">${g.text}</span>`;
+  // Remove placeholder
+  const placeholder = els.skribblGuessList.querySelector("div");
+  if (placeholder?.textContent.includes("Waiting")) placeholder.remove();
+  els.skribblGuessList.appendChild(item);
+  els.skribblGuessList.scrollTop = els.skribblGuessList.scrollHeight;
+
+  if (correct && !els.skribblWinnerBanner.style.display.includes("block")) {
+    // First correct guess — set winner
+    set(ref(db,"skribbl/winner"), { userKey: snap.key, name: g.name, text: g.text });
+    els.skribblWinnerBanner.style.display = "block";
+    els.skribblWinnerBanner.textContent = `🎉 ${g.name} got it! The word was "${state.skribblWord}"`;
+  }
+});
+
+onValue(ref(db,"skribbl/mode"), snap => {
+  state.skribblMode = snap.val() === true;
+  if (state.skribblMode) setTool("skribbl");
+  else if (!state.triviaMode && !state.pollsMode && !state.drawMode) setTool("none");
+});
+
+onValue(ref(db,"drawing/mode"), snap => {
+  state.drawMode = snap.val() === true;
+  if (state.drawMode) setTool("draw");
+  else if (!state.triviaMode && !state.pollsMode) setTool("none");
+  Object.keys(state.participants).forEach(patchCard);
+  updateStats();
+});
+onChildAdded(ref(db,"drawing/submissions"),   snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildChanged(ref(db,"drawing/submissions"), snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildRemoved(ref(db,"drawing/submissions"), snap => { delete state.drawSubmissions[snap.key]; if(state.participants[snap.key]) patchCard(snap.key); });
+onChildAdded(ref(db,"drawing/reveal"),   snap => { state.drawReveals[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildChanged(ref(db,"drawing/reveal"), snap => { state.drawReveals[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildRemoved(ref(db,"drawing/reveal"), snap => { delete state.drawReveals[snap.key]; if(state.participants[snap.key]) patchCard(snap.key); });
+
+updateSendState();
+updatePollSend();
+updateStats();
+updateWinnerStat();
+</script>
+</body>
+</html>
