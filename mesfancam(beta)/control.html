@@ -527,16 +527,19 @@ async function activateNone() {
     set(ref(db,"skribbl/mode"), false),
   ]);
   setTool("none");
+  updateStats();
 }
 async function activateTrivia() {
   await update(ref(db,"polls"),  { mode: false });
   await update(ref(db,"trivia"), { mode: true });
   setTool("trivia");
+  updateStats();
 }
 async function activatePolls() {
   await update(ref(db,"trivia"), { mode: false });
   await update(ref(db,"polls"),  { mode: true });
   setTool("polls");
+  updateStats();
 }
 
 async function activateDraw() {
@@ -546,6 +549,7 @@ async function activateDraw() {
     update(ref(db,"drawing"), { mode: true }),
   ]);
   setTool("draw");
+  updateStats();
 }
 els.showNoneBtn.onclick   = activateNone;
 els.showTriviaBtn.onclick = activateTrivia;
@@ -559,6 +563,7 @@ async function activateSkribbl() {
     update(ref(db,"drawing"), { mode: false }),
   ]);
   setTool("skribbl");
+  updateStats();
 }
 els.showSkribblBtn.onclick = activateSkribbl;
 
@@ -1007,9 +1012,6 @@ els.resetDrawBtn.onclick = async () => {
 onValue(ref(db,"trivia/mode"), snap => {
   state.triviaMode = snap.val() === true;
   els.triviaToggle.checked = state.triviaMode;
-  if (state.triviaMode) setTool("trivia");
-  else if (!state.pollsMode) setTool("none");
-  updateStats();
   Object.keys(state.participants).forEach(patchCard);
 });
 
@@ -1042,9 +1044,6 @@ onValue(ref(db,"trivia/reveal"), snap => {
 onValue(ref(db,"polls/mode"), snap => {
   state.pollsMode = snap.val() === true;
   els.pollsToggle.checked = state.pollsMode;
-  if (state.pollsMode) setTool("polls");
-  else if (!state.triviaMode) setTool("none");
-  updateStats();
 });
 
 onValue(ref(db,"polls/options"), snap => { state.pollOptions = snap.val() || {}; });
@@ -1191,16 +1190,11 @@ onChildAdded(ref(db,"skribbl/guesses"), snap => {
 
 onValue(ref(db,"skribbl/mode"), snap => {
   state.skribblMode = snap.val() === true;
-  if (state.skribblMode) setTool("skribbl");
-  else if (!state.triviaMode && !state.pollsMode && !state.drawMode) setTool("none");
 });
 
 onValue(ref(db,"drawing/mode"), snap => {
   state.drawMode = snap.val() === true;
-  if (state.drawMode) setTool("draw");
-  else if (!state.triviaMode && !state.pollsMode) setTool("none");
   Object.keys(state.participants).forEach(patchCard);
-  updateStats();
 });
 onChildAdded(ref(db,"drawing/submissions"),   snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
 onChildChanged(ref(db,"drawing/submissions"), snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
