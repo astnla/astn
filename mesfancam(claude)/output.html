@@ -5,24 +5,45 @@
   <title>FEED — MANATEE CAM</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Krona+One&family=Bebas+Neue&display=swap" rel="stylesheet">
   <style>
     :root {
       --red:  #DA1A32;
-      --navy: #00031F;
-      --card: rgba(0, 3, 31, 0.82);
-      --line: rgba(255,255,255,0.10);
+      --navy: #ff6600;
+      --card: rgba(17, 17, 17, 0.82);
       --muted: rgba(255,255,255,0.55);
     }
 
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      background: var(--navy);
-      font-family: "DM Sans", sans-serif;
-      color: #fff;
-    }
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: "DM Sans", sans-serif;
+  color: #fff;
+  background: #ff0033;
+  animation: bgShift 30s linear infinite;
+}
+
+@keyframes bgShift {
+  0%   { background-color: #ff0033; }  /* red */
+  16%  { background-color: #ff6600; }  /* orange */
+  32%  { background-color: #fff700; }  /* yellow */
+  48%  { background-color: #33ff9c; }  /* green */
+  64%  { background-color: #3341ff; }  /* blue */
+  80%  { background-color: #ff00f7; }  /* pink */
+
+  /* 👇 smooth transition BACK to red */
+  100% { background-color: #ff0033; }
+}
+
+.header-title {
+  font-family: 'Krona One', sans-serif;
+}
+
+.card-eyebrow {
+  font-family: 'Bebas Neue', sans-serif;
+}
 
     /* ── SCENE ── */
     .scene {
@@ -47,6 +68,8 @@
 
     /* ── HEADER ── */
     .header {
+        font-family: 'Krona One', sans-serif;
+
       display: flex;
       align-items: center;
       gap: clamp(8px, 1vh, 14px);
