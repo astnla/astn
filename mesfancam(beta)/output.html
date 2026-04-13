@@ -836,6 +836,8 @@ let drawSubs = {};
 function showDrawPanel(imgSrc, label) {
   drawPanelEyebrow.textContent = label || "DRAWING";
   drawPanelImg.src = imgSrc;
+  drawPanelImg.style.display = "block";   // was hidden by default after skribbl addition
+  skribblLiveImg.style.display = "none";  // hide skribbl img when showing static reveal
   stage.classList.add("draw-open");
   drawPanel.classList.add("show");
 }
