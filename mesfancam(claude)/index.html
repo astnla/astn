@@ -59,6 +59,46 @@
     .legal{margin-top:14px;font-size:10px;line-height:1.5;color:rgba(0,3,31,0.55);text-align:center;max-width:300px;}
     @keyframes fadeDown{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:none;}}
     @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+    /* ── DRAWING OVERLAY ── */
+    #drawOverlay{
+      position:absolute;inset:0;z-index:20;
+      background:white;border-radius:12px;
+      display:flex;flex-direction:column;
+      transform:translateY(100%);opacity:0;
+      transition:transform 0.4s cubic-bezier(0.22,1,0.36,1),opacity 0.35s ease;
+      pointer-events:none;
+    }
+    #drawOverlay.show{transform:translateY(0);opacity:1;pointer-events:auto;}
+    #drawPromptLabel{
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;
+      font-size:15px;letter-spacing:1px;color:#00031F;
+      text-align:center;padding:10px 14px 6px;flex-shrink:0;
+    }
+    #drawCanvas{
+      flex:1;width:100%;display:block;
+      cursor:crosshair;touch-action:none;
+    }
+    #drawActions{
+      display:flex;gap:8px;padding:8px 10px;flex-shrink:0;
+    }
+    .draw-btn{
+      flex:1;padding:11px;border-radius:8px;border:none;
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;
+      font-size:15px;letter-spacing:1px;cursor:pointer;transition:opacity 0.15s;
+    }
+    .draw-btn:active{opacity:0.7;}
+    #drawRestart{background:rgba(0,3,31,0.08);color:#00031F;}
+    #drawSubmit{background:#00031F;color:white;}
+    #drawSubmitted{
+      display:none;position:absolute;inset:0;z-index:21;
+      background:white;border-radius:12px;
+      align-items:center;justify-content:center;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;
+      font-size:22px;letter-spacing:2px;color:#00031F;
+      flex-direction:column;gap:8px;
+    }
+    #drawSubmitted.show{display:flex;}
   </style>
 </head>
 <body>
@@ -85,6 +125,20 @@
         </svg>
       </div>
       <span class="cam-label" id="camLabel">TAP TO ENABLE CAMERA</span>
+    </div>
+
+    <!-- Drawing overlay — slides up over camera when drawing mode is active -->
+    <div id="drawOverlay">
+      <div id="drawPromptLabel">DRAW: <span id="drawPromptText"></span></div>
+      <canvas id="drawCanvas"></canvas>
+      <div id="drawActions">
+        <button class="draw-btn" id="drawRestart">RESTART</button>
+        <button class="draw-btn" id="drawSubmit">SUBMIT ✓</button>
+      </div>
+    </div>
+    <div id="drawSubmitted">
+      <div>DRAWING SENT ✓</div>
+      <div style="font-size:13px;font-weight:400;font-family:'DM Sans',sans-serif;opacity:0.5;">waiting for next prompt</div>
     </div>
   </div>
 
@@ -398,6 +452,104 @@ onValue(pollsModeRef, snap => {
       hasVoted = false;
     }
   });
+});
+
+/* ── DRAWING ── */
+const drawOverlay    = document.getElementById("drawOverlay");
+const drawSubmitted  = document.getElementById("drawSubmitted");
+const drawPromptText = document.getElementById("drawPromptText");
+const drawCanvas     = document.getElementById("drawCanvas");
+const drawRestart    = document.getElementById("drawRestart");
+const drawSubmit     = document.getElementById("drawSubmit");
+const drawCtx        = drawCanvas.getContext("2d");
+const drawModeRef    = ref(db, "drawing/mode");
+const drawPromptRef  = ref(db, "drawing/prompt");
+
+let drawActive = false;
+let drawHasSubmitted = false;
+
+function initDrawCanvas() {
+  // Size canvas to its CSS display size
+  const rect = drawCanvas.getBoundingClientRect();
+  drawCanvas.width  = rect.width  || drawCanvas.offsetWidth;
+  drawCanvas.height = rect.height || drawCanvas.offsetHeight;
+  drawCtx.fillStyle = "white";
+  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+  drawCtx.strokeStyle = "#000";
+  drawCtx.lineWidth   = 3;
+  drawCtx.lineCap     = "round";
+  drawCtx.lineJoin    = "round";
+}
+
+// Drawing input — works with both touch and mouse
+let isPainting = false;
+
+function getPos(e) {
+  const rect = drawCanvas.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+}
+drawCanvas.addEventListener("pointerdown", e => {
+  e.preventDefault(); isPainting = true;
+  const { x, y } = getPos(e);
+  drawCtx.beginPath(); drawCtx.moveTo(x, y);
+});
+drawCanvas.addEventListener("pointermove", e => {
+  e.preventDefault(); if (!isPainting) return;
+  const { x, y } = getPos(e);
+  drawCtx.lineTo(x, y); drawCtx.stroke();
+});
+drawCanvas.addEventListener("pointerup",     () => isPainting = false);
+drawCanvas.addEventListener("pointercancel", () => isPainting = false);
+
+drawRestart.addEventListener("click", () => {
+  drawCtx.fillStyle = "white";
+  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+});
+
+drawSubmit.addEventListener("click", async () => {
+  if (drawHasSubmitted) return;
+  drawHasSubmitted = true;
+  drawSubmit.textContent = "SENDING…";
+  // Compress to PNG at 480px wide max
+  const tmp = document.createElement("canvas");
+  const maxW = 480;
+  const scale = Math.min(1, maxW / drawCanvas.width);
+  tmp.width  = Math.round(drawCanvas.width  * scale);
+  tmp.height = Math.round(drawCanvas.height * scale);
+  tmp.getContext("2d").drawImage(drawCanvas, 0, 0, tmp.width, tmp.height);
+  const png = tmp.toDataURL("image/png");
+  await set(ref(db, `drawing/submissions/${userKey}`), { data: png, timestamp: Date.now() })
+    .catch(e => console.warn("Drawing submit failed:", e));
+  drawOverlay.classList.remove("show");
+  drawSubmitted.classList.add("show");
+});
+
+// Gate: listen to drawing mode
+onValue(drawModeRef, snap => {
+  drawActive = snap.val() === true;
+  if (!drawActive) {
+    drawOverlay.classList.remove("show");
+    drawSubmitted.classList.remove("show");
+    drawHasSubmitted = false;
+    drawSubmit.textContent = "SUBMIT ✓";
+  }
+});
+
+// When a prompt arrives, show the drawing overlay
+onValue(drawPromptRef, snap => {
+  const d = snap.val() || {};
+  if (drawActive && d.show && d.text) {
+    drawHasSubmitted = false;
+    drawSubmit.textContent = "SUBMIT ✓";
+    drawPromptText.textContent = d.text;
+    drawOverlay.classList.add("show");
+    drawSubmitted.classList.remove("show");
+    // Init canvas after it becomes visible so dimensions are correct
+    requestAnimationFrame(() => requestAnimationFrame(initDrawCanvas));
+  } else if (!d.show) {
+    drawOverlay.classList.remove("show");
+  }
 });
 
 /* ── VISIBILITY ── */

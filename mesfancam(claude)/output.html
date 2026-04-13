@@ -446,6 +446,10 @@ html, body {
         <div class="card-eyebrow">CLASS ANSWER</div>
         <div class="card-body" id="classText"></div>
       </div>
+      <div class="info-card" id="drawCard">
+        <div class="card-eyebrow" id="drawCardEyebrow">DRAWING</div>
+        <img id="drawCardImg" alt="student drawing" style="width:100%;border-radius:8px;display:block;margin-top:6px;">
+      </div>
     </div>
 
   </div>
@@ -469,10 +473,16 @@ const pollCard       = document.getElementById("pollCard");
 const pollBars       = document.getElementById("pollBars");
 const answerCard     = document.getElementById("answerCard");
 const answerText     = document.getElementById("answerText");
-const classCard      = document.getElementById("classCard");
-const classText      = document.getElementById("classText");
+const classCard        = document.getElementById("classCard");
+const classText        = document.getElementById("classText");
+const drawCard         = document.getElementById("drawCard");
+const drawCardEyebrow  = document.getElementById("drawCardEyebrow");
+const drawCardImg      = document.getElementById("drawCardImg");
 
 const activeUserRef  = ref(db, "live/activeUser");
+const drawRevealRef  = ref(db, "drawing/reveal");
+const drawSubRef     = ref(db, "drawing/submissions");
+const drawModeRef    = ref(db, "drawing/mode");
 const frameRef       = ref(db, "live/frame");
 const triviaModeRef  = ref(db, "trivia/mode");
 const triviaQRef     = ref(db, "trivia/question");
@@ -660,6 +670,22 @@ function stopPolls() {
   pollBars.innerHTML = "";
   pollOptions = {};
 }
+
+/* ── DRAWING ── */
+let drawSubs = {};
+onValue(drawModeRef, snap => {
+  if (!snap.val()) { hideCard(drawCard, "draw"); drawSubs = {}; }
+});
+onValue(drawSubRef, snap => { drawSubs = snap.val() || {}; });
+onValue(drawRevealRef, snap => {
+  const r = snap.val() || {};
+  const key = Object.keys(r).find(k => r[k]?.show === true);
+  if (!key || !drawSubs[key]?.data) { hideCard(drawCard, "draw"); return; }
+  // Look up name from participants via activeUser or just show generic label
+  drawCardEyebrow.textContent = "DRAWING";
+  drawCardImg.src = drawSubs[key].data;
+  showCard(drawCard, "draw");
+});
 
 /* ── GATES ── */
 onValue(triviaModeRef, snap => { snap.val()===true ? startTrivia() : stopTrivia(); });

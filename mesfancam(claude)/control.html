@@ -303,10 +303,11 @@
     <div class="card panel">
       <div class="panelTitle" style="font-size:16px;font-weight:900;margin-bottom:12px;">activities</div>
 
-      <div class="seg-row">
+      <div class="seg-row" style="grid-template-columns:repeat(4,1fr);">
         <button id="showNoneBtn" class="seg idle-active active">none</button>
         <button id="showTriviaBtn" class="seg">trivia</button>
         <button id="showPollsBtn" class="seg">polls</button>
+        <button id="showDrawBtn" class="seg">draw</button>
       </div>
 
       <p id="toolIntro" class="tool-intro">Nothing active. Pick trivia or polls when you're ready.</p>
@@ -352,6 +353,18 @@
             <button id="resetPollBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">reset</button>
           </div>
 
+        </div>
+      </div>
+
+      <!-- DRAW -->
+      <div id="drawShell" class="feature-shell">
+        <div class="feature-block">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">drawing prompt</div>
+          <textarea id="drawPromptInput" placeholder="e.g. Draw a manatee…" style="min-height:60px;"></textarea>
+          <div class="send-row" style="margin-top:4px;">
+            <button id="sendDrawBtn" class="btn-accent disabled" style="flex:1;">SEND PROMPT</button>
+            <button id="resetDrawBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">reset</button>
+          </div>
         </div>
       </div>
 
@@ -403,6 +416,11 @@ const els = {
   autoPill:       document.getElementById("autoPill"),
   endSessionBtn:  document.getElementById("endSessionBtn"),
   clearLiveBtn:   document.getElementById("clearLiveBtn"),
+  showDrawBtn:    document.getElementById("showDrawBtn"),
+  drawShell:      document.getElementById("drawShell"),
+  drawPromptInput:document.getElementById("drawPromptInput"),
+  sendDrawBtn:    document.getElementById("sendDrawBtn"),
+  resetDrawBtn:   document.getElementById("resetDrawBtn"),
   showNoneBtn:    document.getElementById("showNoneBtn"),
   showTriviaBtn:  document.getElementById("showTriviaBtn"),
   showPollsBtn:   document.getElementById("showPollsBtn"),
@@ -428,7 +446,8 @@ const state = {
   participants: {}, selfies: {}, answers: {}, reveals: {},
   pollVotes: {}, pollTotals: {}, pollOptions: {},
   currentLiveUser: null,
-  triviaMode: false, pollsMode: false,
+  triviaMode: false, pollsMode: false, drawMode: false,
+  drawSubmissions: {}, drawReveals: {},
   triviaQuestionActive: false, triviaCorrect: "",
   cardRefs: {},
   autoLiveEnabled: false, autoLiveInterval: null,
@@ -447,13 +466,15 @@ function setTool(t) {
   els.showPollsBtn.classList.toggle("active",  t === "polls");
   els.triviaShell.classList.toggle("open",  t === "trivia");
   els.pollsShell.classList.toggle("open",   t === "polls");
+  els.drawShell.classList.toggle("open",    t === "draw");
   els.toolIntro.style.display = t === "none" ? "block" : "none";
 }
 
 async function activateNone() {
   await Promise.all([
-    update(ref(db,"trivia"), { mode: false }),
-    update(ref(db,"polls"),  { mode: false }),
+    update(ref(db,"trivia"),   { mode: false }),
+    update(ref(db,"polls"),    { mode: false }),
+    update(ref(db,"drawing"),  { mode: false }),
   ]);
   setTool("none");
 }
@@ -468,9 +489,18 @@ async function activatePolls() {
   setTool("polls");
 }
 
+async function activateDraw() {
+  await Promise.all([
+    update(ref(db,"trivia"), { mode: false }),
+    update(ref(db,"polls"),  { mode: false }),
+    update(ref(db,"drawing"), { mode: true }),
+  ]);
+  setTool("draw");
+}
 els.showNoneBtn.onclick   = activateNone;
 els.showTriviaBtn.onclick = activateTrivia;
 els.showPollsBtn.onclick  = activatePolls;
+els.showDrawBtn.onclick   = activateDraw;
 
 /* ── STATS ── */
 function updateStats() {
@@ -548,34 +578,45 @@ function ensureCard(uid) {
       <div class="pmeta"></div>
       <div class="pills"></div>
       <div class="status-text"></div>
+      <div class="draw-thumb" style="display:none;border-radius:8px;overflow:hidden;border:1px solid var(--line);aspect-ratio:3/4;background:white;">
+        <img class="draw-thumb-img" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">
+      </div>
       <div class="person-actions">
         <button class="goLiveBtn btn-accent">go live</button>
         <button class="revealBtn">reveal answer</button>
         <button class="hideBtn btn-ghost">hide answer</button>
+        <button class="showDrawBtn btn-accent" style="display:none;">show drawing</button>
+        <button class="hideDrawBtn btn-ghost" style="display:none;">hide drawing</button>
         <button class="kickBtn btn-danger">remove</button>
       </div>
     </div>`;
 
   const c = {
-    root:       card,
-    img:        card.querySelector("img"),
-    rankBadge:  card.querySelector(".rank-badge"),
-    name:       card.querySelector(".pname"),
-    meta:       card.querySelector(".pmeta"),
-    pills:      card.querySelector(".pills"),
-    statusText: card.querySelector(".status-text"),
-    goLiveBtn:  card.querySelector(".goLiveBtn"),
-    revealBtn:  card.querySelector(".revealBtn"),
-    hideBtn:    card.querySelector(".hideBtn"),
-    kickBtn:    card.querySelector(".kickBtn"),
+    root:        card,
+    img:         card.querySelector("img"),
+    rankBadge:   card.querySelector(".rank-badge"),
+    name:        card.querySelector(".pname"),
+    meta:        card.querySelector(".pmeta"),
+    pills:       card.querySelector(".pills"),
+    statusText:  card.querySelector(".status-text"),
+    drawThumb:   card.querySelector(".draw-thumb"),
+    drawThumbImg:card.querySelector(".draw-thumb-img"),
+    goLiveBtn:   card.querySelector(".goLiveBtn"),
+    revealBtn:   card.querySelector(".revealBtn"),
+    hideBtn:     card.querySelector(".hideBtn"),
+    showDrawBtn: card.querySelector(".showDrawBtn"),
+    hideDrawBtn: card.querySelector(".hideDrawBtn"),
+    kickBtn:     card.querySelector(".kickBtn"),
   };
 
   c.goLiveBtn.onclick = async () => {
     if (!state.participants[uid]?.cameraActive) return;
     await update(ref(db, "live"), { activeUser: uid });
   };
-  c.revealBtn.onclick = () => update(ref(db, `trivia/reveal/${uid}`), { show: true });
-  c.hideBtn.onclick   = () => update(ref(db, `trivia/reveal/${uid}`), { show: false });
+  c.revealBtn.onclick   = () => update(ref(db, `trivia/reveal/${uid}`), { show: true });
+  c.hideBtn.onclick     = () => update(ref(db, `trivia/reveal/${uid}`), { show: false });
+  c.showDrawBtn.onclick = () => set(ref(db, `drawing/reveal/${uid}`), { show: true });
+  c.hideDrawBtn.onclick = () => set(ref(db, `drawing/reveal/${uid}`), { show: false });
   c.kickBtn.onclick   = async () => {
     const p = state.participants[uid];
     if (!confirm(`Remove ${p?.name || uid}?`)) return;
@@ -652,6 +693,22 @@ function patchCard(uid) {
   c.hideBtn.style.display   = state.triviaMode ? "" : "none";
   c.revealBtn.classList.toggle("disabled", !canReveal || revealed);
   c.hideBtn.classList.toggle("disabled",   !canReveal || !revealed);
+
+  // Drawing thumbnail + show/hide buttons
+  const drawing     = state.drawSubmissions[uid];
+  const drawRevealed= state.drawReveals[uid]?.show === true;
+  if (drawing?.data && state.drawMode) {
+    c.drawThumb.style.display    = "";
+    c.drawThumbImg.src           = drawing.data;
+    c.showDrawBtn.style.display  = "";
+    c.hideDrawBtn.style.display  = "";
+    c.showDrawBtn.classList.toggle("disabled", drawRevealed);
+    c.hideDrawBtn.classList.toggle("disabled", !drawRevealed);
+  } else {
+    c.drawThumb.style.display   = "none";
+    c.showDrawBtn.style.display = "none";
+    c.hideDrawBtn.style.display = "none";
+  }
 }
 
 function syncOrder() {
@@ -666,6 +723,8 @@ function syncOrder() {
     els.grid.innerHTML = `<div class="empty">No participants yet.</div>`;
     return;
   }
+  const empty = els.grid.querySelector(".empty");
+  if (empty) empty.remove();
   for (const [uid] of entries) {
     const c = ensureCard(uid);
     patchCard(uid);
@@ -725,6 +784,7 @@ els.endSessionBtn.onclick = async () => {
     set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"meta/resetFlag"), Date.now()),
+    set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
   state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
@@ -740,7 +800,9 @@ function flashSent(btn) {
   btn.textContent = "SENT ✓";
   setTimeout(() => {
     btn.classList.remove("btn-sent");
-    btn.textContent = btn === els.sendQuestionBtn ? "SEND" : "SEND POLL";
+    if (btn === els.sendQuestionBtn) btn.textContent = "SEND";
+    else if (btn === els.sendPollBtn) btn.textContent = "SEND POLL";
+    else if (btn === els.sendDrawBtn) btn.textContent = "SEND PROMPT";
   }, 1800);
 }
 
@@ -816,6 +878,24 @@ els.sendPollBtn.onclick = async () => {
 els.resetPollBtn.onclick = async () => {
   await update(ref(db,"polls"), { question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" });
   els.pollQuestion.value = ""; state.draftPollOptions = ["",""]; renderPollDraft(); updatePollSend();
+};
+
+/* ── DRAWING CONTROLS ── */
+els.drawPromptInput.addEventListener("input", () => {
+  els.sendDrawBtn.classList.toggle("disabled", !els.drawPromptInput.value.trim());
+});
+els.sendDrawBtn.onclick = async () => {
+  const text = els.drawPromptInput.value.trim();
+  if (!text) return;
+  await update(ref(db,"drawing"), { prompt: { text, show: true } });
+  flashSent(els.sendDrawBtn);
+};
+els.resetDrawBtn.onclick = async () => {
+  await update(ref(db,"drawing"), { prompt: { text:"", show:false }, submissions: null, reveal: null });
+  els.drawPromptInput.value = "";
+  els.sendDrawBtn.classList.add("disabled");
+  state.drawSubmissions = {}; state.drawReveals = {};
+  Object.keys(state.participants).forEach(patchCard);
 };
 
 /* ── FIREBASE LISTENERS ── */
@@ -908,6 +988,19 @@ onChildRemoved(ref(db,"participants"), snap => {
 onChildAdded(ref(db,"selfies"),   snap => { state.selfies[snap.key] = snap.val(); if (state.participants[snap.key]) patchCard(snap.key); });
 onChildChanged(ref(db,"selfies"), snap => { state.selfies[snap.key] = snap.val(); if (state.participants[snap.key]) patchCard(snap.key); });
 onChildRemoved(ref(db,"selfies"), snap => { delete state.selfies[snap.key]; if (state.participants[snap.key]) patchCard(snap.key); });
+
+onValue(ref(db,"drawing/mode"), snap => {
+  state.drawMode = snap.val() === true;
+  if (state.drawMode) setTool("draw");
+  else if (!state.triviaMode && !state.pollsMode) setTool("none");
+  Object.keys(state.participants).forEach(patchCard);
+});
+onChildAdded(ref(db,"drawing/submissions"),   snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildChanged(ref(db,"drawing/submissions"), snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildRemoved(ref(db,"drawing/submissions"), snap => { delete state.drawSubmissions[snap.key]; if(state.participants[snap.key]) patchCard(snap.key); });
+onChildAdded(ref(db,"drawing/reveal"),   snap => { state.drawReveals[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildChanged(ref(db,"drawing/reveal"), snap => { state.drawReveals[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildRemoved(ref(db,"drawing/reveal"), snap => { delete state.drawReveals[snap.key]; if(state.participants[snap.key]) patchCard(snap.key); });
 
 updateSendState();
 updatePollSend();
