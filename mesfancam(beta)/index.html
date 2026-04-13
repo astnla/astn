@@ -272,11 +272,8 @@ async function enableCamera() {
     preview.srcObject = stream;
     preview.style.display = "block";
     preview.style.transform = currentCamera === "front" ? "scaleX(-1)" : "scaleX(1)";
-    // Wait for first frame before hiding overlay — prevents blank gap + play button flash
-    preview.onloadeddata = () => {
-      camOverlay.style.display = "none";
-      flipBtn.classList.add("show");
-    };
+    camOverlay.style.display = "none";
+    flipBtn.classList.add("show");
     update(ref(db, `participants/${userKey}`), { cameraActive: true });
     streamingEnabled = true;
     startFrameLoop();
@@ -718,16 +715,16 @@ onValue(skribblWinnerRef, snap => {
     drawOverlay.classList.remove("show");
     stopSkribblStream();
     // Show who won
-    skribblWinner.textContent = `✅ ${w.name} got it!`;
+    skribblWinner.textContent = `${w.name} got it!`;
     skribblWinner.classList.add("show");
   } else if (w.guesserKey === userKey) {
     // I won!
-    skribblWinner.textContent = "🎉 YOU GOT IT!";
+    skribblWinner.textContent = "YOU GOT IT!";
     skribblWinner.classList.add("show");
     skribblBox.classList.remove("show");
   } else {
     // Someone else won
-    skribblWinner.textContent = `✅ ${w.name} got it!`;
+    skribblWinner.textContent = `${w.name} got it!`;
     skribblWinner.classList.add("show");
     skribblBox.classList.remove("show");
   }
