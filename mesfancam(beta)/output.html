@@ -915,15 +915,23 @@ onValue(skribblGuessRef, snap => {
   });
 });
 
-// Winner
+// Winner — show overlay, then auto-dismiss after 3s and slide drawing away
 onValue(skribblWinnerRef, snap => {
   const w = snap.val();
   if (!w || !skribblOn) return;
   spawnFloatingGuess(`${w.name}: ${w.text}`, true);
   skribblWinName.textContent = `${w.name} guessed it!`;
   skribblWinnerOverlay.classList.add("show");
-  // Clear guess floats after winner
+  // Clear floating guesses
   setTimeout(() => skribblGuessLayer.innerHTML = "", 500);
+  // After 3s: fade winner overlay and slide drawing panel away
+  setTimeout(() => {
+    skribblWinnerOverlay.classList.remove("show");
+    // Slide drawing panel away so we see the winner on the fan cam
+    skribblLiveImg.style.display = "none";
+    skribblLiveImg.src = "";
+    hideDrawPanel();
+  }, 3000);
 });
 
 /* ── GATES ── */

@@ -15,7 +15,7 @@
     .wordmark img{width:48px;height:48px;object-fit:contain;border-radius:8px;margin-bottom:6px;}
     .wordmark-text{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;letter-spacing:2px;color:var(--navy);}
     .viewfinder{position:relative;width:min(82vw,320px);aspect-ratio:3/4;background:var(--dim);border-radius:12px;overflow:hidden;animation:fadeUp 0.4s 0.1s ease both;}
-    #preview{width:100%;height:100%;object-fit:cover;display:none;}
+    #preview{width:100%;height:100%;object-fit:cover;display:none;pointer-events:none;}
     .viewfinder::before,.viewfinder::after{content:"";position:absolute;width:20px;height:20px;border-color:rgba(255,255,255,0.4);border-style:solid;z-index:3;pointer-events:none;}
     .viewfinder::before{top:10px;left:10px;border-width:2px 0 0 2px;border-radius:3px 0 0 0;}
     .viewfinder::after{bottom:10px;right:10px;border-width:0 2px 2px 0;border-radius:0 0 3px 0;}
@@ -122,7 +122,7 @@
   </div>
 
   <div class="viewfinder" id="viewfinder">
-    <video id="preview" autoplay playsinline muted></video>
+    <video id="preview" autoplay playsinline muted disablepictureinpicture style="pointer-events:none;"></video>
     <div id="liveBadge"><span class="live-dot"></span>LIVE</div>
     <button id="flipBtn" aria-label="Flip camera">
       <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -655,11 +655,12 @@ onValue(skribblModeRef, snap => {
     skribblWinner.classList.remove("show");
     skribblWinner.textContent = "";
     skribblInput.value = "";
-    skribblWon = false;
+    skribblWon = false;       // reset so next round works fresh
     skribblAmDrawer = false;
     stopSkribblStream();
-    // Also hide draw overlay if it was open for skribbl
     drawOverlay.classList.remove("show");
+    // Restore drawSubmit button in case it was hidden for skribbl
+    drawSubmit.style.display = "";
   }
 });
 
@@ -701,18 +702,32 @@ onValue(skribblPromptRef, snap => {
   }
 });
 
-// Winner — show celebration to guesser who won, or "someone got it!" to others
+// Winner — show celebration, stop guessing, stop drawing if drawer
 onValue(skribblWinnerRef, snap => {
   const w = snap.val();
   if (!w || !skribblActive) return;
-  if (w.userKey === userKey) {
-    skribblWinner.textContent = "🎉 YOU GOT IT!";
-  } else {
-    skribblWinner.textContent = `✅ ${w.name} got it!`;
-  }
-  skribblWinner.classList.add("show");
-  skribblBox.classList.remove("show");
+
+  // Round is over for everyone — stop all activity
   skribblWon = true;
+
+  if (skribblAmDrawer) {
+    // Drawer: hide the canvas — round is done
+    drawOverlay.classList.remove("show");
+    stopSkribblStream();
+    // Show who won
+    skribblWinner.textContent = `✅ ${w.name} got it!`;
+    skribblWinner.classList.add("show");
+  } else if (w.guesserKey === userKey) {
+    // I won!
+    skribblWinner.textContent = "🎉 YOU GOT IT!";
+    skribblWinner.classList.add("show");
+    skribblBox.classList.remove("show");
+  } else {
+    // Someone else won
+    skribblWinner.textContent = `✅ ${w.name} got it!`;
+    skribblWinner.classList.add("show");
+    skribblBox.classList.remove("show");
+  }
 });
 
 // Guess submission — each guess gets a unique key so they don't overwrite
