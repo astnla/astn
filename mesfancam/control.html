@@ -311,16 +311,16 @@
 
     <!-- LEFT: TOOLS -->
     <div class="card panel">
-      <div class="panelTitle" style="font-size:16px;font-weight:900;margin-bottom:12px;">activities</div>
+      <div class="panelTitle" style="font-size:16px;font-weight:900;margin-bottom:12px;">Activities</div>
 
       <div class="seg-row" style="grid-template-columns:repeat(4,1fr);">
-        <button id="showNoneBtn" class="seg idle-active active">none</button>
-        <button id="showTriviaBtn" class="seg">trivia</button>
-        <button id="showPollsBtn" class="seg">polls</button>
-        <button id="showDrawBtn" class="seg">draw</button>
+        <button id="showNoneBtn" class="seg idle-active active">OFF</button>
+        <button id="showTriviaBtn" class="seg">TRIVIA</button>
+        <button id="showPollsBtn" class="seg">POLLS</button>
+        <button id="showDrawBtn" class="seg">DRAW</button>
       </div>
 
-      <p id="toolIntro" class="tool-intro">Nothing active. Pick trivia or polls when you're ready.</p>
+      <p id="toolIntro" class="tool-intro">Nothing active yet, pick an activity!</p>
 
       <!-- hidden toggles for Firebase -->
       <input style="display:none" type="checkbox" id="triviaToggle">
@@ -336,12 +336,12 @@
           <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;">correct answer</div>
           <div class="send-row">
             <input id="correctInput" class="input" placeholder="Type the answer…">
-            <button id="sendQuestionBtn" class="btn-accent disabled">SEND</button>
+            <button id="sendQuestionBtn" class="btn-accent disabled" style="font-size:13px;">SEND</button>
           </div>
 
           <div class="reveal-row" style="margin-top:4px;">
-            <button id="revealCorrectBtn" class="disabled">reveal answer</button>
-            <button id="resetTriviaBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">reset</button>
+            <button id="revealCorrectBtn" class="disabled" style="font-size:12px;">SHOW ANSWER</button>
+            <button id="resetTriviaBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">RESET</button>
           </div>
 
         </div>
@@ -356,11 +356,11 @@
 
           <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;">options</div>
           <div id="pollOptions" class="option-list"></div>
-          <button id="addOptionBtn" class="add-option-bar">+ add option</button>
+          <button id="addOptionBtn" class="add-option-bar" style="font-size:13px;">+ ADD OPTION</button>
 
           <div class="send-row" style="margin-top:4px;">
-            <button id="sendPollBtn" class="btn-accent disabled" style="flex:1;">SEND</button>
-            <button id="resetPollBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">reset</button>
+            <button id="sendPollBtn" class="btn-accent disabled" style="flex:1;font-size:13px;">SEND</button>
+            <button id="resetPollBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">RESET</button>
           </div>
 
         </div>
@@ -372,8 +372,8 @@
           <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">drawing prompt</div>
           <textarea id="drawPromptInput" placeholder="e.g. Manatee wearing sunglasses…" style="min-height:60px;"></textarea>
           <div class="send-row" style="margin-top:4px;">
-            <button id="sendDrawBtn" class="btn-accent disabled" style="flex:1;">SEND</button>
-            <button id="timesUpBtn" class="btn-ghost disabled" style="font-size:12px;" title="Auto-submit drawings for anyone who hasn't sent yet">⏱ TIME'S UP</button>
+            <button id="sendDrawBtn" class="btn-accent disabled" style="flex:1;font-size:14px;">SEND</button>
+            <button id="timesUpBtn" class="btn-ghost disabled" style="font-size:13px;" title="Auto-submit drawings for anyone who hasn't sent yet">⏱ TIME'S UP</button>
             <button id="resetDrawBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">RESET</button>
           </div>
         </div>
