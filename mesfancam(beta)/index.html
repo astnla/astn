@@ -272,8 +272,11 @@ async function enableCamera() {
     preview.srcObject = stream;
     preview.style.display = "block";
     preview.style.transform = currentCamera === "front" ? "scaleX(-1)" : "scaleX(1)";
-    camOverlay.style.display = "none";
-    flipBtn.classList.add("show");
+    // Wait for first frame before hiding overlay — prevents blank gap + play button flash
+    preview.onloadeddata = () => {
+      camOverlay.style.display = "none";
+      flipBtn.classList.add("show");
+    };
     update(ref(db, `participants/${userKey}`), { cameraActive: true });
     streamingEnabled = true;
     startFrameLoop();
