@@ -815,12 +815,12 @@ els.endSessionBtn.onclick = async () => {
 /* ── SENT FLASH ── */
 function flashSent(btn) {
   btn.classList.add("btn-sent");
-  btn.textContent = "SENT ✓";
+  btn.textContent = "SENT";
   setTimeout(() => {
     btn.classList.remove("btn-sent");
     if (btn === els.sendQuestionBtn) btn.textContent = "SEND";
-    else if (btn === els.sendPollBtn) btn.textContent = "SEND POLL";
-    else if (btn === els.sendDrawBtn) btn.textContent = "SEND PROMPT";
+    else if (btn === els.sendPollBtn) btn.textContent = "SEND";
+    else if (btn === els.sendDrawBtn) btn.textContent = "SEND";
   }, 1800);
 }
 
@@ -936,7 +936,7 @@ els.timesUpBtn.onclick = async () => {
   });
   await Promise.all(ops);
   els.timesUpBtn.classList.add("disabled");
-  els.timesUpBtn.textContent = "⏱ SUBMITTED";
+  els.timesUpBtn.textContent = "SUBMITTED";
 };
 els.resetDrawBtn.onclick = async () => {
   await update(ref(db,"drawing"), { prompt: { text:"", show:false }, submissions: null, reveal: null, timesUp: null });
