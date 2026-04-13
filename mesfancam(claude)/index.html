@@ -274,7 +274,7 @@ function startFrameLoop() {
     if (!preview || preview.readyState < 2) return;
     const now = performance.now();
     if (now - lastSendTime < MIN_INTERVAL_MS) return;
-    const targetW = Math.min(preview.videoWidth, 480);
+    const targetW = Math.min(preview.videoWidth, 560);
     frameCanvas.width = targetW;
     frameCanvas.height = Math.round(preview.videoHeight * (targetW / preview.videoWidth));
     frameCtx.save();
@@ -286,7 +286,7 @@ function startFrameLoop() {
     }
     frameCtx.restore();
     if (!hasSignificantChange(frameCanvas)) return;
-    const jpeg = frameCanvas.toDataURL("image/jpeg", 0.30);
+    const jpeg = frameCanvas.toDataURL("image/jpeg", 0.50);
     // Guard: toDataURL returns "data:," if canvas is empty/invalid
     if (!jpeg || !jpeg.startsWith("data:image")) { return; }
     lastSendTime = now;
@@ -299,10 +299,27 @@ function startFrameLoop() {
 }
 
 /* ── ACTIVE USER ── */
+let heartbeatInterval = null;
+
 onValue(activeUserRef, snap => {
   isLive = snap.val() === userKey;
   liveBadge.classList.toggle("show", isLive);
-  if (!isLive) lastFrameData = null;
+  if (!isLive) {
+    lastFrameData = null;
+    // Stop heartbeat when no longer live
+    if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+    return;
+  }
+  // Start heartbeat — fires every 3s regardless of pixel diff skipping
+  // This lets output.html distinguish "still scene" from "lost connection"
+  if (!heartbeatInterval) {
+    const hbRef = ref(db, "live/heartbeat");
+    set(hbRef, Date.now()); // immediate first beat
+    heartbeatInterval = setInterval(() => {
+      if (isLive) set(hbRef, Date.now()).catch(() => {});
+      else { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+    }, 3000);
+  }
 });
 
 /* ── CAMERA TAP / FLIP ── */

@@ -184,21 +184,32 @@ html, body {
     #liveNameSlot.show { opacity: 1; }
 
     .name-dot {
+      display: inline-block;
       width: clamp(6px, 0.8vh, 9px);
       height: clamp(6px, 0.8vh, 9px);
       border-radius: 50%;
       background: var(--red);
       flex-shrink: 0;
+      margin-right: clamp(5px, 0.6vh, 8px);
+      vertical-align: middle;
       animation: livePulse 1s ease-in-out infinite;
     }
 
-    /* Clip window — one name visible at a time */
+    /* Clip window — one name visible at a time.
+       Uses overflow:hidden for the slot machine clip.
+       Labels stack vertically via translateY so the window
+       only needs to be tall enough for one line. Width is
+       driven by the label content naturally. */
     .name-window {
       height: clamp(18px, 2.4vh, 30px);
       overflow: hidden;
       position: relative;
-      /* No min-width cap — name grows as wide as needed, header clips it */
-      max-width: clamp(120px, 20vw, 320px);
+      max-width: clamp(140px, 22vw, 340px);
+      /* Flex column so labels stack — only visible one shows through clip */
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: flex-end;
     }
 
     .name-label {
@@ -209,8 +220,7 @@ html, body {
       color: rgba(255,255,255,0.9);
       white-space: nowrap;
       line-height: 1;
-      position: absolute;
-      bottom: 0; right: 0; left: 0;
+      flex-shrink: 0;
       text-align: right;
     }
 
@@ -262,19 +272,6 @@ html, body {
     #liveImage.visible {
       opacity: 1;
     }
-
-    /* Corner brackets */
-    #feedWrap::before, #feedWrap::after {
-      content: "";
-      position: absolute;
-      width: clamp(14px, 2vh, 22px);
-      height: clamp(14px, 2vh, 22px);
-      border-color: rgba(255,255,255,0.2);
-      border-style: solid;
-      z-index: 4; pointer-events: none;
-    }
-    #feedWrap::before { top: 12px; left: 12px; border-width: 1.5px 0 0 1.5px; border-radius: 3px 0 0 0; }
-    #feedWrap::after  { bottom: 12px; right: 12px; border-width: 0 1.5px 1.5px 0; border-radius: 0 0 3px 0; }
 
     /* LIVE pip */
     #livePip {
@@ -482,7 +479,6 @@ html, body {
       <img src="assets/mestv.png" alt="MES TV">
       <div class="header-title">MANATEE CAM</div>
       <div id="liveNameSlot">
-        <span class="name-dot"></span>
         <div class="name-window" id="nameWindow"></div>
       </div>
     </div>
@@ -562,6 +558,7 @@ const drawPanelImg     = document.getElementById("drawPanelImg");
 
 const activeUserRef  = ref(db, "live/activeUser");
 const frameRef       = ref(db, "live/frame");
+const heartbeatRef   = ref(db, "live/heartbeat");
 const triviaModeRef  = ref(db, "trivia/mode");
 const triviaQRef     = ref(db, "trivia/question");
 const triviaCRef     = ref(db, "trivia/correct");
@@ -574,9 +571,10 @@ const drawModeRef    = ref(db, "drawing/mode");
 const drawRevealRef  = ref(db, "drawing/reveal");
 const drawSubRef     = ref(db, "drawing/submissions");
 
-let activeUser  = null;
-let lastFrame   = 0;
-let streamOn    = false;
+let activeUser     = null;
+let lastFrame      = 0;
+let lastHeartbeat  = 0;
+let streamOn       = false;
 let triviaOn    = false;
 let pollsOn     = false;
 let pollOptions = {};
@@ -627,6 +625,10 @@ function hideBad()    { badOverlay.classList.remove("visible"); }
 function ensureStream() {
   if (streamOn) return;
   streamOn = true;
+  // Heartbeat listener — updated independently of pixel diff skipping
+  onValue(heartbeatRef, snap => {
+    if (snap.val()) lastHeartbeat = performance.now();
+  });
   onValue(frameRef, snap => {
     // Only show frames when someone is actually live
     if (!activeUser) return;
@@ -805,7 +807,7 @@ function flipName(newName) {
   }
   const incoming = document.createElement("div");
   incoming.className = "name-label enter-from-below";
-  incoming.textContent = newName;
+  incoming.innerHTML = `<span class="name-dot"></span>${newName}`;
   nameWindow.appendChild(incoming);
   liveNameSlot.classList.add("show");
   incoming.offsetHeight; // force reflow so enter-from-below is applied
@@ -830,8 +832,9 @@ onValue(activeUserRef, snap => {
     return;
   }
 
-  // Reset frame timer so bad-connection check doesn't immediately fire
-  lastFrame = performance.now();
+  // Reset timers so bad-connection check doesn't immediately fire on switch
+  lastFrame     = performance.now();
+  lastHeartbeat = performance.now();
 
   // Load name for slot machine flip
   onValue(ref(db, `participants/${activeUser}/name`), snap => {
@@ -845,9 +848,12 @@ onValue(activeUserRef, snap => {
 });
 
 /* ── BAD CONNECTION ── */
+// Use heartbeat (not frame time) so pixel diff skipping doesn't false-trigger.
+// Heartbeat fires every 3s from the phone; 8s timeout gives 2+ missed beats before alarm.
+const HB_TIMEOUT_MS = 8000;
 setInterval(() => {
   if (!activeUser || !streamOn) return;
-  const stale = performance.now() - lastFrame > TIMEOUT_MS;
+  const stale = lastHeartbeat > 0 && performance.now() - lastHeartbeat > HB_TIMEOUT_MS;
   if (stale) { hideFeed(); showBad(); }
   else        { showFeed(); hideBad(); }
 }, 500);
