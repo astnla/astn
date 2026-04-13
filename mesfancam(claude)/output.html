@@ -197,7 +197,8 @@ html, body {
       height: clamp(18px, 2.4vh, 30px);
       overflow: hidden;
       position: relative;
-      min-width: clamp(60px, 8vh, 120px);
+      /* No min-width cap — name grows as wide as needed, header clips it */
+      max-width: clamp(120px, 20vw, 320px);
     }
 
     .name-label {
@@ -718,12 +719,22 @@ function renderBars(totals) {
 function startPolls() {
   if (pollsOn) return;
   pollsOn = true;
+  let latestTotals = {};
+
+  // Persistent options — always current before question shows
   onValue(pollsOptsRef, snap => {
     pollOptions = snap.val() || {};
-    if (pollCard.classList.contains("show")) {
-      onValue(pollsTotalsRef, s => renderBars(s.val() || {}), { onlyOnce: true });
-    }
+    // If poll is already showing (e.g. output page opened mid-poll), re-render immediately
+    if (pollCard.classList.contains("show")) renderBars(latestTotals);
   });
+
+  // Totals — cache latest value and render if poll is visible
+  onValue(pollsTotalsRef, snap => {
+    latestTotals = snap.val() || {};
+    if (pollCard.classList.contains("show")) renderBars(latestTotals);
+  });
+
+  // Question controls visibility — render bars immediately on show
   onValue(pollsQRef, snap => {
     const d = snap.val() || {};
     if (d.show && d.text) {
@@ -731,14 +742,13 @@ function startPolls() {
       questionText.textContent = d.text;
       showCard(questionCard, "question");
       showCard(pollCard, "poll");
+      // Render bars right away using whatever totals we already have
+      renderBars(latestTotals);
     } else {
       hideCard(questionCard, "question");
       hideCard(pollCard, "poll");
       pollBars.innerHTML = "";
     }
-  });
-  onValue(pollsTotalsRef, snap => {
-    if (pollCard.classList.contains("show")) renderBars(snap.val() || {});
   });
 }
 function stopPolls() {

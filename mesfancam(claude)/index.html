@@ -556,6 +556,15 @@ onValue(drawPromptRef, snap => {
   }
 });
 
+/* ── TIMES UP — auto-submit if not already submitted ── */
+onValue(ref(db, "drawing/timesUp"), snap => {
+  if (!snap.val()) return;          // null/cleared — ignore
+  if (!drawActive) return;          // drawing mode not on
+  if (drawHasSubmitted) return;     // already submitted, nothing to do
+  // Treat this exactly like the user hitting SUBMIT themselves
+  drawSubmit.click();
+});
+
 /* ── VISIBILITY ── */
 document.addEventListener("visibilitychange", () => {
   streamingEnabled = !document.hidden;
