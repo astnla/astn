@@ -523,6 +523,10 @@ drawSubmit.addEventListener("click", async () => {
     .catch(e => console.warn("Drawing submit failed:", e));
   drawOverlay.classList.remove("show");
   drawSubmitted.classList.add("show");
+  // After 3s, hide submitted state so camera returns
+  setTimeout(() => {
+    drawSubmitted.classList.remove("show");
+  }, 3000);
 });
 
 // Gate: listen to drawing mode

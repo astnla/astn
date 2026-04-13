@@ -51,12 +51,20 @@ html, body {
       display: flex;
       align-items: center;
       justify-content: center;
+      /* Stage is a flex row: feed column on left, drawing panel slides in from right */
     }
 
-    /* ── COLUMN ──
-       Width is 56vh so on a 4K display (2160px tall) this gives ~1210px.
-       Padding provides breathing room from screen edges.
-       flex column so everything stacks: header → name → feed → panel */
+    /* Stage wraps column + draw panel side by side */
+    .stage {
+      display: flex;
+      align-items: center;
+      gap: clamp(16px, 2vw, 36px);
+      max-height: 100vh;
+      /* Transition so feed column shifts left smoothly when draw panel opens */
+      transition: gap 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* ── COLUMN — feed side ── */
     .column {
       display: flex;
       flex-direction: column;
@@ -64,6 +72,70 @@ html, body {
       width: min(56vh, calc(100vw - clamp(48px, 8vw, 160px)));
       max-height: 100vh;
       padding: clamp(14px, 2.5vh, 40px) 0;
+      flex-shrink: 0;
+      transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    /* When drawing panel is open, shrink feed column slightly */
+    .stage.draw-open .column {
+      width: min(40vh, calc(55vw - clamp(24px, 4vw, 80px)));
+    }
+
+    /* ── DRAWING SIDE PANEL ── */
+    #drawPanel {
+      flex-shrink: 0;
+      /* Match feed height — same aspect drives the width */
+      width: min(40vh, calc(40vw - clamp(24px, 4vw, 80px)));
+      max-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(8px, 1vh, 14px);
+      padding: clamp(14px, 2.5vh, 40px) 0;
+      /* Slide in from right */
+      transform: translateX(calc(100% + clamp(16px, 2vw, 36px)));
+      opacity: 0;
+      pointer-events: none;
+      transition:
+        transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity   0.4s ease;
+      /* Keep it in flow but visually hidden — avoids layout jump */
+      width: 0;
+      overflow: hidden;
+    }
+    #drawPanel.show {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+      width: min(40vh, calc(40vw - clamp(24px, 4vw, 80px)));
+      overflow: visible;
+    }
+
+    /* Drawing panel card */
+    #drawPanelCard {
+      background: rgba(255,255,255,0.95);
+      border-radius: clamp(10px, 1.2vh, 16px);
+      overflow: hidden;
+      flex-shrink: 1;
+      min-height: 0;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+    }
+    #drawPanelEyebrow {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(11px, 1.4vh, 16px);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--red);
+      padding: clamp(8px, 1vh, 14px) clamp(10px, 1.2vh, 16px) clamp(4px, 0.5vh, 8px);
+      flex-shrink: 0;
+    }
+    #drawPanelImg {
+      width: 100%;
+      flex: 1;
+      object-fit: contain;
+      display: block;
+      background: white;
     }
 
     /* ── HEADER ── */
@@ -401,6 +473,7 @@ html, body {
 </head>
 <body>
 <div class="scene">
+  <div class="stage" id="stage">
   <div class="column">
 
     <div class="header">
@@ -446,13 +519,19 @@ html, body {
         <div class="card-eyebrow">CLASS ANSWER</div>
         <div class="card-body" id="classText"></div>
       </div>
-      <div class="info-card" id="drawCard">
-        <div class="card-eyebrow" id="drawCardEyebrow">DRAWING</div>
-        <img id="drawCardImg" alt="student drawing" style="width:100%;border-radius:8px;display:block;margin-top:6px;">
-      </div>
     </div>
 
   </div>
+
+  <!-- Drawing side panel — slides in from right -->
+  <div id="drawPanel">
+    <div id="drawPanelCard">
+      <div id="drawPanelEyebrow">DRAWING</div>
+      <img id="drawPanelImg" alt="student drawing">
+    </div>
+  </div>
+
+  </div><!-- /stage -->
 </div>
 
 <script type="module">
@@ -475,14 +554,12 @@ const answerCard     = document.getElementById("answerCard");
 const answerText     = document.getElementById("answerText");
 const classCard        = document.getElementById("classCard");
 const classText        = document.getElementById("classText");
-const drawCard         = document.getElementById("drawCard");
-const drawCardEyebrow  = document.getElementById("drawCardEyebrow");
-const drawCardImg      = document.getElementById("drawCardImg");
+const stage            = document.getElementById("stage");
+const drawPanel        = document.getElementById("drawPanel");
+const drawPanelEyebrow = document.getElementById("drawPanelEyebrow");
+const drawPanelImg     = document.getElementById("drawPanelImg");
 
 const activeUserRef  = ref(db, "live/activeUser");
-const drawRevealRef  = ref(db, "drawing/reveal");
-const drawSubRef     = ref(db, "drawing/submissions");
-const drawModeRef    = ref(db, "drawing/mode");
 const frameRef       = ref(db, "live/frame");
 const triviaModeRef  = ref(db, "trivia/mode");
 const triviaQRef     = ref(db, "trivia/question");
@@ -492,6 +569,9 @@ const pollsModeRef   = ref(db, "polls/mode");
 const pollsQRef      = ref(db, "polls/question");
 const pollsOptsRef   = ref(db, "polls/options");
 const pollsTotalsRef = ref(db, "polls/totals");
+const drawModeRef    = ref(db, "drawing/mode");
+const drawRevealRef  = ref(db, "drawing/reveal");
+const drawSubRef     = ref(db, "drawing/submissions");
 
 let activeUser  = null;
 let lastFrame   = 0;
@@ -671,20 +751,30 @@ function stopPolls() {
   pollOptions = {};
 }
 
-/* ── DRAWING ── */
+/* ── DRAWING SIDE PANEL ── */
 let drawSubs = {};
+
+function showDrawPanel(imgSrc, label) {
+  drawPanelEyebrow.textContent = label || "DRAWING";
+  drawPanelImg.src = imgSrc;
+  stage.classList.add("draw-open");
+  drawPanel.classList.add("show");
+}
+function hideDrawPanel() {
+  stage.classList.remove("draw-open");
+  drawPanel.classList.remove("show");
+  setTimeout(() => { if (!drawPanel.classList.contains("show")) drawPanelImg.src = ""; }, 500);
+}
+
 onValue(drawModeRef, snap => {
-  if (!snap.val()) { hideCard(drawCard, "draw"); drawSubs = {}; }
+  if (!snap.val()) { hideDrawPanel(); drawSubs = {}; }
 });
 onValue(drawSubRef, snap => { drawSubs = snap.val() || {}; });
 onValue(drawRevealRef, snap => {
   const r = snap.val() || {};
   const key = Object.keys(r).find(k => r[k]?.show === true);
-  if (!key || !drawSubs[key]?.data) { hideCard(drawCard, "draw"); return; }
-  // Look up name from participants via activeUser or just show generic label
-  drawCardEyebrow.textContent = "DRAWING";
-  drawCardImg.src = drawSubs[key].data;
-  showCard(drawCard, "draw");
+  if (!key || !drawSubs[key]?.data) { hideDrawPanel(); return; }
+  showDrawPanel(drawSubs[key].data, "DRAWING");
 });
 
 /* ── GATES ── */
