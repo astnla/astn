@@ -480,6 +480,7 @@ function setTool(t) {
   els.pollsShell.classList.toggle("open",   t === "polls");
   els.drawShell.classList.toggle("open",    t === "draw");
   els.toolIntro.style.display = t === "none" ? "block" : "none";
+  els.showDrawBtn.classList.toggle("active", t === "draw");
 }
 
 async function activateNone() {
@@ -523,6 +524,7 @@ function updateStats() {
   let mode = "idle";
   if (state.pollsMode)  mode = "polls";
   else if (state.triviaMode) mode = "trivia";
+  else if (state.drawMode) mode = "draw";
   else if (state.autoLiveEnabled) mode = "auto";
 
   els.statMembers.textContent = users.length;
@@ -1049,6 +1051,7 @@ onValue(ref(db,"drawing/mode"), snap => {
   if (state.drawMode) setTool("draw");
   else if (!state.triviaMode && !state.pollsMode) setTool("none");
   Object.keys(state.participants).forEach(patchCard);
+  updateStats();
 });
 onChildAdded(ref(db,"drawing/submissions"),   snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
 onChildChanged(ref(db,"drawing/submissions"), snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
