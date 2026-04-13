@@ -715,15 +715,17 @@ onValue(skribblWinnerRef, snap => {
   skribblWon = true;
 });
 
-// Guess submission — unlimited until someone wins
+// Guess submission — each guess gets a unique key so they don't overwrite
 skribblGuess.addEventListener("click", async () => {
   const text = skribblInput.value.trim();
   if (!text || skribblWon) return;
   skribblInput.value = "";
-  // Write guess — control page checks against the secret word
-  await set(ref(db, `skribbl/guesses/${userKey}`), {
+  // Use timestamp + userKey as unique path so multiple guesses don't overwrite
+  const guessKey = `${userKey}_${Date.now()}`;
+  await set(ref(db, `skribbl/guesses/${guessKey}`), {
     text,
     name: name || userKey,
+    guesserKey: userKey,
     timestamp: Date.now()
   }).catch(() => {});
 });

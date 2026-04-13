@@ -313,10 +313,12 @@
     <div class="card panel">
       <div class="panelTitle" style="font-size:16px;font-weight:900;margin-bottom:12px;">Activities</div>
 
-      <div class="seg-row" style="grid-template-columns:repeat(5,1fr);">
+      <div class="seg-row" style="grid-template-columns:repeat(3,1fr);">
         <button id="showNoneBtn" class="seg idle-active active">OFF</button>
         <button id="showTriviaBtn" class="seg">TRIVIA</button>
         <button id="showPollsBtn" class="seg">POLLS</button>
+      </div>
+      <div class="seg-row" style="grid-template-columns:repeat(2,1fr);margin-top:0;">
         <button id="showDrawBtn" class="seg">DRAW</button>
         <button id="showSkribblBtn" class="seg">SKRIBBL</button>
       </div>
@@ -392,11 +394,11 @@
             <input id="skribblWordInput" class="input" placeholder="e.g. Manatee…">
             <button id="startSkribblBtn" class="btn-accent disabled" style="font-size:13px;">START</button>
           </div>
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">live guesses</div>
-          <div id="skribblGuessList" style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px;background:rgba(0,0,0,0.15);border-radius:12px;border:1px solid var(--line);">
-            <div style="color:var(--muted);font-size:12px;text-align:center;">Waiting for guesses…</div>
+          <div id="skribblStatusArea" style="display:none;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">status</div>
+            <div id="skribblGuessCount" style="padding:8px;background:rgba(0,0,0,0.15);border-radius:12px;border:1px solid var(--line);font-size:13px;color:var(--muted);text-align:center;">Waiting for guesses…</div>
+            <div id="skribblWinnerBanner" style="display:none;padding:12px;border-radius:12px;background:rgba(84,209,138,0.15);border:1px solid var(--good);color:var(--good);font-weight:900;font-size:15px;text-align:center;"></div>
           </div>
-          <div id="skribblWinnerBanner" style="display:none;padding:10px;border-radius:12px;background:rgba(84,209,138,0.15);border:1px solid var(--good);color:var(--good);font-weight:900;font-size:14px;text-align:center;"></div>
           <button id="endSkribblBtn" class="btn-danger disabled" style="font-size:13px;">END ROUND</button>
         </div>
       </div>
@@ -457,8 +459,10 @@ const els = {
   skribblWordInput:   document.getElementById("skribblWordInput"),
   startSkribblBtn:    document.getElementById("startSkribblBtn"),
   skribblGuessList:   document.getElementById("skribblGuessList"),
-  skribblWinnerBanner:document.getElementById("skribblWinnerBanner"),
-  endSkribblBtn:      document.getElementById("endSkribblBtn"),
+  skribblWinnerBanner: document.getElementById("skribblWinnerBanner"),
+  skribblStatusArea:   document.getElementById("skribblStatusArea"),
+  skribblGuessCount:   document.getElementById("skribblGuessCount"),
+  endSkribblBtn:       document.getElementById("endSkribblBtn"),
   drawPromptInput:document.getElementById("drawPromptInput"),
   sendDrawBtn:    document.getElementById("sendDrawBtn"),
   timesUpBtn:     document.getElementById("timesUpBtn"),
@@ -846,6 +850,7 @@ els.endSessionBtn.onclick = async () => {
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"meta/resetFlag"), Date.now()),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null }),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
   state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
@@ -1130,7 +1135,9 @@ els.startSkribblBtn.onclick = async () => {
   ]);
   els.endSkribblBtn.classList.remove("disabled");
   els.skribblWinnerBanner.style.display = "none";
-  els.skribblGuessList.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;">Waiting for guesses…</div>';
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "";
+  if (els.skribblGuessCount) els.skribblGuessCount.textContent = "Waiting for guesses…";
+  skribblGuessTotal = 0;
 };
 
 els.endSkribblBtn.onclick = async () => {
@@ -1148,33 +1155,37 @@ els.endSkribblBtn.onclick = async () => {
   els.skribblWordInput.value = "";
   els.skribblDrawerSelect.value = "";
   els.skribblWinnerBanner.style.display = "none";
-  els.skribblGuessList.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;">Waiting for guesses…</div>';
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
+  if (els.skribblGuessCount) els.skribblGuessCount.textContent = "Waiting for guesses…";
+  skribblGuessTotal = 0;
   updateSkribblStart();
 };
 
 // Listen to guesses — check each one against the secret word
 onValue(ref(db,"skribbl/word"), snap => { state.skribblWord = snap.val() || ""; });
 
+let skribblGuessTotal = 0;
 onChildAdded(ref(db,"skribbl/guesses"), snap => {
   const g = snap.val();
   if (!g) return;
   const correct = state.skribblWord && g.text?.toLowerCase().trim() === state.skribblWord;
+  skribblGuessTotal++;
 
-  // Add to guess list
-  const item = document.createElement("div");
-  item.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;background:${correct ? "rgba(84,209,138,0.15)" : "rgba(255,255,255,0.05)"};border:1px solid ${correct ? "var(--good)" : "var(--line)"};font-size:13px;`;
-  item.innerHTML = `<span style="font-weight:700;">${g.name || "?"}</span><span style="color:${correct ? "var(--good)" : "var(--muted)"};">${g.text}</span>`;
-  // Remove placeholder
-  const placeholder = els.skribblGuessList.querySelector("div");
-  if (placeholder?.textContent.includes("Waiting")) placeholder.remove();
-  els.skribblGuessList.appendChild(item);
-  els.skribblGuessList.scrollTop = els.skribblGuessList.scrollHeight;
+  // Update guess count display
+  if (els.skribblGuessCount) {
+    els.skribblGuessCount.textContent = `${skribblGuessTotal} guess${skribblGuessTotal !== 1 ? "es" : ""} submitted`;
+  }
 
-  if (correct && !els.skribblWinnerBanner.style.display.includes("block")) {
-    // First correct guess — set winner
-    set(ref(db,"skribbl/winner"), { userKey: snap.key, name: g.name, text: g.text });
+  if (correct && els.skribblWinnerBanner.style.display !== "block") {
+    // First correct guess — set winner, set them live, show banner
+    const winnerKey = g.guesserKey || snap.key.split("_")[0];
+    Promise.all([
+      set(ref(db,"skribbl/winner"), { userKey: winnerKey, name: g.name, text: g.text }),
+      // Set the winner live on the fan cam!
+      update(ref(db,"live"), { activeUser: winnerKey }),
+    ]);
     els.skribblWinnerBanner.style.display = "block";
-    els.skribblWinnerBanner.textContent = `🎉 ${g.name} got it! The word was "${state.skribblWord}"`;
+    els.skribblWinnerBanner.textContent = `🎉 ${g.name} got it! "${state.skribblWord}"`;
   }
 });
 

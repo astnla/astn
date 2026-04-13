@@ -876,14 +876,15 @@ function spawnFloatingGuess(text, correct) {
 onValue(skribblModeRef, snap => {
   skribblOn = snap.val() === true;
   if (!skribblOn) {
-    // Hide skribbl panel and clear
+    // Clear all skribbl UI
     skribblLiveImg.style.display = "none";
     skribblLiveImg.src = "";
     skribblGuessLayer.innerHTML = "";
     skribblWinnerOverlay.classList.remove("show");
-    // Only collapse panel if draw reveal isn't also showing
-    if (!drawPanel.classList.contains("show")) return;
-    if (!drawPanelImg.src || drawPanelImg.style.display === "none") hideDrawPanel();
+    seenGuesses.clear();
+    // Collapse side panel if draw reveal image isn't showing
+    const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
+    if (!drawRevealVisible) hideDrawPanel();
   }
 });
 
@@ -902,6 +903,7 @@ onValue(skribblLiveRef, snap => {
 });
 
 // Floating guesses
+// seenGuesses is module-scoped so mode listener can clear it on round end
 const seenGuesses = new Set();
 onValue(skribblGuessRef, snap => {
   if (!skribblOn) return;
