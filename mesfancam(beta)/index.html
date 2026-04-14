@@ -15,7 +15,10 @@
     .wordmark img{width:48px;height:48px;object-fit:contain;border-radius:8px;margin-bottom:6px;}
     .wordmark-text{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;letter-spacing:2px;color:var(--navy);}
     .viewfinder{position:relative;width:min(82vw,320px);aspect-ratio:3/4;background:var(--dim);border-radius:12px;overflow:hidden;animation:fadeUp 0.4s 0.1s ease both;}
-    #preview{width:100%;height:100%;object-fit:cover;display:none;pointer-events:none;}
+    #preview{width:100%;height:100%;object-fit:cover;display:block;opacity:0;pointer-events:none;}
+    #preview::-webkit-media-controls,
+    #preview::-webkit-media-controls-enclosure,
+    #preview::-webkit-media-controls-panel{display:none !important;}
     .viewfinder::before,.viewfinder::after{content:"";position:absolute;width:20px;height:20px;border-color:rgba(255,255,255,0.4);border-style:solid;z-index:3;pointer-events:none;}
     .viewfinder::before{top:10px;left:10px;border-width:2px 0 0 2px;border-radius:3px 0 0 0;}
     .viewfinder::after{bottom:10px;right:10px;border-width:0 2px 2px 0;border-radius:0 0 3px 0;}
@@ -122,7 +125,7 @@
   </div>
 
   <div class="viewfinder" id="viewfinder">
-    <video id="preview" autoplay playsinline muted disablepictureinpicture style="pointer-events:none;"></video>
+    <video id="preview" autoplay playsinline muted disablepictureinpicture x-webkit-airplay="deny" style="pointer-events:none;opacity:0;"></video>
     <div id="liveBadge"><span class="live-dot"></span>LIVE</div>
     <button id="flipBtn" aria-label="Flip camera">
       <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -270,10 +273,13 @@ async function enableCamera() {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
     preview.srcObject = stream;
-    preview.style.display = "block";
     preview.style.transform = currentCamera === "front" ? "scaleX(-1)" : "scaleX(1)";
-    camOverlay.style.display = "none";
-    flipBtn.classList.add("show");
+    // Wait for first real frame before revealing — prevents play button flash on iOS
+    preview.onloadeddata = () => {
+      preview.style.opacity = "1";
+      camOverlay.style.display = "none";
+      flipBtn.classList.add("show");
+    };
     update(ref(db, `participants/${userKey}`), { cameraActive: true });
     streamingEnabled = true;
     startFrameLoop();
@@ -668,36 +674,45 @@ onValue(skribblModeRef, snap => {
 onValue(skribblDrawerRef, snap => {
   const drawerKey = snap.val();
   skribblAmDrawer = drawerKey === userKey;
-
-  if (!skribblActive) return;
-
-  if (skribblAmDrawer) {
-    // I'm the drawer — hide guess box, show draw canvas
-    skribblBox.classList.remove("show");
-    skribblWinner.classList.remove("show");
-  } else {
-    // I'm a guesser — show guess box, hide draw overlay
+  // Don't show any UI here — wait for prompt to arrive (means START was actually hit)
+  // This prevents the guess box appearing just from clicking the mode button
+  if (!skribblAmDrawer) {
+    // If drawer changed away from me, hide my draw canvas
     drawOverlay.classList.remove("show");
-    skribblBox.classList.add("show");
+    stopSkribblStream();
   }
 });
 
-// Prompt — only shown to drawer
+// Prompt — gates both drawer canvas AND guesser box
+// Nothing shows until control hits START (which writes prompt with show:true)
 onValue(skribblPromptRef, snap => {
   const d = snap.val() || {};
-  if (!skribblActive || !skribblAmDrawer) return;
-  if (d.show && d.text) {
-    drawHasSubmitted = false;
-    drawSubmit.style.display = "none"; // drawer doesn't submit in skribbl
-    drawRestart.style.display = "";
-    drawPromptText.textContent = d.text;
-    drawOverlay.classList.add("show");
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      initDrawCanvas();
-      startSkribblStream();
-    }));
+  const gameStarted = d.show && d.text;
+
+  if (!skribblActive) return;
+
+  if (gameStarted) {
+    if (skribblAmDrawer) {
+      // I'm the drawer — show canvas
+      drawHasSubmitted = false;
+      drawSubmit.style.display = "none";
+      drawRestart.style.display = "";
+      drawPromptText.textContent = d.text;
+      drawOverlay.classList.add("show");
+      skribblBox.classList.remove("show");
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        initDrawCanvas();
+        startSkribblStream();
+      }));
+    } else {
+      // I'm a guesser — only show guess box once game is actually started
+      drawOverlay.classList.remove("show");
+      if (!skribblWon) skribblBox.classList.add("show");
+    }
   } else {
+    // Prompt cleared (round ended / not started yet) — hide everything
     drawOverlay.classList.remove("show");
+    skribblBox.classList.remove("show");
     stopSkribblStream();
   }
 });
