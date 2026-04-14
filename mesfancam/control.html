@@ -302,7 +302,7 @@
     </div>
     <div class="stat" id="modeStat" style="display:block">
       <div class="stat-label">mode</div>
-      <div class="stat-value" id="statMode">idle</div>
+      <div class="stat-value" id="statMode">—</div>
     </div>
   </div>
 
@@ -575,7 +575,7 @@ function updateStats() {
   const ready = users.filter(u => u?.cameraActive).length;
   const liveName = state.currentLiveUser
     ? (state.participants[state.currentLiveUser]?.name || "—") : "—";
-  let mode = "idle";
+  let mode = "—";
   if (state.pollsMode)  mode = "POLLS";
   else if (state.triviaMode) mode = "TRIVIA";
   else if (state.drawMode) mode = "SKETCHERS";

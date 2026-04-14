@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>JOIN — MANATEE CAM</title>
+  <title>LOGIN</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --red: #DA1A32;
+      --red: #0a0a0a;
       --navy: #00031F;
       --white: #ffffff;
       --dim: rgba(0,0,0,0.18);
@@ -56,7 +56,7 @@
       font-weight: 900;
       font-size: 26px;
       letter-spacing: 2px;
-      color: var(--navy);
+      color: var(--WHITE);
     }
 
     /* ── VIEWFINDER ── */
@@ -131,19 +131,6 @@
       50% { opacity:1; }
     }
 
-    /* corner brackets */
-    .viewfinder::before, .viewfinder::after {
-      content: "";
-      position: absolute;
-      width: 20px; height: 20px;
-      border-color: rgba(255,255,255,0.4);
-      border-style: solid;
-      z-index: 2;
-      pointer-events: none;
-    }
-    .viewfinder::before { top:10px; left:10px; border-width:2px 0 0 2px; border-radius:3px 0 0 0; }
-    .viewfinder::after  { bottom:10px; right:10px; border-width:0 2px 2px 0; border-radius:0 0 3px 0; }
-
     /* ── BOTTOM AREA ── */
     .bottom {
       display: flex;
@@ -211,7 +198,7 @@
     }
     .btn:active { transform: scale(0.97); }
     .btn-ghost { background: rgba(255,255,255,0.15); color: white; }
-    .btn-solid { background: var(--navy); color: white; }
+    .btn-solid { background: #ff9d3b; color: white; }
     .btn-solid.dim { opacity: 0.35; pointer-events: none; }
 
     /* ── WIFI OVERLAY ── */
@@ -236,7 +223,7 @@
       font-weight: 900;
       font-size: 32px;
       letter-spacing: 3px;
-      color: var(--navy);
+      color: var(--white);
       animation: pulse 1.4s ease-in-out infinite;
     }
     .wifi-msg {
@@ -256,15 +243,14 @@
 
 <!-- WiFi notice -->
 <div id="wifiOverlay">
-  <div class="wifi-ssid">CCPS</div>
-  <div class="wifi-msg">Make sure you're connected<br>to the school Wi-Fi first</div>
+  <div class="wifi-ssid">WARNING</div>
+  <div class="wifi-msg">Make sure you're connected to the <br>school Wi-Fi first for a stable connection.</div>
 </div>
 
 <div class="page">
 
   <div class="wordmark">
-    <img src="assets/mestv.png" alt="MES TV">
-    <div class="wordmark-text">MANATEE CAM</div>
+    <div class="wordmark-text">TAKE A SELFIE</div>
   </div>
 
   <div class="viewfinder" id="viewfinder">
@@ -282,7 +268,7 @@
 
   <div class="bottom">
     <button id="snapBtn" class="disabled" aria-label="Take selfie"></button>
-    <input id="nameInput" type="text" placeholder="YOUR NAME" maxlength="30" autocomplete="off" autocorrect="off" spellcheck="false">
+    <input id="nameInput" type="text" placeholder="WHO'S PLAYING?" maxlength="30" autocomplete="off" autocorrect="off" spellcheck="false">
     <div class="action-row" id="actionRow">
       <button class="btn btn-ghost" id="retakeBtn">RETAKE</button>
       <button class="btn btn-solid dim" id="continueBtn">CONTINUE</button>
