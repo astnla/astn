@@ -82,11 +82,11 @@
     #preview::-webkit-media-controls,
     #preview::-webkit-media-controls-enclosure,
     #preview::-webkit-media-controls-panel { display: none !important; }
-    #canvasOutput {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      display: none;
-    }
+#canvasOutput {
+  width: 100%;
+  height: 100%;
+  display: none;
+}
 
     .cam-overlay {
       position: absolute;
@@ -373,17 +373,19 @@ snapBtn.addEventListener("click", () => {
 });
 
 /* ── RETAKE ── */
-retakeBtn.addEventListener("click", () => {
+retakeBtn.addEventListener("click", async () => {
   nameInput.style.display = "none";
   nameInput.value = "";
   actionRow.classList.remove("visible");
   snapBtn.style.display = "";
   snapBtn.classList.add("disabled");
   canvas.style.display = "none";
-  camOverlay.style.display = "flex";
-  camLabel.textContent = "TAP TO ENABLE CAMERA";
+  preview.style.opacity = "0";
   continueBtn.classList.add("dim");
+  retakeBtn.style.pointerEvents = "";
   cameraReady = false;
+
+  await startCamera();
 });
 
 /* ── NAME VALIDATION ── */

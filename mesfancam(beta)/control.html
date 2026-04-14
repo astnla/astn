@@ -1100,7 +1100,7 @@ onChildRemoved(ref(db,"selfies"), snap => { delete state.selfies[snap.key]; if (
 function rebuildDrawerSelect() {
   const sel = els.skribblDrawerSelect;
   const cur = sel.value;
-  sel.innerHTML = '<option value="">— pick a participant —</option>';
+  sel.innerHTML = '<option value="">select someone</option>';
   Object.entries(state.participants).forEach(([uid, p]) => {
     const opt = document.createElement("option");
     opt.value = uid; opt.textContent = p.name || uid;
