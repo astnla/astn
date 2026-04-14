@@ -319,8 +319,8 @@
         <button id="showPollsBtn" class="seg">POLLS</button>
       </div>
       <div class="seg-row" style="grid-template-columns:repeat(2,1fr);margin-top:0;">
-        <button id="showDrawBtn" class="seg">DRAW</button>
-        <button id="showSkribblBtn" class="seg">SKRIBBL</button>
+        <button id="showDrawBtn" class="seg">SKETCHERS</button>
+        <button id="showSkribblBtn" class="seg">WHAT'S MY DOODLE?</button>
       </div>
 
       <p id="toolIntro" class="tool-intro">Nothing active yet, pick an activity!</p>
@@ -387,7 +387,7 @@
         <div class="feature-block">
           <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">drawer</div>
           <select id="skribblDrawerSelect" class="input" style="cursor:pointer;">
-            <option value="">— pick a participant —</option>
+            <option value="">select someone</option>
           </select>
           <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">secret word</div>
           <div class="send-row">
@@ -511,12 +511,13 @@ function setTool(t) {
   els.showNoneBtn.classList.toggle("idle-active", t === "none");
   els.showTriviaBtn.classList.toggle("active", t === "trivia");
   els.showPollsBtn.classList.toggle("active",  t === "polls");
+  els.showDrawBtn.classList.toggle("active",   t === "draw");
+  els.showSkribblBtn.classList.toggle("active", t === "skribbl");
   els.triviaShell.classList.toggle("open",  t === "trivia");
   els.pollsShell.classList.toggle("open",   t === "polls");
   els.drawShell.classList.toggle("open",    t === "draw");
   els.skribblShell.classList.toggle("open", t === "skribbl");
   els.toolIntro.style.display = t === "none" ? "block" : "none";
-  els.showDrawBtn.classList.toggle("active", t === "draw");
 }
 
 async function activateNone() {
@@ -561,6 +562,7 @@ async function activateSkribbl() {
     update(ref(db,"trivia"),  { mode: false }),
     update(ref(db,"polls"),   { mode: false }),
     update(ref(db,"drawing"), { mode: false }),
+    set(ref(db,"skribbl/mode"), true),
   ]);
   setTool("skribbl");
   updateStats();
@@ -574,10 +576,10 @@ function updateStats() {
   const liveName = state.currentLiveUser
     ? (state.participants[state.currentLiveUser]?.name || "—") : "—";
   let mode = "idle";
-  if (state.pollsMode)  mode = "polls";
-  else if (state.triviaMode) mode = "trivia";
-  else if (state.drawMode) mode = "draw";
-  else if (state.autoLiveEnabled) mode = "auto";
+  if (state.pollsMode)  mode = "POLLS";
+  else if (state.triviaMode) mode = "TRIVIA";
+  else if (state.drawMode) mode = "SKETCHERS";
+  else if (state.skribblMode) mode = "WHAT'S MY DOODLE?";
 
   els.statMembers.textContent = users.length;
   els.statReady.textContent   = ready;
@@ -1190,6 +1192,9 @@ onChildAdded(ref(db,"skribbl/guesses"), snap => {
 
 onValue(ref(db,"skribbl/mode"), snap => {
   state.skribblMode = snap.val() === true;
+  if (state.skribblMode) setTool("skribbl");
+  else if (!state.triviaMode && !state.pollsMode && !state.drawMode) setTool("none");
+  updateStats();
 });
 
 onValue(ref(db,"drawing/mode"), snap => {
