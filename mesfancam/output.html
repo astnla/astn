@@ -458,6 +458,64 @@ html, body {
     /* ── ANIMATIONS ── */
     @keyframes breathe   { 0%,100%{opacity:.4;} 50%{opacity:1;} }
     @keyframes livePulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(.4);opacity:.4;} }
+
+    /* ── SKRIBBL ── */
+    #skribblGuessLayer {
+      position: absolute; inset: 0;
+      pointer-events: none; overflow: hidden;
+      z-index: 10;
+    }
+    .floating-guess {
+      position: absolute;
+      left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white;
+      padding: clamp(6px,0.8vh,10px) clamp(10px,1.2vh,16px);
+      border-radius: 99px;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: clamp(13px, 1.6vh, 20px);
+      white-space: nowrap;
+      animation: floatUp 3.5s ease-out forwards;
+    }
+    .floating-guess.correct {
+      background: rgba(84,209,138,0.85);
+      color: #09180f;
+      font-size: clamp(16px, 2vh, 26px);
+      font-weight: 900;
+    }
+    @keyframes floatUp {
+      0%   { bottom: 5%; opacity: 1; transform: translateX(-50%) translateY(0) rotate(0deg); }
+      60%  { opacity: 1; }
+      100% { bottom: 80%; opacity: 0; transform: translateX(calc(-50% + var(--drift))) translateY(0) rotate(var(--spin)); }
+    }
+
+    /* Winner banner over feed */
+    #skribblWinnerOverlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+      z-index: 8;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.4s ease;
+      flex-direction: column; gap: 8px; text-align: center; padding: 20px;
+    }
+    #skribblWinnerOverlay.show { opacity: 1; }
+    #skribblWinnerOverlay .win-label {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(20px, 2.8vh, 36px);
+      letter-spacing: 1px;
+      color: var(--good, #54d18a);
+    }
+    #skribblWinnerOverlay .win-name {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: clamp(14px, 1.8vh, 22px);
+      color: rgba(255,255,255,0.8);
+    }
   </style>
 </head>
 <body>
@@ -488,6 +546,13 @@ html, body {
       <div id="livePip">
         <span class="live-dot"></span>LIVE
       </div>
+      <!-- Floating guesses layer -->
+      <div id="skribblGuessLayer"></div>
+      <!-- Winner overlay -->
+      <div id="skribblWinnerOverlay">
+        <div class="win-label">🎉 CORRECT!</div>
+        <div class="win-name" id="skribblWinName"></div>
+      </div>
     </div>
 
     <div id="infoPanel">
@@ -511,11 +576,14 @@ html, body {
 
   </div>
 
-  <!-- Drawing side panel — slides in from right -->
+  <!-- Drawing side panel — slides in from right (shared by draw reveal + skribbl live) -->
   <div id="drawPanel">
     <div id="drawPanelCard">
       <div id="drawPanelEyebrow">DRAWING</div>
-      <img id="drawPanelImg" alt="student drawing">
+      <!-- Static reveal image (draw mode) -->
+      <img id="drawPanelImg" alt="student drawing" style="display:none;">
+      <!-- Live canvas stream (skribbl mode) -->
+      <img id="skribblLiveImg" alt="live drawing" style="width:100%;flex:1;object-fit:contain;display:none;background:white;">
     </div>
   </div>
 
@@ -542,10 +610,14 @@ const answerCard     = document.getElementById("answerCard");
 const answerText     = document.getElementById("answerText");
 const classCard        = document.getElementById("classCard");
 const classText        = document.getElementById("classText");
-const stage            = document.getElementById("stage");
-const drawPanel        = document.getElementById("drawPanel");
-const drawPanelEyebrow = document.getElementById("drawPanelEyebrow");
-const drawPanelImg     = document.getElementById("drawPanelImg");
+const stage              = document.getElementById("stage");
+const drawPanel          = document.getElementById("drawPanel");
+const drawPanelEyebrow   = document.getElementById("drawPanelEyebrow");
+const drawPanelImg       = document.getElementById("drawPanelImg");
+const skribblLiveImg     = document.getElementById("skribblLiveImg");
+const skribblGuessLayer  = document.getElementById("skribblGuessLayer");
+const skribblWinnerOverlay = document.getElementById("skribblWinnerOverlay");
+const skribblWinName     = document.getElementById("skribblWinName");
 
 const activeUserRef  = ref(db, "live/activeUser");
 const frameRef       = ref(db, "live/frame");
@@ -558,9 +630,13 @@ const pollsModeRef   = ref(db, "polls/mode");
 const pollsQRef      = ref(db, "polls/question");
 const pollsOptsRef   = ref(db, "polls/options");
 const pollsTotalsRef = ref(db, "polls/totals");
-const drawModeRef    = ref(db, "drawing/mode");
-const drawRevealRef  = ref(db, "drawing/reveal");
-const drawSubRef     = ref(db, "drawing/submissions");
+const drawModeRef      = ref(db, "drawing/mode");
+const drawRevealRef    = ref(db, "drawing/reveal");
+const drawSubRef       = ref(db, "drawing/submissions");
+const skribblModeRef   = ref(db, "skribbl/mode");
+const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
+const skribblGuessRef  = ref(db, "skribbl/guesses");
+const skribblWinnerRef = ref(db, "skribbl/winner");
 
 let activeUser     = null;
 let lastFrame      = 0;
@@ -760,6 +836,8 @@ let drawSubs = {};
 function showDrawPanel(imgSrc, label) {
   drawPanelEyebrow.textContent = label || "DRAWING";
   drawPanelImg.src = imgSrc;
+  drawPanelImg.style.display = "block";   // was hidden by default after skribbl addition
+  skribblLiveImg.style.display = "none";  // hide skribbl img when showing static reveal
   stage.classList.add("draw-open");
   drawPanel.classList.add("show");
 }
@@ -778,6 +856,84 @@ onValue(drawRevealRef, snap => {
   const key = Object.keys(r).find(k => r[k]?.show === true);
   if (!key || !drawSubs[key]?.data) { hideDrawPanel(); return; }
   showDrawPanel(drawSubs[key].data, "DRAWING");
+});
+
+/* ── SKRIBBL SIDE PANEL ── */
+let skribblOn = false;
+let floatCount = 0;
+
+function spawnFloatingGuess(text, correct) {
+  const el = document.createElement("div");
+  el.className = "floating-guess" + (correct ? " correct" : "");
+  el.textContent = (correct ? "✓ " : "") + text;
+  const drift = (Math.random() - 0.5) * 60;
+  const spin  = (Math.random() - 0.5) * 12;
+  el.style.setProperty("--drift", drift + "px");
+  el.style.setProperty("--spin",  spin  + "deg");
+  el.style.bottom = "5%";
+  skribblGuessLayer.appendChild(el);
+  setTimeout(() => el.remove(), 3600);
+}
+
+onValue(skribblModeRef, snap => {
+  skribblOn = snap.val() === true;
+  if (!skribblOn) {
+    // Clear all skribbl UI
+    skribblLiveImg.style.display = "none";
+    skribblLiveImg.src = "";
+    skribblGuessLayer.innerHTML = "";
+    skribblWinnerOverlay.classList.remove("show");
+    seenGuesses.clear();
+    // Collapse side panel if draw reveal image isn't showing
+    const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
+    if (!drawRevealVisible) hideDrawPanel();
+  }
+});
+
+// Live canvas stream from drawer
+onValue(skribblLiveRef, snap => {
+  const val = snap.val();
+  if (!skribblOn) return;
+  if (val && typeof val === "string" && val.startsWith("data:")) {
+    skribblLiveImg.src = val;
+    skribblLiveImg.style.display = "block";
+    drawPanelImg.style.display = "none";
+    drawPanelEyebrow.textContent = "🎨 LIVE DRAWING";
+    stage.classList.add("draw-open");
+    drawPanel.classList.add("show");
+  }
+});
+
+// Floating guesses
+// seenGuesses is module-scoped so mode listener can clear it on round end
+const seenGuesses = new Set();
+onValue(skribblGuessRef, snap => {
+  if (!skribblOn) return;
+  const all = snap.val() || {};
+  Object.entries(all).forEach(([key, g]) => {
+    if (seenGuesses.has(key)) return;
+    seenGuesses.add(key);
+    spawnFloatingGuess(`${g.name}: ${g.text}`, false);
+  });
+});
+
+// Winner — show overlay, then auto-dismiss after 3s and slide drawing away
+onValue(skribblWinnerRef, snap => {
+  const w = snap.val();
+  if (!w || !skribblOn) return;
+  spawnFloatingGuess(`${w.name}: ${w.text}`, true);
+  skribblWinName.textContent = `${w.name} guessed it!`;
+  skribblWinnerOverlay.classList.add("show");
+  // Clear floating guesses
+  setTimeout(() => skribblGuessLayer.innerHTML = "", 500);
+  // After 3s: fade winner overlay and slide drawing panel away
+  setTimeout(() => {
+    skribblWinnerOverlay.classList.remove("show");
+    // Slide drawing panel away so we see the winner on the fan cam
+    skribblLiveImg.style.display = "none";
+    skribblLiveImg.src = "";
+    hideDrawPanel();
+  }, 3000);
 });
 
 /* ── GATES ── */

@@ -313,11 +313,14 @@
     <div class="card panel">
       <div class="panelTitle" style="font-size:16px;font-weight:900;margin-bottom:12px;">Activities</div>
 
-      <div class="seg-row" style="grid-template-columns:repeat(4,1fr);">
+      <div class="seg-row" style="grid-template-columns:repeat(3,1fr);">
         <button id="showNoneBtn" class="seg idle-active active">OFF</button>
         <button id="showTriviaBtn" class="seg">TRIVIA</button>
         <button id="showPollsBtn" class="seg">POLLS</button>
-        <button id="showDrawBtn" class="seg">DRAW</button>
+      </div>
+      <div class="seg-row" style="grid-template-columns:repeat(2,1fr);margin-top:0;">
+        <button id="showDrawBtn" class="seg">SKETCHERS</button>
+        <button id="showSkribblBtn" class="seg">WHAT'S MY DOODLE?</button>
       </div>
 
       <p id="toolIntro" class="tool-intro">Nothing active yet, pick an activity!</p>
@@ -379,6 +382,27 @@
         </div>
       </div>
 
+      <!-- SKRIBBL -->
+      <div id="skribblShell" class="feature-shell">
+        <div class="feature-block">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">drawer</div>
+          <select id="skribblDrawerSelect" class="input" style="cursor:pointer;">
+            <option value="">select someone</option>
+          </select>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">secret word</div>
+          <div class="send-row">
+            <input id="skribblWordInput" class="input" placeholder="e.g. Manatee…">
+            <button id="startSkribblBtn" class="btn-accent disabled" style="font-size:13px;">START</button>
+          </div>
+          <div id="skribblStatusArea" style="display:none;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">status</div>
+            <div id="skribblGuessCount" style="padding:8px;background:rgba(0,0,0,0.15);border-radius:12px;border:1px solid var(--line);font-size:13px;color:var(--muted);text-align:center;">Waiting for guesses…</div>
+            <div id="skribblWinnerBanner" style="display:none;padding:12px;border-radius:12px;background:rgba(84,209,138,0.15);border:1px solid var(--good);color:var(--good);font-weight:900;font-size:15px;text-align:center;"></div>
+          </div>
+          <button id="endSkribblBtn" class="btn-danger disabled" style="font-size:13px;">END ROUND</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- RIGHT: PARTICIPANTS -->
@@ -429,6 +453,16 @@ const els = {
   clearLiveBtn:   document.getElementById("clearLiveBtn"),
   showDrawBtn:    document.getElementById("showDrawBtn"),
   drawShell:      document.getElementById("drawShell"),
+  showSkribblBtn:     document.getElementById("showSkribblBtn"),
+  skribblShell:       document.getElementById("skribblShell"),
+  skribblDrawerSelect:document.getElementById("skribblDrawerSelect"),
+  skribblWordInput:   document.getElementById("skribblWordInput"),
+  startSkribblBtn:    document.getElementById("startSkribblBtn"),
+  skribblGuessList:   document.getElementById("skribblGuessList"),
+  skribblWinnerBanner: document.getElementById("skribblWinnerBanner"),
+  skribblStatusArea:   document.getElementById("skribblStatusArea"),
+  skribblGuessCount:   document.getElementById("skribblGuessCount"),
+  endSkribblBtn:       document.getElementById("endSkribblBtn"),
   drawPromptInput:document.getElementById("drawPromptInput"),
   sendDrawBtn:    document.getElementById("sendDrawBtn"),
   timesUpBtn:     document.getElementById("timesUpBtn"),
@@ -460,6 +494,7 @@ const state = {
   currentLiveUser: null,
   triviaMode: false, pollsMode: false, drawMode: false,
   drawSubmissions: {}, drawReveals: {},
+  skribblMode: false, skribblWord: "",
   triviaQuestionActive: false, triviaCorrect: "",
   cardRefs: {},
   autoLiveEnabled: false, autoLiveInterval: null,
@@ -476,11 +511,13 @@ function setTool(t) {
   els.showNoneBtn.classList.toggle("idle-active", t === "none");
   els.showTriviaBtn.classList.toggle("active", t === "trivia");
   els.showPollsBtn.classList.toggle("active",  t === "polls");
+  els.showDrawBtn.classList.toggle("active",   t === "draw");
+  els.showSkribblBtn.classList.toggle("active", t === "skribbl");
   els.triviaShell.classList.toggle("open",  t === "trivia");
   els.pollsShell.classList.toggle("open",   t === "polls");
   els.drawShell.classList.toggle("open",    t === "draw");
+  els.skribblShell.classList.toggle("open", t === "skribbl");
   els.toolIntro.style.display = t === "none" ? "block" : "none";
-  els.showDrawBtn.classList.toggle("active", t === "draw");
 }
 
 async function activateNone() {
@@ -488,18 +525,22 @@ async function activateNone() {
     update(ref(db,"trivia"),   { mode: false }),
     update(ref(db,"polls"),    { mode: false }),
     update(ref(db,"drawing"),  { mode: false }),
+    set(ref(db,"skribbl/mode"), false),
   ]);
   setTool("none");
+  updateStats();
 }
 async function activateTrivia() {
   await update(ref(db,"polls"),  { mode: false });
   await update(ref(db,"trivia"), { mode: true });
   setTool("trivia");
+  updateStats();
 }
 async function activatePolls() {
   await update(ref(db,"trivia"), { mode: false });
   await update(ref(db,"polls"),  { mode: true });
   setTool("polls");
+  updateStats();
 }
 
 async function activateDraw() {
@@ -509,11 +550,24 @@ async function activateDraw() {
     update(ref(db,"drawing"), { mode: true }),
   ]);
   setTool("draw");
+  updateStats();
 }
 els.showNoneBtn.onclick   = activateNone;
 els.showTriviaBtn.onclick = activateTrivia;
 els.showPollsBtn.onclick  = activatePolls;
 els.showDrawBtn.onclick   = activateDraw;
+
+async function activateSkribbl() {
+  await Promise.all([
+    update(ref(db,"trivia"),  { mode: false }),
+    update(ref(db,"polls"),   { mode: false }),
+    update(ref(db,"drawing"), { mode: false }),
+    set(ref(db,"skribbl/mode"), true),
+  ]);
+  setTool("skribbl");
+  updateStats();
+}
+els.showSkribblBtn.onclick = activateSkribbl;
 
 /* ── STATS ── */
 function updateStats() {
@@ -522,10 +576,10 @@ function updateStats() {
   const liveName = state.currentLiveUser
     ? (state.participants[state.currentLiveUser]?.name || "—") : "—";
   let mode = "idle";
-  if (state.pollsMode)  mode = "polls";
-  else if (state.triviaMode) mode = "trivia";
-  else if (state.drawMode) mode = "draw";
-  else if (state.autoLiveEnabled) mode = "auto";
+  if (state.pollsMode)  mode = "POLLS";
+  else if (state.triviaMode) mode = "TRIVIA";
+  else if (state.drawMode) mode = "SKETCHERS";
+  else if (state.skribblMode) mode = "WHAT'S MY DOODLE?";
 
   els.statMembers.textContent = users.length;
   els.statReady.textContent   = ready;
@@ -803,6 +857,7 @@ els.endSessionBtn.onclick = async () => {
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"meta/resetFlag"), Date.now()),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null }),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
   state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
@@ -959,9 +1014,6 @@ els.resetDrawBtn.onclick = async () => {
 onValue(ref(db,"trivia/mode"), snap => {
   state.triviaMode = snap.val() === true;
   els.triviaToggle.checked = state.triviaMode;
-  if (state.triviaMode) setTool("trivia");
-  else if (!state.pollsMode) setTool("none");
-  updateStats();
   Object.keys(state.participants).forEach(patchCard);
 });
 
@@ -994,9 +1046,6 @@ onValue(ref(db,"trivia/reveal"), snap => {
 onValue(ref(db,"polls/mode"), snap => {
   state.pollsMode = snap.val() === true;
   els.pollsToggle.checked = state.pollsMode;
-  if (state.pollsMode) setTool("polls");
-  else if (!state.triviaMode) setTool("none");
-  updateStats();
 });
 
 onValue(ref(db,"polls/options"), snap => { state.pollOptions = snap.val() || {}; });
@@ -1027,6 +1076,7 @@ onChildAdded(ref(db,"participants"),   snap => {
   ensureCard(snap.key); syncOrder();
   if (state.autoLiveEnabled) rebuildCycle();
   updateStats();
+  rebuildDrawerSelect();
 });
 onChildChanged(ref(db,"participants"), snap => {
   state.participants[snap.key] = snap.val() || {};
@@ -1046,12 +1096,110 @@ onChildAdded(ref(db,"selfies"),   snap => { state.selfies[snap.key] = snap.val()
 onChildChanged(ref(db,"selfies"), snap => { state.selfies[snap.key] = snap.val(); if (state.participants[snap.key]) patchCard(snap.key); });
 onChildRemoved(ref(db,"selfies"), snap => { delete state.selfies[snap.key]; if (state.participants[snap.key]) patchCard(snap.key); });
 
+/* ── SKRIBBL CONTROLS ── */
+function rebuildDrawerSelect() {
+  const sel = els.skribblDrawerSelect;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">select someone</option>';
+  Object.entries(state.participants).forEach(([uid, p]) => {
+    const opt = document.createElement("option");
+    opt.value = uid; opt.textContent = p.name || uid;
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+}
+
+els.skribblDrawerSelect.addEventListener("change", updateSkribblStart);
+els.skribblWordInput.addEventListener("input", updateSkribblStart);
+function updateSkribblStart() {
+  const ready = !!els.skribblDrawerSelect.value && !!els.skribblWordInput.value.trim();
+  els.startSkribblBtn.classList.toggle("disabled", !ready);
+}
+
+els.startSkribblBtn.onclick = async () => {
+  const drawerKey = els.skribblDrawerSelect.value;
+  const word      = els.skribblWordInput.value.trim().toLowerCase();
+  if (!drawerKey || !word) return;
+  state.skribblWord = word;
+  // Clear previous round data
+  await Promise.all([
+    set(ref(db,"skribbl/guesses"), null),
+    set(ref(db,"skribbl/winner"),  null),
+    set(ref(db,"skribbl/liveCanvas"), null),
+  ]);
+  // Write mode + drawer + prompt (prompt only goes to drawer via index.html listener)
+  await Promise.all([
+    set(ref(db,"skribbl/mode"),   true),
+    set(ref(db,"skribbl/drawer"), drawerKey),
+    set(ref(db,"skribbl/word"),   word),  // for control page answer checking
+    set(ref(db,"skribbl/prompt"), { text: word, show: true }),
+  ]);
+  els.endSkribblBtn.classList.remove("disabled");
+  els.skribblWinnerBanner.style.display = "none";
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "";
+  if (els.skribblGuessCount) els.skribblGuessCount.textContent = "Waiting for guesses…";
+  skribblGuessTotal = 0;
+};
+
+els.endSkribblBtn.onclick = async () => {
+  state.skribblWord = "";
+  await Promise.all([
+    set(ref(db,"skribbl/mode"),   false),
+    set(ref(db,"skribbl/drawer"), null),
+    set(ref(db,"skribbl/prompt"), { text:"", show:false }),
+    set(ref(db,"skribbl/guesses"), null),
+    set(ref(db,"skribbl/winner"),  null),
+    set(ref(db,"skribbl/liveCanvas"), null),
+    set(ref(db,"skribbl/word"), null),
+  ]);
+  els.endSkribblBtn.classList.add("disabled");
+  els.skribblWordInput.value = "";
+  els.skribblDrawerSelect.value = "";
+  els.skribblWinnerBanner.style.display = "none";
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
+  if (els.skribblGuessCount) els.skribblGuessCount.textContent = "Waiting for guesses…";
+  skribblGuessTotal = 0;
+  updateSkribblStart();
+};
+
+// Listen to guesses — check each one against the secret word
+onValue(ref(db,"skribbl/word"), snap => { state.skribblWord = snap.val() || ""; });
+
+let skribblGuessTotal = 0;
+onChildAdded(ref(db,"skribbl/guesses"), snap => {
+  const g = snap.val();
+  if (!g) return;
+  const correct = state.skribblWord && g.text?.toLowerCase().trim() === state.skribblWord;
+  skribblGuessTotal++;
+
+  // Update guess count display
+  if (els.skribblGuessCount) {
+    els.skribblGuessCount.textContent = `${skribblGuessTotal} guess${skribblGuessTotal !== 1 ? "es" : ""} submitted`;
+  }
+
+  if (correct && els.skribblWinnerBanner.style.display !== "block") {
+    // First correct guess — set winner, set them live, show banner
+    const winnerKey = g.guesserKey || snap.key.split("_")[0];
+    Promise.all([
+      set(ref(db,"skribbl/winner"), { userKey: winnerKey, name: g.name, text: g.text }),
+      // Set the winner live on the fan cam!
+      update(ref(db,"live"), { activeUser: winnerKey }),
+    ]);
+    els.skribblWinnerBanner.style.display = "block";
+    els.skribblWinnerBanner.textContent = `🎉 ${g.name} got it! "${state.skribblWord}"`;
+  }
+});
+
+onValue(ref(db,"skribbl/mode"), snap => {
+  state.skribblMode = snap.val() === true;
+  if (state.skribblMode) setTool("skribbl");
+  else if (!state.triviaMode && !state.pollsMode && !state.drawMode) setTool("none");
+  updateStats();
+});
+
 onValue(ref(db,"drawing/mode"), snap => {
   state.drawMode = snap.val() === true;
-  if (state.drawMode) setTool("draw");
-  else if (!state.triviaMode && !state.pollsMode) setTool("none");
   Object.keys(state.participants).forEach(patchCard);
-  updateStats();
 });
 onChildAdded(ref(db,"drawing/submissions"),   snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
 onChildChanged(ref(db,"drawing/submissions"), snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });

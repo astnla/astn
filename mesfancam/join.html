@@ -71,15 +71,28 @@
     }
 
     #preview {
-      width: 100%; height: 100%;
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
       transform: scaleX(-1);
-      display: none;
+      display: block;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1;
     }
+    /* Suppress all Safari/iOS native video controls */
+    #preview::-webkit-media-controls,
+    #preview::-webkit-media-controls-enclosure,
+    #preview::-webkit-media-controls-panel { display: none !important; }
     #canvasOutput {
-      width: 100%; height: 100%;
-      object-fit: cover;
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       display: none;
+      z-index: 1;
     }
 
     .cam-overlay {
@@ -255,7 +268,7 @@
   </div>
 
   <div class="viewfinder" id="viewfinder">
-    <video id="preview" autoplay playsinline muted></video>
+    <video id="preview" autoplay playsinline muted disablepictureinpicture x-webkit-airplay="deny"></video>
     <canvas id="canvasOutput"></canvas>
     <div class="cam-overlay" id="camOverlay">
       <div class="cam-icon">
@@ -328,11 +341,14 @@ async function startCamera() {
       audio: false
     });
     preview.srcObject = stream;
-    preview.style.display = "block";
     canvas.style.display = "none";
-    camOverlay.style.display = "none";
-    snapBtn.classList.remove("disabled");
-    cameraReady = true;
+    // Only reveal camera once the first real frame is ready — no blank gap, no play button
+    preview.onloadeddata = () => {
+      preview.style.opacity = "1";
+      camOverlay.style.display = "none";
+      snapBtn.classList.remove("disabled");
+      cameraReady = true;
+    };
   } catch(e) {
     camLabel.textContent = e.name === "NotAllowedError" ? "CAMERA BLOCKED — TAP TO RETRY" : "CAMERA ERROR — TAP TO RETRY";
     cameraReady = false;
@@ -353,7 +369,7 @@ snapBtn.addEventListener("click", () => {
   ctx.drawImage(preview, -canvas.width, 0, canvas.width, canvas.height);
   ctx.restore();
 
-  preview.style.display = "none";
+  preview.style.opacity = "0";
   canvas.style.display = "block";
   if (stream) stream.getTracks().forEach(t => t.stop());
 
@@ -364,17 +380,19 @@ snapBtn.addEventListener("click", () => {
 });
 
 /* ── RETAKE ── */
-retakeBtn.addEventListener("click", () => {
+retakeBtn.addEventListener("click", async () => {
   nameInput.style.display = "none";
   nameInput.value = "";
   actionRow.classList.remove("visible");
   snapBtn.style.display = "";
   snapBtn.classList.add("disabled");
   canvas.style.display = "none";
-  camOverlay.style.display = "flex";
-  camLabel.textContent = "TAP TO ENABLE CAMERA";
+  preview.style.opacity = "0";
   continueBtn.classList.add("dim");
+  retakeBtn.style.pointerEvents = "";
   cameraReady = false;
+
+  await startCamera();
 });
 
 /* ── NAME VALIDATION ── */

@@ -15,7 +15,10 @@
     .wordmark img{width:48px;height:48px;object-fit:contain;border-radius:8px;margin-bottom:6px;}
     .wordmark-text{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;letter-spacing:2px;color:var(--navy);}
     .viewfinder{position:relative;width:min(82vw,320px);aspect-ratio:3/4;background:var(--dim);border-radius:12px;overflow:hidden;animation:fadeUp 0.4s 0.1s ease both;}
-    #preview{width:100%;height:100%;object-fit:cover;display:none;}
+    #preview{width:100%;height:100%;object-fit:cover;display:block;opacity:0;pointer-events:none;}
+    #preview::-webkit-media-controls,
+    #preview::-webkit-media-controls-enclosure,
+    #preview::-webkit-media-controls-panel{display:none !important;}
     .viewfinder::before,.viewfinder::after{content:"";position:absolute;width:20px;height:20px;border-color:rgba(255,255,255,0.4);border-style:solid;z-index:3;pointer-events:none;}
     .viewfinder::before{top:10px;left:10px;border-width:2px 0 0 2px;border-radius:3px 0 0 0;}
     .viewfinder::after{bottom:10px;right:10px;border-width:0 2px 2px 0;border-radius:0 0 3px 0;}
@@ -59,6 +62,18 @@
     .legal{margin-top:14px;font-size:10px;line-height:1.5;color:rgba(0,3,31,0.55);text-align:center;max-width:300px;}
     @keyframes fadeDown{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:none;}}
     @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+    /* ── SKRIBBL ── */
+    #skribblBox{display:none;flex-direction:column;gap:10px;width:min(82vw,320px);margin-top:18px;animation:fadeUp 0.3s ease both;}
+    #skribblBox.show{display:flex;}
+    #skribblLabel{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:18px;letter-spacing:1px;color:white;text-align:center;line-height:1.3;}
+    #skribblInput{padding:12px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.15);color:white;font-family:"DM Sans",sans-serif;font-size:15px;font-weight:500;outline:none;transition:background 0.2s;}
+    #skribblInput::placeholder{color:rgba(255,255,255,0.45);}
+    #skribblInput:focus{background:rgba(255,255,255,0.22);}
+    #skribblGuess{padding:12px;border-radius:8px;border:none;background:var(--navy);color:white;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:17px;letter-spacing:1px;cursor:pointer;transition:opacity 0.15s;}
+    #skribblGuess:active{opacity:0.7;}
+    #skribblWinner{display:none;text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;letter-spacing:2px;color:white;margin-top:10px;animation:fadeUp 0.4s ease both;}
+    #skribblWinner.show{display:block;}
 
     /* ── DRAWING OVERLAY ── */
     #drawOverlay{
@@ -110,7 +125,7 @@
   </div>
 
   <div class="viewfinder" id="viewfinder">
-    <video id="preview" autoplay playsinline muted></video>
+    <video id="preview" autoplay playsinline muted disablepictureinpicture x-webkit-airplay="deny" style="pointer-events:none;opacity:0;"></video>
     <div id="liveBadge"><span class="live-dot"></span>LIVE</div>
     <button id="flipBtn" aria-label="Flip camera">
       <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -155,6 +170,14 @@
     <div id="pollOptionsList"></div>
   </div>
   <div id="pollSubmitted">VOTE SUBMITTED ✓</div>
+
+  <!-- Skribbl guess box -->
+  <div id="skribblBox">
+    <div id="skribblLabel">🎨 What are they drawing?</div>
+    <input id="skribblInput" type="text" placeholder="Type your guess…" autocomplete="off">
+    <button id="skribblGuess">GUESS</button>
+  </div>
+  <div id="skribblWinner"></div>
 
   <p class="legal">By participating you consent to being filmed and broadcast live. For school use only.</p>
 </div>
@@ -250,10 +273,13 @@ async function enableCamera() {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
     preview.srcObject = stream;
-    preview.style.display = "block";
     preview.style.transform = currentCamera === "front" ? "scaleX(-1)" : "scaleX(1)";
-    camOverlay.style.display = "none";
-    flipBtn.classList.add("show");
+    // Wait for first real frame before revealing — prevents play button flash on iOS
+    preview.onloadeddata = () => {
+      preview.style.opacity = "1";
+      camOverlay.style.display = "none";
+      flipBtn.classList.add("show");
+    };
     update(ref(db, `participants/${userKey}`), { cameraActive: true });
     streamingEnabled = true;
     startFrameLoop();
@@ -575,11 +601,166 @@ onValue(drawPromptRef, snap => {
 
 /* ── TIMES UP — auto-submit if not already submitted ── */
 onValue(ref(db, "drawing/timesUp"), snap => {
-  if (!snap.val()) return;          // null/cleared — ignore
-  if (!drawActive) return;          // drawing mode not on
-  if (drawHasSubmitted) return;     // already submitted, nothing to do
-  // Treat this exactly like the user hitting SUBMIT themselves
+  if (!snap.val()) return;
+  if (!drawActive) return;
+  if (drawHasSubmitted) return;
   drawSubmit.click();
+});
+
+/* ── SKRIBBL ── */
+const skribblBox     = document.getElementById("skribblBox");
+const skribblLabel   = document.getElementById("skribblLabel");
+const skribblInput   = document.getElementById("skribblInput");
+const skribblGuess   = document.getElementById("skribblGuess");
+const skribblWinner  = document.getElementById("skribblWinner");
+
+const skribblModeRef   = ref(db, "skribbl/mode");
+const skribblDrawerRef = ref(db, "skribbl/drawer");
+const skribblPromptRef = ref(db, "skribbl/prompt");
+const skribblWinnerRef = ref(db, "skribbl/winner");
+const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
+
+let skribblActive  = false;
+let skribblAmDrawer = false;
+let skribblWon     = false;
+
+// Skribbl canvas streaming — separate from regular draw mode
+// Uses the existing drawCanvas but streams live every 300ms
+let skribblStreamInterval = null;
+
+function startSkribblStream() {
+  if (skribblStreamInterval) return;
+  skribblStreamInterval = setInterval(() => {
+    if (!skribblAmDrawer || !skribblActive) {
+      clearInterval(skribblStreamInterval); skribblStreamInterval = null; return;
+    }
+    // Compress canvas at low quality — simple line art compresses very small
+    const tmp = document.createElement("canvas");
+    const maxW = 400;
+    const scale = Math.min(1, maxW / (drawCanvas.width || 1));
+    tmp.width  = Math.round((drawCanvas.width  || 400) * scale);
+    tmp.height = Math.round((drawCanvas.height || 533) * scale);
+    tmp.getContext("2d").drawImage(drawCanvas, 0, 0, tmp.width, tmp.height);
+    const jpeg = tmp.toDataURL("image/jpeg", 0.40);
+    if (jpeg && jpeg.startsWith("data:image")) {
+      set(skribblLiveRef, jpeg).catch(() => {});
+    }
+  }, 300);
+}
+
+function stopSkribblStream() {
+  if (skribblStreamInterval) { clearInterval(skribblStreamInterval); skribblStreamInterval = null; }
+  set(skribblLiveRef, null).catch(() => {});
+}
+
+// Mode gate
+onValue(skribblModeRef, snap => {
+  skribblActive = snap.val() === true;
+  if (!skribblActive) {
+    skribblBox.classList.remove("show");
+    skribblWinner.classList.remove("show");
+    skribblWinner.textContent = "";
+    skribblInput.value = "";
+    skribblWon = false;       // reset so next round works fresh
+    skribblAmDrawer = false;
+    stopSkribblStream();
+    drawOverlay.classList.remove("show");
+    // Restore drawSubmit button in case it was hidden for skribbl
+    drawSubmit.style.display = "";
+  }
+});
+
+// Who is the drawer?
+onValue(skribblDrawerRef, snap => {
+  const drawerKey = snap.val();
+  skribblAmDrawer = drawerKey === userKey;
+  // Don't show any UI here — wait for prompt to arrive (means START was actually hit)
+  // This prevents the guess box appearing just from clicking the mode button
+  if (!skribblAmDrawer) {
+    // If drawer changed away from me, hide my draw canvas
+    drawOverlay.classList.remove("show");
+    stopSkribblStream();
+  }
+});
+
+// Prompt — gates both drawer canvas AND guesser box
+// Nothing shows until control hits START (which writes prompt with show:true)
+onValue(skribblPromptRef, snap => {
+  const d = snap.val() || {};
+  const gameStarted = d.show && d.text;
+
+  if (!skribblActive) return;
+
+  if (gameStarted) {
+    if (skribblAmDrawer) {
+      // I'm the drawer — show canvas
+      drawHasSubmitted = false;
+      drawSubmit.style.display = "none";
+      drawRestart.style.display = "";
+      drawPromptText.textContent = d.text;
+      drawOverlay.classList.add("show");
+      skribblBox.classList.remove("show");
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        initDrawCanvas();
+        startSkribblStream();
+      }));
+    } else {
+      // I'm a guesser — only show guess box once game is actually started
+      drawOverlay.classList.remove("show");
+      if (!skribblWon) skribblBox.classList.add("show");
+    }
+  } else {
+    // Prompt cleared (round ended / not started yet) — hide everything
+    drawOverlay.classList.remove("show");
+    skribblBox.classList.remove("show");
+    stopSkribblStream();
+  }
+});
+
+// Winner — show celebration, stop guessing, stop drawing if drawer
+onValue(skribblWinnerRef, snap => {
+  const w = snap.val();
+  if (!w || !skribblActive) return;
+
+  // Round is over for everyone — stop all activity
+  skribblWon = true;
+
+  if (skribblAmDrawer) {
+    // Drawer: hide the canvas — round is done
+    drawOverlay.classList.remove("show");
+    stopSkribblStream();
+    // Show who won
+    skribblWinner.textContent = `${w.name} got it!`;
+    skribblWinner.classList.add("show");
+  } else if (w.guesserKey === userKey) {
+    // I won!
+    skribblWinner.textContent = "YOU GOT IT!";
+    skribblWinner.classList.add("show");
+    skribblBox.classList.remove("show");
+  } else {
+    // Someone else won
+    skribblWinner.textContent = `${w.name} got it!`;
+    skribblWinner.classList.add("show");
+    skribblBox.classList.remove("show");
+  }
+});
+
+// Guess submission — each guess gets a unique key so they don't overwrite
+skribblGuess.addEventListener("click", async () => {
+  const text = skribblInput.value.trim();
+  if (!text || skribblWon) return;
+  skribblInput.value = "";
+  // Use timestamp + userKey as unique path so multiple guesses don't overwrite
+  const guessKey = `${userKey}_${Date.now()}`;
+  await set(ref(db, `skribbl/guesses/${guessKey}`), {
+    text,
+    name: name || userKey,
+    guesserKey: userKey,
+    timestamp: Date.now()
+  }).catch(() => {});
+});
+skribblInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") skribblGuess.click();
 });
 
 /* ── VISIBILITY ── */
