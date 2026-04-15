@@ -2,13 +2,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebas
 import { getDatabase } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAzt0NZ3gPUm6vUwrsO_Khc0ltjx_G0M34",
-  authDomain: "fancamtests.firebaseapp.com",
-  databaseURL: "https://fancamtests-default-rtdb.firebaseio.com",
-  projectId: "fancamtests",
-  storageBucket: "fancamtests.firebasestorage.app",
-  messagingSenderId: "827180605140",
-  appId: "1:827180605140:web:0c05447c4831320ef3a541"
+  apiKey: "AIzaSyD36wU7dXJSivL2FMLIt4PyLSy5HtlVQ5A",
+  authDomain: "mes-fancam.firebaseapp.com",
+  databaseURL: "https://mes-fancam-default-rtdb.firebaseio.com",
+  projectId: "mes-fancam",
+  storageBucket: "mes-fancam.firebasestorage.app",
+  messagingSenderId: "1091345682482",
+  appId: "1:1091345682482:web:eb8e8ea08d7a952c022c2b"
 };
 
 const app = initializeApp(firebaseConfig);
