@@ -247,9 +247,39 @@
     /* ── ANIMATIONS ── */
     @keyframes fadeDown { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:none; } }
     @keyframes fadeUp   { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+
+    /* ── OFFLINE SCREEN ── */
+    #offlineScreen {
+      display: none;
+      position: fixed; inset: 0;
+      background: #0a0a0a;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px; z-index: 9999;
+    }
+    #offlineScreen.show { display: flex; }
+    #offlineScreen .off-icon {
+      font-size: 48px; line-height: 1;
+    }
+    #offlineScreen .off-title {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900; font-size: 28px;
+      letter-spacing: 2px; color: white;
+    }
+    #offlineScreen .off-msg {
+      font-size: 14px; color: rgba(255,255,255,0.45);
+      text-align: center; line-height: 1.6; max-width: 280px;
+    }
   </style>
 </head>
 <body>
+
+<!-- OFFLINE SCREEN -->
+<div id="offlineScreen">
+  <div class="off-icon">📵</div>
+  <div class="off-title">FAN CAM IS OFF</div>
+  <div class="off-msg">The fan cam isn't running right now. Check back when your teacher starts the session.</div>
+</div>
 
 <!-- WiFi notice -->
 <div id="wifiOverlay">
@@ -290,6 +320,12 @@
 <script type="module">
 import { db } from "./firebase-config.js";
 import { ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+/* ── FAN CAM GATE ── */
+const offlineScreen = document.getElementById("offlineScreen");
+onValue(ref(db, "meta/fanCamOn"), snap => {
+  offlineScreen.classList.toggle("show", snap.val() === false);
+});
 
 /* ── WIFI OVERLAY ── */
 const wifiOverlay = document.getElementById("wifiOverlay");

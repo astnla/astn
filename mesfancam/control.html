@@ -271,14 +271,91 @@
 
     @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
     @media (max-width: 640px) { .stats-row { grid-template-columns: 1fr 1fr; } .pgrid { grid-template-columns: 1fr 1fr; } }
+
+    /* ── PASSWORD GATE ── */
+    #pwGate {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #0a0a0a;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px;
+    }
+    #pwGate.hidden { display: none; }
+    #pwGate h1 {
+      font-size: 28px; font-weight: 900; letter-spacing: 2px;
+      color: white;
+    }
+    #pwGate p { font-size: 13px; color: rgba(255,255,255,0.45); }
+    #pwInput {
+      padding: 14px 18px; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.07);
+      color: white; font-size: 18px; font-weight: 700;
+      width: 260px; text-align: center; outline: none;
+      font-family: "Outfit", sans-serif; letter-spacing: 3px;
+    }
+    #pwInput:focus { border-color: rgba(255,255,255,0.5); }
+    #pwSubmit {
+      padding: 13px 32px; border-radius: 12px; border: none;
+      background: var(--accent); color: white;
+      font-size: 15px; font-weight: 800; cursor: pointer;
+      letter-spacing: 1px; font-family: "Outfit", sans-serif;
+      transition: opacity 0.15s;
+    }
+    #pwSubmit:hover { opacity: 0.85; }
+    #pwError {
+      font-size: 13px; color: var(--danger);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    #pwError.show { opacity: 1; }
+
+    /* ── FAN CAM OFF SCREEN ── */
+    #fanCamOffScreen {
+      position: fixed; inset: 0; z-index: 9998;
+      background: #0a0a0a;
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px;
+    }
+    #fanCamOffScreen.show { display: flex; }
+    #fanCamOffScreen h1 {
+      font-size: 26px; font-weight: 900; letter-spacing: 2px; color: white;
+    }
+    #fanCamOffScreen p { font-size: 14px; color: rgba(255,255,255,0.45); text-align: center; max-width: 320px; line-height: 1.6; }
+    #turnOnBtn {
+      padding: 14px 36px; border-radius: 14px; border: none;
+      background: var(--good); color: #09180f;
+      font-size: 16px; font-weight: 900; cursor: pointer;
+      letter-spacing: 1px; font-family: "Outfit", sans-serif;
+      transition: opacity 0.15s;
+    }
+    #turnOnBtn:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
+
+<!-- PASSWORD GATE -->
+<div id="pwGate">
+  <h1>MANATEE CAM</h1>
+  <p>Control Room — Staff Only</p>
+  <input id="pwInput" type="password" placeholder="••••••••••" autocomplete="off">
+  <button id="pwSubmit">ENTER</button>
+  <div id="pwError">Incorrect password</div>
+</div>
+
+<!-- FAN CAM OFF SCREEN (shown after auth if fanCamOn is false) -->
+<div id="fanCamOffScreen">
+  <h1>FAN CAM IS OFF</h1>
+  <p>Students can't join or stream while the fan cam is off. Turn it on to begin your session.</p>
+  <button id="turnOnBtn">TURN FAN CAM ON</button>
+</div>
+
 <div class="shell">
 
   <!-- TOP BAR -->
   <div class="card topbar">
     <div class="topbar-brand">MANATEE <span>CAM</span> — CONTROL ROOM</div>
+    <button id="turnOffFanCamBtn" class="btn-ghost" style="font-size:13px;padding:10px 16px;">TURN OFF</button>
     <button id="endSessionBtn" class="btn-danger" style="font-size:13px;padding:10px 16px;">END SESSION</button>
   </div>
 
@@ -432,8 +509,59 @@
 import { db } from "./firebase-config.js";
 import {
   ref, onValue, onChildAdded, onChildChanged, onChildRemoved,
-  update, set
+  update, set, get
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+/* ── PASSWORD GATE ── */
+// Password stored as SHA-256 hash — plaintext never in source code
+// Current password: manatee2025
+const PW_HASH = "d95fbd477be7025b92ffe6d82e9bf46cbe22f8750c0eda5c3601c344c234958c";
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+const pwGate          = document.getElementById("pwGate");
+const pwInput         = document.getElementById("pwInput");
+const pwSubmit        = document.getElementById("pwSubmit");
+const pwError         = document.getElementById("pwError");
+const fanCamOffScreen = document.getElementById("fanCamOffScreen");
+const turnOnBtn       = document.getElementById("turnOnBtn");
+const turnOffFanCamBtn= document.getElementById("turnOffFanCamBtn");
+const fanCamOnRef     = ref(db, "meta/fanCamOn");
+
+async function checkPassword() {
+  const hash = await sha256(pwInput.value);
+  if (hash === PW_HASH) {
+    pwGate.classList.add("hidden");
+    const snap = await get(fanCamOnRef);
+    if (!snap.val()) fanCamOffScreen.classList.add("show");
+  } else {
+    pwError.classList.add("show");
+    pwInput.value = "";
+    setTimeout(() => pwError.classList.remove("show"), 2000);
+  }
+}
+pwSubmit.addEventListener("click", checkPassword);
+pwInput.addEventListener("keydown", e => { if (e.key === "Enter") checkPassword(); });
+
+turnOnBtn.addEventListener("click", async () => {
+  await set(fanCamOnRef, true);
+  fanCamOffScreen.classList.remove("show");
+});
+
+turnOffFanCamBtn.addEventListener("click", async () => {
+  if (!confirm("Turn off the fan cam? Students won\'t be able to join.")) return;
+  await set(fanCamOnRef, false);
+  fanCamOffScreen.classList.add("show");
+});
+
+onValue(fanCamOnRef, snap => {
+  if (pwGate.classList.contains("hidden")) {
+    fanCamOffScreen.classList.toggle("show", !snap.val());
+  }
+});
 
 /* ── ELEMENTS ── */
 const els = {

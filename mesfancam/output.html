@@ -295,13 +295,12 @@ html, body {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       text-align: center; padding: 20px;
-      opacity: 1;
-      transform: translateY(0);
-      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22,1,0.36,1);
+      opacity: 0;                /* start invisible — revealed by JS after Firebase responds */
+      transition: opacity 0.5s ease;
     }
+    #emptyState.visible { opacity: 1; }
     #emptyState.hidden {
       opacity: 0;
-      transform: translateY(-8px);
       pointer-events: none;
     }
     .empty-label {
@@ -316,6 +315,30 @@ html, body {
       width: clamp(90px, 13vh, 170px);
       height: auto; margin: clamp(8px,1.2vh,18px) 0;
       border-radius: 8px; object-fit: contain;
+    }
+    /* Offline block — shown instead of QR when fan cam is off */
+    #offlineBlock {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(6px, 0.8vh, 10px);
+    }
+    #offlineBlock.show { display: flex; }
+    #offlineBlock .off-icon {
+      font-size: clamp(28px, 4vh, 48px);
+      line-height: 1;
+    }
+    #offlineBlock .off-title {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(14px, 2vh, 24px);
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.9);
+    }
+    #offlineBlock .off-msg {
+      font-size: clamp(10px, 1.3vh, 15px);
+      color: rgba(255,255,255,0.4);
+      line-height: 1.5;
     }
 
     /* Bad connection */
@@ -535,9 +558,18 @@ html, body {
     <div id="feedWrap">
       <img id="liveImage" alt="Live fan cam feed">
       <div id="emptyState">
-        <div class="empty-label">SCAN TO JOIN</div>
-        <img id="qrImage" src="assets/qr.png" alt="QR code">
-        <div class="empty-label">MANATEE CAM</div>
+        <!-- Online state -->
+        <div id="onlineBlock">
+          <div class="empty-label">SCAN TO JOIN</div>
+          <img id="qrImage" src="assets/qr.png" alt="QR code">
+          <div class="empty-label">MANATEE CAM</div>
+        </div>
+        <!-- Offline state -->
+        <div id="offlineBlock">
+          <div class="off-icon">📵</div>
+          <div class="off-title">FAN CAM IS OFF</div>
+          <div class="off-msg">Not taking connections right now</div>
+        </div>
       </div>
       <div id="badOverlay">
         <div class="bad-dot"></div>
@@ -622,6 +654,19 @@ const skribblWinName     = document.getElementById("skribblWinName");
 const activeUserRef  = ref(db, "live/activeUser");
 const frameRef       = ref(db, "live/frame");
 const heartbeatRef   = ref(db, "live/heartbeat");
+const fanCamOnRef    = ref(db, "meta/fanCamOn");
+
+/* ── FAN CAM ON/OFF ── */
+const qrImage     = document.getElementById("qrImage"); // kept for layout
+const onlineBlock  = document.getElementById("onlineBlock");
+const offlineBlock = document.getElementById("offlineBlock");
+onValue(fanCamOnRef, snap => {
+  const on = snap.val() !== false; // null (never set) = treat as on
+  onlineBlock.style.display  = on  ? "" : "none";
+  offlineBlock.classList.toggle("show", !on);
+  // Fade in now that we know the correct state
+  emptyState.classList.add("visible");
+});
 const triviaModeRef  = ref(db, "trivia/mode");
 const triviaQRef     = ref(db, "trivia/question");
 const triviaCRef     = ref(db, "trivia/correct");
