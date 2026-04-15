@@ -552,8 +552,26 @@ turnOnBtn.addEventListener("click", async () => {
 });
 
 turnOffFanCamBtn.addEventListener("click", async () => {
-  if (!confirm("Turn off the fan cam? Students won\'t be able to join.")) return;
-  await set(fanCamOnRef, false);
+  if (!confirm("Turn off the fan cam? This will end the session and remove all connected students.")) return;
+  stopAuto();
+  els.autoLiveToggle.checked = false;
+  await Promise.all([
+    set(fanCamOnRef, false),
+    set(ref(db,"participants"), null),
+    set(ref(db,"selfies"), null),
+    set(ref(db,"live"), null),
+    set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
+    set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
+    set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null }),
+    set(ref(db,"meta/resetFlag"), Date.now()),
+  ]);
+  state.participants = {}; state.selfies = {}; state.answers = {};
+  state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
+  els.grid.innerHTML = `<div class="empty">Session ended. Ready for next time.</div>`;
+  els.questionInput.value = ""; els.correctInput.value = "";
+  els.pollQuestion.value = ""; state.draftPollOptions = ["",""]; renderPollDraft();
+  updateStats(); updateWinnerStat();
   fanCamOffScreen.classList.add("show");
 });
 
