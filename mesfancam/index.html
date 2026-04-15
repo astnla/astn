@@ -6,22 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root { --red:#DA1A32; --navy:#00031F; --white:#ffffff; --dim:rgba(0,0,0,0.18); }
+    :root { --red:#0a0a0a; --navy:#ffffff; --white:#ffffff; --dim:rgba(0,0,0,0.18); }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
     html,body{min-height:100vh;background:var(--red);font-family:"DM Sans",sans-serif;color:var(--white);overflow-x:hidden;}
     body{padding-bottom:80px;}
     .page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:env(safe-area-inset-top,16px) 24px 0;}
     .wordmark{display:flex;flex-direction:column;align-items:center;margin-bottom:20px;animation:fadeDown 0.4s ease both;}
     .wordmark img{width:48px;height:48px;object-fit:contain;border-radius:8px;margin-bottom:6px;}
-    .wordmark-text{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;letter-spacing:2px;color:var(--navy);}
+    .wordmark-text{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;letter-spacing:2px;color:var(--white);}
     .viewfinder{position:relative;width:min(82vw,320px);aspect-ratio:3/4;background:var(--dim);border-radius:12px;overflow:hidden;animation:fadeUp 0.4s 0.1s ease both;}
     #preview{width:100%;height:100%;object-fit:cover;display:block;opacity:0;pointer-events:none;}
     #preview::-webkit-media-controls,
     #preview::-webkit-media-controls-enclosure,
     #preview::-webkit-media-controls-panel{display:none !important;}
-    .viewfinder::before,.viewfinder::after{content:"";position:absolute;width:20px;height:20px;border-color:rgba(255,255,255,0.4);border-style:solid;z-index:3;pointer-events:none;}
-    .viewfinder::before{top:10px;left:10px;border-width:2px 0 0 2px;border-radius:3px 0 0 0;}
-    .viewfinder::after{bottom:10px;right:10px;border-width:0 2px 2px 0;border-radius:0 0 3px 0;}
+
     #liveBadge{display:none;position:absolute;top:10px;left:10px;background:rgba(255,255,255,0.92);color:var(--red);padding:5px 11px;border-radius:6px;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:15px;letter-spacing:1px;align-items:center;gap:6px;z-index:10;}
     #liveBadge.show{display:flex;}
     .live-dot{width:8px;height:8px;background:var(--red);border-radius:50%;animation:livePulse 1s ease-in-out infinite;}
@@ -36,14 +34,26 @@
     .cam-label{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:16px;letter-spacing:1.5px;color:rgba(255,255,255,0.85);text-align:center;animation:pulse 1.8s ease-in-out infinite;}
     @keyframes pulse{0%,100%{opacity:0.55;}50%{opacity:1;}}
 
+    /* ── SHARED INTERACTIVE BUTTON STYLE ── */
+    /* Used by trivia submit, skribbl guess, and poll options — consistent outline style */
+    .action-btn {
+      width:100%;padding:13px 16px;border-radius:8px;
+      border:2px solid rgba(255,255,255,0.35);
+      background:rgba(255,255,255,0.08);
+      color:white;
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:17px;letter-spacing:1px;
+      cursor:pointer;text-align:center;
+      transition:background 0.15s,border-color 0.15s,transform 0.1s;
+    }
+    .action-btn:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.6);}
+    .action-btn:active{transform:scale(0.98);background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.8);}
+
     /* ── TRIVIA ── */
     #triviaBox{display:none;flex-direction:column;gap:10px;width:min(82vw,320px);margin-top:18px;animation:fadeUp 0.3s ease both;}
     #triviaBox.show{display:flex;}
     #triviaInput{padding:12px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.15);color:white;font-family:"DM Sans",sans-serif;font-size:15px;font-weight:500;outline:none;transition:background 0.2s;}
     #triviaInput::placeholder{color:rgba(255,255,255,0.45);}
     #triviaInput:focus{background:rgba(255,255,255,0.22);}
-    #triviaSubmit{padding:12px;border-radius:8px;border:none;background:var(--navy);color:white;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:17px;letter-spacing:1px;cursor:pointer;transition:opacity 0.15s;}
-    #triviaSubmit:active{opacity:0.7;}
     #triviaSubmitted{display:none;text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;letter-spacing:1px;color:rgba(255,255,255,0.9);margin-top:16px;}
     #triviaSubmitted.show{display:block;}
 
@@ -52,14 +62,15 @@
     #pollBox.show{display:flex;}
     #pollQuestionText{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:18px;letter-spacing:0.5px;color:white;text-align:center;line-height:1.3;}
     #pollOptionsList{display:flex;flex-direction:column;gap:8px;}
-    .poll-btn{width:100%;padding:13px 16px;border-radius:8px;border:2px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:white;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:16px;letter-spacing:0.5px;cursor:pointer;text-align:left;transition:background 0.15s,border-color 0.15s,transform 0.1s;}
+    .poll-btn{width:100%;padding:13px 16px;border-radius:8px;border:2px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.08);color:white;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:16px;letter-spacing:0.5px;cursor:pointer;text-align:left;transition:background 0.15s,border-color 0.15s,transform 0.1s;}
+    .poll-btn:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.6);}
     .poll-btn:active{transform:scale(0.98);}
-    .poll-btn:hover{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.6);}
-    .poll-btn.selected{background:var(--navy);border-color:var(--navy);}
+    /* Selected: brighter border + slightly more opaque bg — keeps text readable unlike solid fill */
+    .poll-btn.selected{background:rgba(255,255,255,0.22);border-color:rgba(255,255,255,0.9);border-width:2px;}
     #pollSubmitted{display:none;text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;letter-spacing:1px;color:rgba(255,255,255,0.9);margin-top:16px;}
     #pollSubmitted.show{display:block;}
 
-    .legal{margin-top:14px;font-size:10px;line-height:1.5;color:rgba(0,3,31,0.55);text-align:center;max-width:300px;}
+    .legal{margin-top:14px;font-size:10px;line-height:1.5;color:rgba(255, 255, 255, 0.55);text-align:center;max-width:300px;}
     @keyframes fadeDown{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:none;}}
     @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
 
@@ -70,8 +81,6 @@
     #skribblInput{padding:12px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.15);color:white;font-family:"DM Sans",sans-serif;font-size:15px;font-weight:500;outline:none;transition:background 0.2s;}
     #skribblInput::placeholder{color:rgba(255,255,255,0.45);}
     #skribblInput:focus{background:rgba(255,255,255,0.22);}
-    #skribblGuess{padding:12px;border-radius:8px;border:none;background:var(--navy);color:white;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:17px;letter-spacing:1px;cursor:pointer;transition:opacity 0.15s;}
-    #skribblGuess:active{opacity:0.7;}
     #skribblWinner{display:none;text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;letter-spacing:2px;color:white;margin-top:10px;animation:fadeUp 0.4s ease both;}
     #skribblWinner.show{display:block;}
 
@@ -103,8 +112,11 @@
       font-size:15px;letter-spacing:1px;cursor:pointer;transition:opacity 0.15s;
     }
     .draw-btn:active{opacity:0.7;}
-    #drawRestart{background:rgba(0,3,31,0.08);color:#00031F;}
-    #drawSubmit{background:#00031F;color:white;}
+    /* Draw overlay is white bg — use bordered styles for contrast */
+    #drawRestart{background:rgba(255, 0, 0, 0.1);color:#cc0000;border:2px solid #cc0000;}
+    #drawRestart:active{background:rgba(204,0,0,0.08);}
+    #drawSubmit{background:rgba(0, 0, 0, 0.08);color:rgb(0, 0, 0);border:2px solid #00031F;}
+    #drawSubmit:active{background:#111;}
     #drawSubmitted{
       display:none;position:absolute;inset:0;z-index:21;
       background:white;border-radius:12px;
@@ -148,34 +160,33 @@
       <canvas id="drawCanvas"></canvas>
       <div id="drawActions">
         <button class="draw-btn" id="drawRestart">RESTART</button>
-        <button class="draw-btn" id="drawSubmit">SUBMIT ✓</button>
+        <button class="draw-btn" id="drawSubmit">SUBMIT</button>
       </div>
     </div>
     <div id="drawSubmitted">
-      <div>DRAWING SENT ✓</div>
-      <div style="font-size:13px;font-weight:400;font-family:'DM Sans',sans-serif;opacity:0.5;">waiting for next prompt</div>
+      <div>DRAWING SENT</div>
     </div>
   </div>
 
   <!-- Trivia -->
   <div id="triviaBox">
     <input id="triviaInput" type="text" placeholder="Type your answer…" autocomplete="off">
-    <button id="triviaSubmit">SUBMIT ANSWER</button>
+    <button id="triviaSubmit" class="action-btn">SUBMIT ANSWER</button>
   </div>
-  <div id="triviaSubmitted">ANSWER SUBMITTED ✓</div>
+  <div id="triviaSubmitted">ANSWER SUBMITTED</div>
 
   <!-- Polls -->
   <div id="pollBox">
     <div id="pollQuestionText"></div>
     <div id="pollOptionsList"></div>
   </div>
-  <div id="pollSubmitted">VOTE SUBMITTED ✓</div>
+  <div id="pollSubmitted">VOTE SUBMITTED</div>
 
   <!-- Skribbl guess box -->
   <div id="skribblBox">
-    <div id="skribblLabel">🎨 What are they drawing?</div>
+    <div id="skribblLabel">🎨 WHAT'S THEIR DOODLE?</div>
     <input id="skribblInput" type="text" placeholder="Type your guess…" autocomplete="off">
-    <button id="skribblGuess">GUESS</button>
+    <button id="skribblGuess" class="action-btn">GUESS</button>
   </div>
   <div id="skribblWinner"></div>
 
@@ -366,7 +377,7 @@ function endSession() {
   if (currentStream) currentStream.getTracks().forEach(t => t.stop());
   document.body.innerHTML = `
     <div style="height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:#DA1A32;color:white;font-family:'Barlow Condensed',sans-serif;
+    background:#0a0a0a;color:white;font-family:'Barlow Condensed',sans-serif;
     font-size:28px;font-weight:900;letter-spacing:2px;text-align:center;padding:24px;gap:12px;">
       <div>THANKS FOR JOINING!</div>
       <div style="font-size:14px;font-weight:400;font-family:'DM Sans',sans-serif;opacity:0.7;letter-spacing:0;">You can close this tab.</div>
@@ -579,7 +590,7 @@ onValue(drawModeRef, snap => {
     drawOverlay.classList.remove("show");
     drawSubmitted.classList.remove("show");
     drawHasSubmitted = false;
-    drawSubmit.textContent = "SUBMIT ✓";
+    drawSubmit.textContent = "SUBMIT";
   }
 });
 
@@ -588,7 +599,7 @@ onValue(drawPromptRef, snap => {
   const d = snap.val() || {};
   if (drawActive && d.show && d.text) {
     drawHasSubmitted = false;
-    drawSubmit.textContent = "SUBMIT ✓";
+    drawSubmit.textContent = "SUBMIT";
     drawPromptText.textContent = d.text;
     drawOverlay.classList.add("show");
     drawSubmitted.classList.remove("show");
