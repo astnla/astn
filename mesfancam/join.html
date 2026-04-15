@@ -55,7 +55,6 @@
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
       font-size: 26px;
-      letter-spacing: 2px;
       color: var(--WHITE);
     }
 
@@ -120,7 +119,6 @@
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 700;
       font-size: 16px;
-      letter-spacing: 1.5px;
       color: rgba(255,255,255,0.85);
       text-align: center;
       animation: pulse 1.8s ease-in-out infinite;
@@ -165,7 +163,6 @@
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 700;
       font-size: 24px;
-      letter-spacing: 2px;
       text-transform: uppercase;
       color: white;
       text-align: center;
@@ -192,7 +189,6 @@
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 700;
       font-size: 16px;
-      letter-spacing: 1px;
       cursor: pointer;
       transition: opacity 0.15s, transform 0.1s;
     }
@@ -232,7 +228,6 @@
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
       font-size: 32px;
-      letter-spacing: 3px;
       color: var(--white);
       animation: pulse 1.4s ease-in-out infinite;
     }
@@ -255,7 +250,7 @@
       background: #0a0a0a;
       flex-direction: column;
       align-items: center; justify-content: center;
-      gap: 14px; z-index: 9999;
+      gap: 5px; z-index: 9999;
     }
     #offlineScreen.show { display: flex; }
     #offlineScreen .off-icon {
@@ -264,11 +259,10 @@
     #offlineScreen .off-title {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900; font-size: 28px;
-      letter-spacing: 2px; color: white;
     }
     #offlineScreen .off-msg {
       font-size: 14px; color: rgba(255,255,255,0.45);
-      text-align: center; line-height: 1.6; max-width: 280px;
+      text-align: center; max-width: 280px;
     }
   </style>
 </head>
@@ -276,9 +270,9 @@
 
 <!-- OFFLINE SCREEN -->
 <div id="offlineScreen">
-  <div class="off-icon">📵</div>
-  <div class="off-title">FAN CAM IS OFF</div>
-  <div class="off-msg">The fan cam isn't running right now. Check back when your teacher starts the session.</div>
+  <div class="off-icon">😔</div>
+  <div class="off-title">FAN CAM OFFLINE</div>
+  <div class="off-msg">Try again another time.</div>
 </div>
 
 <!-- WiFi notice -->

@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <title>LIVE FEED</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
       --red:  #DA1A32;
@@ -154,9 +154,8 @@ html, body {
     }
     .header-title {
       font-family: "Barlow Condensed", sans-serif;
-      font-weight: 900;
+      font-weight: 800;
       font-size: clamp(18px, 2.4vh, 32px);
-      letter-spacing: 2.5px;
       color: white;
     }
 
@@ -207,7 +206,6 @@ html, body {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
       font-size: clamp(14px, 1.9vh, 26px);
-      letter-spacing: 1.5px;
       color: rgba(255,255,255,0.9);
       white-space: nowrap;
       line-height: 1;
@@ -276,7 +274,6 @@ html, body {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
       font-size: clamp(10px, 1.4vh, 16px);
-      letter-spacing: 1.5px;
       z-index: 5;
       opacity: 0;
       pointer-events: none;
@@ -306,15 +303,15 @@ html, body {
     .empty-label {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
-      font-size: clamp(14px, 2vh, 24px);
-      letter-spacing: 2px;
-      color: rgba(255,255,255,0.45);
+      font-size: clamp(25px, 2vh, 50px);
+      color: rgba(255,255,255,1);
       animation: breathe 2s ease-in-out infinite;
     }
     #qrImage {
       width: clamp(90px, 13vh, 170px);
       height: auto; margin: clamp(8px,1.2vh,18px) 0;
       border-radius: 8px; object-fit: contain;
+      animation: breathe 2s ease-in-out infinite;
     }
     /* Offline block — shown instead of QR when fan cam is off */
     #offlineBlock {
@@ -322,6 +319,7 @@ html, body {
       flex-direction: column;
       align-items: center;
       gap: clamp(6px, 0.8vh, 10px);
+      text-shadow: 0px 2px 10px #000000;
     }
     #offlineBlock.show { display: flex; }
     #offlineBlock .off-icon {
@@ -331,13 +329,12 @@ html, body {
     #offlineBlock .off-title {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
-      font-size: clamp(14px, 2vh, 24px);
-      letter-spacing: 2px;
-      color: rgba(255,255,255,0.9);
+      font-size: clamp(25px, 2vh, 30px);
+      color: rgba(255,255,255,1);
     }
     #offlineBlock .off-msg {
-      font-size: clamp(10px, 1.3vh, 15px);
-      color: rgba(255,255,255,0.4);
+      font-size: clamp(13px, 1.3vh, 15px);
+      color: rgba(255, 255, 255, 1);
       line-height: 1.5;
     }
 
@@ -352,7 +349,6 @@ html, body {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
       font-size: clamp(13px, 1.8vh, 22px);
-      letter-spacing: 1.5px;
       z-index: 5;
       opacity: 0;
       pointer-events: none;
@@ -427,7 +423,6 @@ html, body {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 700;
       font-size: clamp(9px, 1.1vh, 13px);
-      letter-spacing: 2.5px;
       text-transform: uppercase;
       color: var(--red);
       margin-bottom: clamp(4px, 0.6vh, 8px);
@@ -436,7 +431,6 @@ html, body {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
       font-size: clamp(16px, 2.2vh, 30px);
-      letter-spacing: 0.3px;
       line-height: 1.15;
     }
 
@@ -453,7 +447,6 @@ html, body {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 700;
       font-size: clamp(13px, 1.8vh, 22px);
-      letter-spacing: 0.3px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       flex: 1;
     }
@@ -530,7 +523,6 @@ html, body {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
       font-size: clamp(20px, 2.8vh, 36px);
-      letter-spacing: 1px;
       color: var(--good, #54d18a);
     }
     #skribblWinnerOverlay .win-name {
@@ -566,9 +558,9 @@ html, body {
         </div>
         <!-- Offline state -->
         <div id="offlineBlock">
-          <div class="off-icon">📵</div>
-          <div class="off-title">FAN CAM IS OFF</div>
-          <div class="off-msg">Not taking connections right now</div>
+          <div class="off-icon">😔</div>
+          <div class="off-title">FAN CAM OFFLINE</div>
+          <div class="off-msg">We'll be back later.</div>
         </div>
       </div>
       <div id="badOverlay">
