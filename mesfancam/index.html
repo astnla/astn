@@ -299,17 +299,24 @@ async function enableCamera() {
     currentStream = stream;
     preview.srcObject = stream;
     preview.style.transform = currentCamera === "front" ? "scaleX(-1)" : "scaleX(1)";
-    // Wait for first real frame before revealing.
-    // On iOS, onloadeddata fires before the frame dimensions stabilize, causing a
-    // brief "zoomed in" flicker. The double rAF waits for the browser to finish
-    // its layout pass so object-fit:cover is applied at the correct size first.
-    preview.onloadeddata = () => {
-      requestAnimationFrame(() => requestAnimationFrame(() => {
+    // On iOS, onloadeddata (and even onplaying) fire before the video frame is
+    // fully composited at the right size, causing a zoomed-in flicker for a few
+    // frames. We poll until videoWidth has been stable for 2 consecutive rAF ticks,
+    // meaning the browser has locked in the real dimensions and object-fit:cover
+    // will be correct before we reveal the video.
+    let lastW = 0;
+    function revealWhenStable() {
+      const w = preview.videoWidth;
+      if (w > 0 && w === lastW) {
         preview.style.opacity = "1";
         camOverlay.style.display = "none";
         flipBtn.classList.add("show");
-      }));
-    };
+      } else {
+        lastW = w;
+        requestAnimationFrame(revealWhenStable);
+      }
+    }
+    preview.onloadeddata = () => requestAnimationFrame(revealWhenStable);
     update(ref(db, `participants/${userKey}`), { cameraActive: true });
     streamingEnabled = true;
     startFrameLoop();
