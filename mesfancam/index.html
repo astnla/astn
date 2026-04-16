@@ -261,62 +261,36 @@ function hasSignificantChange(sourceCanvas) {
 
 /* ── CAMERA ── */
 async function enableCamera() {
-  if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
+  if (currentStream) currentStream.getTracks().forEach(t => t.stop());
   camLabel.textContent = "ENABLING…";
   try {
+    await navigator.mediaDevices.getUserMedia({ video: true });
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === "videoinput");
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     let constraints;
     if (isIOS) {
-      // iOS: facingMode is reliable and doesn't need device enumeration
       constraints = { video: { facingMode: currentCamera === "front" ? "user" : "environment", width:{ideal:480}, height:{ideal:360} } };
     } else {
-      // Android: enumerate devices AFTER any prior stream is fully stopped.
-      // Do NOT do a probe getUserMedia() first — on many Android phones a second
-      // getUserMedia() call right after fails because the camera hasn't fully released.
-      // Instead, try facingMode first (works on most Androids), and only fall back to
-      // deviceId-based selection if we have labelled devices available.
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const cams = devices.filter(d => d.kind === "videoinput");
-      const hasLabels = cams.some(c => c.label);
-      if (!hasLabels) {
-        // No labels yet (permission not granted) — use facingMode, which triggers the permission prompt
-        constraints = { video: { facingMode: currentCamera === "front" ? "user" : "environment", width:{ideal:480}, height:{ideal:360} } };
+      let target;
+      if (currentCamera === "front") {
+        target = cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) || cams.find(c => /front/i.test(c.label)) || cams[0];
       } else {
-        let target;
-        if (currentCamera === "front") {
-          target = cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label))
-                || cams.find(c => /front/i.test(c.label))
-                || cams[0];
-        } else {
-          target = cams.find(c => /back|rear|environment/i.test(c.label))
-                || cams[cams.length - 1];
-        }
-        if (!target?.deviceId) target = currentCamera === "front" ? cams[0] : cams[cams.length - 1];
-        constraints = { video: { deviceId: { exact: target.deviceId }, width:{ideal:480}, height:{ideal:360} } };
+        target = cams.find(c => /back|rear|environment/i.test(c.label)) || cams[cams.length - 1];
       }
+      if (!target?.deviceId) target = currentCamera === "front" ? cams[0] : cams[cams.length-1];
+      constraints = { video: { deviceId: { exact: target.deviceId }, width:{ideal:480}, height:{ideal:360} } };
     }
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
     preview.srcObject = stream;
     preview.style.transform = currentCamera === "front" ? "scaleX(-1)" : "scaleX(1)";
-    // On iOS, onloadeddata (and even onplaying) fire before the video frame is
-    // fully composited at the right size, causing a zoomed-in flicker for a few
-    // frames. We poll until videoWidth has been stable for 2 consecutive rAF ticks,
-    // meaning the browser has locked in the real dimensions and object-fit:cover
-    // will be correct before we reveal the video.
-    let lastW = 0;
-    function revealWhenStable() {
-      const w = preview.videoWidth;
-      if (w > 0 && w === lastW) {
-        preview.style.opacity = "1";
-        camOverlay.style.display = "none";
-        flipBtn.classList.add("show");
-      } else {
-        lastW = w;
-        requestAnimationFrame(revealWhenStable);
-      }
-    }
-    preview.onloadeddata = () => requestAnimationFrame(revealWhenStable);
+    // Wait for first real frame before revealing — prevents play button flash on iOS
+    preview.onloadeddata = () => {
+      preview.style.opacity = "1";
+      camOverlay.style.display = "none";
+      flipBtn.classList.add("show");
+    };
     update(ref(db, `participants/${userKey}`), { cameraActive: true });
     streamingEnabled = true;
     startFrameLoop();
