@@ -261,25 +261,32 @@ function hasSignificantChange(sourceCanvas) {
 
 /* ── CAMERA ── */
 async function enableCamera() {
-  if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+  if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
   camLabel.textContent = "ENABLING…";
   try {
-    await navigator.mediaDevices.getUserMedia({ video: true });
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const cams = devices.filter(d => d.kind === "videoinput");
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     let constraints;
     if (isIOS) {
       constraints = { video: { facingMode: currentCamera === "front" ? "user" : "environment", width:{ideal:480}, height:{ideal:360} } };
     } else {
-      let target;
-      if (currentCamera === "front") {
-        target = cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label)) || cams.find(c => /front/i.test(c.label)) || cams[0];
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter(d => d.kind === "videoinput");
+      const hasLabels = cams.some(c => c.label);
+      if (!hasLabels) {
+        constraints = { video: { facingMode: currentCamera === "front" ? "user" : "environment", width:{ideal:480}, height:{ideal:360} } };
       } else {
-        target = cams.find(c => /back|rear|environment/i.test(c.label)) || cams[cams.length - 1];
+        let target;
+        if (currentCamera === "front") {
+          target = cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label))
+                || cams.find(c => /front/i.test(c.label))
+                || cams[0];
+        } else {
+          target = cams.find(c => /back|rear|environment/i.test(c.label))
+                || cams[cams.length - 1];
+        }
+        if (!target?.deviceId) target = currentCamera === "front" ? cams[0] : cams[cams.length - 1];
+        constraints = { video: { deviceId: { exact: target.deviceId }, width:{ideal:480}, height:{ideal:360} } };
       }
-      if (!target?.deviceId) target = currentCamera === "front" ? cams[0] : cams[cams.length-1];
-      constraints = { video: { deviceId: { exact: target.deviceId }, width:{ideal:480}, height:{ideal:360} } };
     }
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
@@ -365,6 +372,11 @@ camOverlay.addEventListener("click", () => {
 });
 flipBtn.addEventListener("click", async () => {
   streamingEnabled = false;
+  // Hide and detach the video BEFORE switching — this prevents iOS from briefly
+  // showing the new stream at its natural (unconstrained) resolution before
+  // object-fit:cover kicks in, which caused the zoomed-in flicker.
+  preview.style.opacity = "0";
+  preview.srcObject = null;
   currentCamera = currentCamera === "front" ? "back" : "front";
   lastFrameData = null;
   await enableCamera();
