@@ -127,6 +127,7 @@ html, body {
       object-fit: contain;
       display: block;
       background: white;
+      transition: opacity 0.35s ease;
     }
 
     /* ── HEADER ── */
@@ -869,13 +870,25 @@ function stopPolls() {
 /* ── DRAWING SIDE PANEL ── */
 let drawSubs = {};
 
-function showDrawPanel(imgSrc, label) {
+function showDrawPanel(imgSrc, label, crossfade = false) {
   drawPanelEyebrow.textContent = label || "DRAWING";
-  drawPanelImg.src = imgSrc;
-  drawPanelImg.style.display = "block";   // was hidden by default after skribbl addition
-  skribblLiveImg.style.display = "none";  // hide skribbl img when showing static reveal
-  stage.classList.add("draw-open");
-  drawPanel.classList.add("show");
+  skribblLiveImg.style.display = "none";
+  const panelAlreadyOpen = drawPanel.classList.contains("show");
+  if (crossfade && panelAlreadyOpen) {
+    // Panel is already open — crossfade the image instead of slide animating
+    drawPanelImg.style.opacity = "0";
+    setTimeout(() => {
+      drawPanelImg.src = imgSrc;
+      drawPanelImg.style.display = "block";
+      drawPanelImg.style.opacity = "1";
+    }, 200);
+  } else {
+    drawPanelImg.src = imgSrc;
+    drawPanelImg.style.display = "block";
+    drawPanelImg.style.opacity = "1";
+    stage.classList.add("draw-open");
+    drawPanel.classList.add("show");
+  }
 }
 function hideDrawPanel() {
   stage.classList.remove("draw-open");
@@ -883,15 +896,38 @@ function hideDrawPanel() {
   setTimeout(() => { if (!drawPanel.classList.contains("show")) drawPanelImg.src = ""; }, 500);
 }
 
+let revealModeOn = false;
+onValue(ref(db, "meta/revealMode"), snap => { revealModeOn = snap.val() === true; });
+
 onValue(drawModeRef, snap => {
   if (!snap.val()) { hideDrawPanel(); drawSubs = {}; }
 });
 onValue(drawSubRef, snap => { drawSubs = snap.val() || {}; });
+
+// Debounce hide so that when reveal mode swaps reveals (clear → set new),
+// the brief null state doesn't collapse the panel before the new image arrives.
+let drawHideTimer = null;
+
 onValue(drawRevealRef, snap => {
   const r = snap.val() || {};
   const key = Object.keys(r).find(k => r[k]?.show === true);
-  if (!key || !drawSubs[key]?.data) { hideDrawPanel(); return; }
-  showDrawPanel(drawSubs[key].data, "DRAWING");
+
+  if (key && drawSubs[key]?.data) {
+    // A reveal is active — cancel any pending hide and show the image
+    if (drawHideTimer) { clearTimeout(drawHideTimer); drawHideTimer = null; }
+    showDrawPanel(drawSubs[key].data, "DRAWING", revealModeOn);
+  } else {
+    // No reveal — if reveal mode is on, wait briefly in case a new one is coming
+    // (control clears then immediately sets new reveal when switching person)
+    if (revealModeOn && drawPanel.classList.contains("show")) {
+      drawHideTimer = setTimeout(() => {
+        drawHideTimer = null;
+        hideDrawPanel();
+      }, 600);
+    } else {
+      hideDrawPanel();
+    }
+  }
 });
 
 /* ── SKRIBBL SIDE PANEL ── */
@@ -958,7 +994,7 @@ onValue(skribblWinnerRef, snap => {
   const w = snap.val();
   if (!w || !skribblOn) return;
   spawnFloatingGuess(`${w.name}: ${w.text}`, true);
-  skribblWinName.textContent = `${w.name} guessed it!`;
+  skribblWinName.textContent = `${w.name} GUESSED IT!`;
   skribblWinnerOverlay.classList.add("show");
   // Clear floating guesses
   setTimeout(() => skribblGuessLayer.innerHTML = "", 500);

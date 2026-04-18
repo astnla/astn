@@ -753,7 +753,7 @@ onValue(skribblWinnerRef, snap => {
     drawOverlay.classList.remove("show");
     stopSkribblStream();
     // Show who won
-    skribblWinner.textContent = `${w.name} got it!`;
+    skribblWinner.textContent = `${w.name} GOT IT!`;
     skribblWinner.classList.add("show");
   } else if (w.guesserKey === userKey) {
     // I won!
@@ -762,7 +762,7 @@ onValue(skribblWinnerRef, snap => {
     skribblBox.classList.remove("show");
   } else {
     // Someone else won
-    skribblWinner.textContent = `${w.name} got it!`;
+    skribblWinner.textContent = `${w.name} GOT IT!`;
     skribblWinner.classList.add("show");
     skribblBox.classList.remove("show");
   }

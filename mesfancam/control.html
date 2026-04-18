@@ -490,6 +490,10 @@
           <div class="participant-sub" id="memberSub">waiting for people to join</div>
         </div>
         <div class="participant-bar-right">
+          <label class="auto-pill" id="revealPill">
+            <input class="switch" type="checkbox" id="revealModeToggle">
+            REVEAL MODE
+          </label>
           <label class="auto-pill" id="autoPill">
             <input class="switch" type="checkbox" id="autoLiveToggle">
             AUTO LIVE
@@ -597,6 +601,8 @@ const els = {
   autoPill:       document.getElementById("autoPill"),
   endSessionBtn:  document.getElementById("endSessionBtn"),
   clearLiveBtn:   document.getElementById("clearLiveBtn"),
+  revealModeToggle: document.getElementById("revealModeToggle"),
+  revealPill:     document.getElementById("revealPill"),
   showDrawBtn:    document.getElementById("showDrawBtn"),
   drawShell:      document.getElementById("drawShell"),
   showSkribblBtn:     document.getElementById("showSkribblBtn"),
@@ -644,6 +650,7 @@ const state = {
   triviaQuestionActive: false, triviaCorrect: "",
   cardRefs: {},
   autoLiveEnabled: false, autoLiveInterval: null,
+  revealModeEnabled: false,
   autoCycle: [], autoIndex: 0,
   draftPollOptions: [],
 };
@@ -1211,8 +1218,31 @@ onValue(ref(db,"polls/votes"), snap => {
 });
 
 onValue(ref(db,"polls/totals"),    snap => { state.pollTotals = snap.val() || {}; });
-onValue(ref(db,"live/activeUser"), snap => {
-  state.currentLiveUser = snap.val() || null;
+onValue(ref(db,"live/activeUser"), async snap => {
+  const newUser = snap.val() || null;
+  if (newUser && newUser !== state.currentLiveUser) {
+    if (state.revealModeEnabled) {
+      // Reveal mode on — check what was showing and carry intent to the new person
+      const drawWasRevealed = state.currentLiveUser && state.drawReveals[state.currentLiveUser]?.show === true;
+      const triviaWasRevealed = state.currentLiveUser && state.reveals[state.currentLiveUser]?.show === true;
+      await Promise.all([
+        set(ref(db, "trivia/reveal"), null),
+        set(ref(db, "drawing/reveal"), null),
+      ]);
+      if (drawWasRevealed && state.drawSubmissions[newUser]?.data) {
+        await set(ref(db, `drawing/reveal/${newUser}`), { show: true });
+      } else if (triviaWasRevealed && state.answers[newUser]?.answer) {
+        await set(ref(db, `trivia/reveal/${newUser}`), { show: true });
+      }
+    } else {
+      // Reveal mode off — always clear, teacher reveals manually for suspense
+      await Promise.all([
+        set(ref(db, "trivia/reveal"), null),
+        set(ref(db, "drawing/reveal"), null),
+      ]);
+    }
+  }
+  state.currentLiveUser = newUser;
   updateStats();
   Object.keys(state.participants).forEach(patchCard);
 });
@@ -1358,6 +1388,21 @@ updateSendState();
 updatePollSend();
 updateStats();
 updateWinnerStat();
+
+/* ── REVEAL MODE ── */
+const revealModeRef = ref(db, "meta/revealMode");
+els.revealModeToggle.onchange = async () => {
+  const on = els.revealModeToggle.checked;
+  state.revealModeEnabled = on;
+  els.revealPill.classList.toggle("on", on);
+  await set(revealModeRef, on);
+};
+onValue(revealModeRef, snap => {
+  const on = snap.val() === true;
+  state.revealModeEnabled = on;
+  els.revealModeToggle.checked = on;
+  els.revealPill.classList.toggle("on", on);
+});
 </script>
 </body>
 </html>
