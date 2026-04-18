@@ -755,7 +755,7 @@ onValue(skribblWinnerRef, snap => {
     // Show who won
     skribblWinner.textContent = `${w.name} GOT IT!`;
     skribblWinner.classList.add("show");
-  } else if (w.guesserKey === userKey) {
+  } else if (w.userKey === userKey) {
     // I won!
     skribblWinner.textContent = "YOU GOT IT!";
     skribblWinner.classList.add("show");
