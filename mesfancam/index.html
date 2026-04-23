@@ -126,6 +126,72 @@
       flex-direction:column;gap:8px;
     }
     #drawSubmitted.show{display:flex;}
+
+    /* ── DRAW TOOLBAR ── */
+    #drawToolbar{
+      display:none;
+      flex-direction:column;
+      gap:10px;
+      width:min(82vw,320px);
+      margin-top:12px;
+      animation:fadeUp 0.3s ease both;
+    }
+    #drawToolbar.show{display:flex;}
+    .dtool-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    /* Brush size buttons */
+    .brush-btn{
+      border:2px solid rgba(255,255,255,0.25);
+      border-radius:50%;
+      background:rgba(255,255,255,0.08);
+      cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      transition:border-color 0.15s, background 0.15s;
+      flex-shrink:0;
+    }
+    .brush-btn.active{
+      border-color:white;
+      background:rgba(255,255,255,0.22);
+    }
+    .brush-btn:active{opacity:0.7;}
+    /* dots inside brush buttons */
+    .brush-dot{border-radius:50%;background:white;display:block;}
+    /* Color swatches */
+    .color-swatch{
+      width:26px;height:26px;
+      border-radius:50%;
+      border:2.5px solid transparent;
+      cursor:pointer;
+      flex-shrink:0;
+      transition:border-color 0.15s, transform 0.12s;
+    }
+    .color-swatch.active{
+      border-color:white;
+      transform:scale(1.18);
+    }
+    .color-swatch:active{transform:scale(0.92);}
+    /* Eraser */
+    #eraserBtn{
+      margin-left:auto;
+      background:rgba(255,255,255,0.08);
+      border:2px solid rgba(255,255,255,0.25);
+      border-radius:8px;
+      padding:5px 10px;
+      font-family:"Barlow Condensed",sans-serif;
+      font-weight:700;font-size:13px;
+      color:rgba(255,255,255,0.8);
+      cursor:pointer;
+      transition:background 0.15s, border-color 0.15s;
+      flex-shrink:0;
+    }
+    #eraserBtn.active{
+      background:rgba(255,255,255,0.22);
+      border-color:white;
+      color:white;
+    }
   </style>
 </head>
 <body>
@@ -183,6 +249,36 @@
   <div id="pollSubmitted">VOTE SUBMITTED</div>
 
   <!-- Skribbl guess box -->
+  <!-- Draw toolbar — shown below viewfinder when drawing is active -->
+  <div id="drawToolbar">
+    <!-- Row 1: brush sizes + eraser -->
+    <div class="dtool-row">
+      <button class="brush-btn active" data-size="3" style="width:34px;height:34px;" aria-label="Small brush">
+        <span class="brush-dot" style="width:6px;height:6px;"></span>
+      </button>
+      <button class="brush-btn" data-size="8" style="width:38px;height:38px;" aria-label="Medium brush">
+        <span class="brush-dot" style="width:12px;height:12px;"></span>
+      </button>
+      <button class="brush-btn" data-size="18" style="width:44px;height:44px;" aria-label="Large brush">
+        <span class="brush-dot" style="width:22px;height:22px;"></span>
+      </button>
+      <button id="eraserBtn">ERASER</button>
+    </div>
+    <!-- Row 2: colors -->
+    <div class="dtool-row" style="flex-wrap:wrap;gap:8px;">
+      <button class="color-swatch active" data-color="#000000" style="background:#000000;" aria-label="Black"></button>
+      <button class="color-swatch" data-color="#6B3A2A" style="background:#6B3A2A;" aria-label="Brown"></button>
+      <button class="color-swatch" data-color="#EF4444" style="background:#EF4444;" aria-label="Red"></button>
+      <button class="color-swatch" data-color="#F97316" style="background:#F97316;" aria-label="Orange"></button>
+      <button class="color-swatch" data-color="#EAB308" style="background:#EAB308;" aria-label="Yellow"></button>
+      <button class="color-swatch" data-color="#22C55E" style="background:#22C55E;" aria-label="Green"></button>
+      <button class="color-swatch" data-color="#3B82F6" style="background:#3B82F6;" aria-label="Blue"></button>
+      <button class="color-swatch" data-color="#8B5CF6" style="background:#8B5CF6;" aria-label="Purple"></button>
+      <button class="color-swatch" data-color="#9CA3AF" style="background:#9CA3AF;" aria-label="Grey"></button>
+      <button class="color-swatch" data-color="#ffffff" style="background:#ffffff;border-color:rgba(255,255,255,0.4);" aria-label="White"></button>
+    </div>
+  </div>
+
   <div id="skribblBox">
     <div id="skribblLabel">🎨 WHAT'S THEIR DOODLE?</div>
     <input id="skribblInput" type="text" placeholder="Type your guess…" autocomplete="off">
@@ -601,6 +697,7 @@ onValue(drawModeRef, snap => {
   if (!drawActive) {
     drawOverlay.classList.remove("show");
     drawSubmitted.classList.remove("show");
+    hideDrawToolbar();
     drawHasSubmitted = false;
     drawSubmit.textContent = "SUBMIT";
   }
@@ -615,6 +712,7 @@ onValue(drawPromptRef, snap => {
     drawPromptText.textContent = d.text;
     drawOverlay.classList.add("show");
     drawSubmitted.classList.remove("show");
+    showDrawToolbar();
     // Init canvas after it becomes visible so dimensions are correct
     requestAnimationFrame(() => requestAnimationFrame(initDrawCanvas));
   } else if (!d.show) {
@@ -629,6 +727,53 @@ onValue(ref(db, "drawing/timesUp"), snap => {
   if (drawHasSubmitted) return;
   drawSubmit.click();
 });
+
+/* ── DRAW TOOLBAR ── */
+const drawToolbar = document.getElementById("drawToolbar");
+let currentColor = "#000000";
+let currentSize  = 3;
+let eraserOn     = false;
+
+function applyTool() {
+  if (eraserOn) {
+    drawCtx.strokeStyle = "white";
+    drawCtx.lineWidth   = 24;
+  } else {
+    drawCtx.strokeStyle = currentColor;
+    drawCtx.lineWidth   = currentSize;
+  }
+}
+
+document.querySelectorAll(".brush-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    currentSize = parseInt(btn.dataset.size);
+    eraserOn = false;
+    document.querySelectorAll(".brush-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("eraserBtn").classList.remove("active");
+    applyTool();
+  });
+});
+
+document.querySelectorAll(".color-swatch").forEach(sw => {
+  sw.addEventListener("click", () => {
+    currentColor = sw.dataset.color;
+    eraserOn = false;
+    document.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("active"));
+    sw.classList.add("active");
+    document.getElementById("eraserBtn").classList.remove("active");
+    applyTool();
+  });
+});
+
+document.getElementById("eraserBtn").addEventListener("click", () => {
+  eraserOn = !eraserOn;
+  document.getElementById("eraserBtn").classList.toggle("active", eraserOn);
+  applyTool();
+});
+
+function showDrawToolbar() { drawToolbar.classList.add("show"); applyTool(); }
+function hideDrawToolbar() { drawToolbar.classList.remove("show"); }
 
 /* ── SKRIBBL ── */
 const skribblBox     = document.getElementById("skribblBox");
@@ -688,6 +833,7 @@ onValue(skribblModeRef, snap => {
     skribblAmDrawer = false;
     stopSkribblStream();
     drawOverlay.classList.remove("show");
+    hideDrawToolbar();
     // Restore drawSubmit button in case it was hidden for skribbl
     drawSubmit.style.display = "";
   }
@@ -723,6 +869,7 @@ onValue(skribblPromptRef, snap => {
       drawPromptText.textContent = d.text;
       drawOverlay.classList.add("show");
       skribblBox.classList.remove("show");
+      showDrawToolbar();
       requestAnimationFrame(() => requestAnimationFrame(() => {
         initDrawCanvas();
         startSkribblStream();
@@ -736,6 +883,7 @@ onValue(skribblPromptRef, snap => {
     // Prompt cleared (round ended / not started yet) — hide everything
     drawOverlay.classList.remove("show");
     skribblBox.classList.remove("show");
+    hideDrawToolbar();
     stopSkribblStream();
   }
 });
