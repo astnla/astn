@@ -183,6 +183,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      margin: 0px 0px 10px 0px;
     }
 
     /* Brush size buttons */
@@ -197,6 +198,7 @@
       background: rgba(255,255,255,0.06);
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s;
+      min-height: 40px;
     }
     .brush-btn:active { transform: scale(0.95); }
     .brush-btn.active {
@@ -335,19 +337,19 @@
     <!-- Row 1: Brush sizes + fill + eraser -->
     <div class="tool-row">
       <button class="brush-btn" data-size="1.5" aria-label="Small brush">
-        <span class="brush-dot" style="width:5px;height:5px;background:#fff;"></span>
+        <span class="brush-dot" style="width:8px;height:8px;background:#fff;"></span>
       </button>
       <button class="brush-btn active" data-size="3" aria-label="Medium brush">
-        <span class="brush-dot" style="width:9px;height:9px;background:#fff;"></span>
+        <span class="brush-dot" style="width:12px;height:12px;background:#fff;"></span>
       </button>
       <button class="brush-btn" data-size="7" aria-label="Large brush">
         <span class="brush-dot" style="width:16px;height:16px;background:#fff;"></span>
       </button>
       <button class="tool-icon-btn" id="fillBtn" aria-label="Fill tool">
-        🪣 FILL
+        FILL
       </button>
       <button class="tool-icon-btn" id="eraserBtn" aria-label="Eraser">
-        ◻ ERASE
+        ERASE
       </button>
     </div>
     <!-- Row 2: Color palette -->
