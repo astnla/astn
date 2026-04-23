@@ -803,16 +803,19 @@ onValue(drawModeRef, snap => {
       const d = snap.val() || {};
       if (d.show && d.text) {
         drawPromptText.textContent = d.text;
-        drawOverlay.classList.add("show");
-        drawSubmitted.classList.remove("show");
         if (!drawHasSubmitted) {
+          // Fresh round for this student — open the canvas
+          drawOverlay.classList.add("show");
+          drawSubmitted.classList.remove("show");
           drawSubmit.textContent = "SUBMIT";
           requestAnimationFrame(() => requestAnimationFrame(() => {
             initDrawCanvas();
             showDrawToolbar();
           }));
         } else {
-          // Already submitted — confirm briefly then clear
+          // Already submitted — don't open the drawing board at all.
+          // Just briefly confirm over the camera then return to it.
+          drawOverlay.classList.remove("show");
           drawSubmitted.classList.add("show");
           hideDrawToolbar();
           setTimeout(() => { drawSubmitted.classList.remove("show"); }, 3000);
@@ -827,23 +830,24 @@ onValue(drawPromptRef, snap => {
   const d = snap.val() || {};
   if (drawActive && d.show && d.text) {
     drawPromptText.textContent = d.text;
-    drawOverlay.classList.add("show");
-    drawSubmitted.classList.remove("show");
     if (!drawHasSubmitted) {
-      // Fresh round — show canvas and tools
+      // Fresh round — open canvas and show tools
+      drawOverlay.classList.add("show");
+      drawSubmitted.classList.remove("show");
       drawSubmit.textContent = "SUBMIT";
       requestAnimationFrame(() => requestAnimationFrame(() => {
         initDrawCanvas();
         showDrawToolbar();
       }));
     } else {
-      // Already submitted this round — briefly confirm then clear
+      // Already submitted — stay on camera, briefly confirm, then clear
+      drawOverlay.classList.remove("show");
       drawSubmitted.classList.add("show");
       hideDrawToolbar();
       setTimeout(() => { drawSubmitted.classList.remove("show"); }, 3000);
     }
   } else if (!d.show) {
-    // Prompt cleared (reset) — reset submitted flag so next prompt works cleanly
+    // Prompt cleared (reset) — reset flag so next prompt works cleanly
     drawHasSubmitted = false;
     drawOverlay.classList.remove("show");
     drawSubmitted.classList.remove("show");
