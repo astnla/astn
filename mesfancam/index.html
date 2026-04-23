@@ -309,6 +309,7 @@
 
   <!-- Trivia -->
   <div id="triviaBox" class="ui-panel">
+    <div id="triviaQuestionText" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;color:white;text-align:center;line-height:1.3;"></div>
     <input id="triviaInput" type="text" placeholder="Type your answer…" autocomplete="off">
     <button id="triviaSubmit" class="action-btn">SUBMIT ANSWER</button>
   </div>
@@ -593,10 +594,12 @@ onValue(triviaModeRef, snap => {
     triviaQListener = onValue(triviaQRef, snap => {
       const d = snap.val() || {};
       if (d.show && d.text) {
+        document.getElementById("triviaQuestionText").textContent = d.text;
         showPanel(triviaBox);
         hidePanel(triviaSubmitted);
         triviaInput.value = "";
       } else {
+        document.getElementById("triviaQuestionText").textContent = "";
         hidePanel(triviaBox);
         hidePanel(triviaSubmitted);
         triviaInput.value = "";
