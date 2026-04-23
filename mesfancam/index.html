@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <title>MANATEE CAM</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root { --red:#0a0a0a; --navy:#ffffff; --white:#ffffff; --dim:rgba(0,0,0,0.18); }
@@ -135,6 +135,7 @@
       width:min(82vw,320px);
       margin-top:12px;
       animation:fadeUp 0.3s ease both;
+      user-select:none;-webkit-user-select:none;
     }
     #drawToolbar.show{display:flex;}
     .dtool-row{
@@ -161,12 +162,13 @@
     .brush-dot{border-radius:50%;background:white;display:block;}
     /* Color swatches */
     .color-swatch{
-      width:26px;height:26px;
+      width:22px;height:22px;
       border-radius:50%;
       border:2.5px solid transparent;
       cursor:pointer;
       flex-shrink:0;
       transition:border-color 0.15s, transform 0.12s;
+      user-select:none;-webkit-user-select:none;
     }
     .color-swatch.active{
       border-color:white;
@@ -265,8 +267,8 @@
       <button id="eraserBtn">ERASER</button>
     </div>
     <!-- Row 2: colors -->
-    <div class="dtool-row" style="flex-wrap:wrap;gap:8px;">
-      <button class="color-swatch active" data-color="#000000" style="background:#000000;" aria-label="Black"></button>
+    <div class="dtool-row" style="justify-content:space-between;">
+      <button class="color-swatch active" data-color="#000000" style="background:#000000;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,0.35);" aria-label="Black"></button>
       <button class="color-swatch" data-color="#6B3A2A" style="background:#6B3A2A;" aria-label="Brown"></button>
       <button class="color-swatch" data-color="#EF4444" style="background:#EF4444;" aria-label="Red"></button>
       <button class="color-swatch" data-color="#F97316" style="background:#F97316;" aria-label="Orange"></button>
@@ -684,6 +686,7 @@ drawSubmit.addEventListener("click", async () => {
   await set(ref(db, `drawing/submissions/${userKey}`), { data: png, timestamp: Date.now() })
     .catch(e => console.warn("Drawing submit failed:", e));
   drawOverlay.classList.remove("show");
+  hideDrawToolbar();
   drawSubmitted.classList.add("show");
   // After 3s, hide submitted state so camera returns
   setTimeout(() => {
@@ -899,6 +902,7 @@ onValue(skribblWinnerRef, snap => {
   if (skribblAmDrawer) {
     // Drawer: hide the canvas — round is done
     drawOverlay.classList.remove("show");
+    hideDrawToolbar();
     stopSkribblStream();
     // Show who won
     skribblWinner.textContent = `${w.name} GOT IT!`;
