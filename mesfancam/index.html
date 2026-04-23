@@ -52,41 +52,75 @@
     .action-btn:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.6);}
     .action-btn:active{transform:scale(0.98);background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.8);}
 
+    /* ── ANIMATED PANEL SYSTEM ──
+       All activity panels (trivia, poll, skribbl, submitted states, toolbar)
+       use the same spring-slide system instead of display:none snapping.
+       .panel-hidden  = fully hidden, collapsed height, pointer-events off
+       .panel-visible = fully visible, natural height
+       .panel-exiting = mid-exit, collapses while fading — removed by JS after transition
+    */
+    .ui-panel {
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(14px);
+      max-height: 0;
+      margin-top: 0;
+      pointer-events: none;
+      transition:
+        opacity   0.35s cubic-bezier(0.22,1,0.36,1),
+        transform 0.38s cubic-bezier(0.22,1,0.36,1),
+        max-height 0.38s cubic-bezier(0.22,1,0.36,1),
+        margin-top 0.38s cubic-bezier(0.22,1,0.36,1);
+    }
+    .ui-panel.visible {
+      opacity: 1;
+      transform: translateY(0);
+      max-height: 600px;   /* generous ceiling — content drives actual height */
+      margin-top: 18px;
+      pointer-events: auto;
+    }
+    /* Exit: slide down + fade, collapse height */
+    .ui-panel.exiting {
+      opacity: 0;
+      transform: translateY(10px);
+      max-height: 0;
+      margin-top: 0;
+      pointer-events: none;
+      transition:
+        opacity    0.28s ease-in,
+        transform  0.28s ease-in,
+        max-height 0.32s ease-in,
+        margin-top 0.32s ease-in;
+    }
+
     /* ── TRIVIA ── */
-    #triviaBox{display:none;flex-direction:column;gap:10px;width:min(82vw,320px);margin-top:18px;animation:fadeUp 0.3s ease both;}
-    #triviaBox.show{display:flex;}
+    #triviaBox{display:flex;flex-direction:column;gap:10px;width:min(82vw,320px);}
     #triviaInput{padding:12px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.15);color:white;font-family:"DM Sans",sans-serif;font-size:15px;font-weight:500;outline:none;transition:background 0.2s;}
     #triviaInput::placeholder{color:rgba(255,255,255,0.45);}
     #triviaInput:focus{background:rgba(255,255,255,0.22);}
-    #triviaSubmitted{display:none;text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;color:rgba(255,255,255,0.9);margin-top:16px;}
-    #triviaSubmitted.show{display:block;}
+    #triviaSubmitted{text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;color:rgba(255,255,255,0.9);}
 
     /* ── POLLS ── */
-    #pollBox{display:none;flex-direction:column;gap:12px;width:min(82vw,320px);margin-top:18px;animation:fadeUp 0.3s ease both;}
-    #pollBox.show{display:flex;}
+    #pollBox{display:flex;flex-direction:column;gap:12px;width:min(82vw,320px);}
     #pollQuestionText{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:18px;color:white;text-align:center;line-height:1.3;}
     #pollOptionsList{display:flex;flex-direction:column;gap:8px;}
     .poll-btn{width:100%;padding:13px 16px;border-radius:8px;border:2px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.08);color:white;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:16px;cursor:pointer;text-align:left;transition:background 0.15s,border-color 0.15s,transform 0.1s;}
     .poll-btn:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.6);}
     .poll-btn:active{transform:scale(0.98);}
-    /* Selected: brighter border + slightly more opaque bg — keeps text readable unlike solid fill */
     .poll-btn.selected{background:rgba(255,255,255,0.22);border-color:rgba(255,255,255,0.9);border-width:2px;}
-    #pollSubmitted{display:none;text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;color:rgba(255,255,255,0.9);margin-top:16px;}
-    #pollSubmitted.show{display:block;}
+    #pollSubmitted{text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;color:rgba(255,255,255,0.9);}
 
     .legal{margin-top:14px;font-size:10px;line-height:1.5;color:rgba(255, 255, 255, 0.55);text-align:center;max-width:300px;}
     @keyframes fadeDown{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:none;}}
     @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
 
     /* ── SKRIBBL ── */
-    #skribblBox{display:none;flex-direction:column;gap:10px;width:min(82vw,320px);margin-top:18px;animation:fadeUp 0.3s ease both;}
-    #skribblBox.show{display:flex;}
+    #skribblBox{display:flex;flex-direction:column;gap:10px;width:min(82vw,320px);}
     #skribblLabel{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:18px;color:white;text-align:center;line-height:1.3;}
     #skribblInput{padding:12px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.15);color:white;font-family:"DM Sans",sans-serif;font-size:15px;font-weight:500;outline:none;transition:background 0.2s;}
     #skribblInput::placeholder{color:rgba(255,255,255,0.45);}
     #skribblInput:focus{background:rgba(255,255,255,0.22);}
-    #skribblWinner{display:none;text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;color:white;margin-top:10px;animation:fadeUp 0.4s ease both;}
-    #skribblWinner.show{display:block;}
+    #skribblWinner{text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;color:white;}
 
     /* ── DRAWING OVERLAY ── */
     #drawOverlay{
@@ -125,25 +159,24 @@
     #drawSubmit{background:rgba(0, 0, 0, 0.08);color:rgb(0, 0, 0);border:2px solid #00031F;}
     #drawSubmit:active{background:#111;}
     #drawSubmitted{
-      display:none;position:absolute;inset:0;z-index:21;
+      position:absolute;inset:0;z-index:21;
       background:white;border-radius:12px;
+      display:flex;
       align-items:center;justify-content:center;
       font-family:"Barlow Condensed",sans-serif;font-weight:900;
       font-size:22px;color:#00031F;
       flex-direction:column;gap:8px;
+      opacity:0;pointer-events:none;
+      transition:opacity 0.35s cubic-bezier(0.22,1,0.36,1);
     }
-    #drawSubmitted.show{display:flex;}
+    #drawSubmitted.show{opacity:1;pointer-events:auto;}
 
     /* ── DRAW TOOLBAR ── */
     #drawToolbar {
-      display: none;
       flex-direction: column;
       gap: 10px;
       width: min(82vw, 320px);
-      margin-top: 12px;
-      animation: fadeUp 0.3s ease both;
     }
-    #drawToolbar.show { display: flex; }
 
     /* Row wrapper */
     .tool-row {
@@ -275,29 +308,29 @@
   </div>
 
   <!-- Trivia -->
-  <div id="triviaBox">
+  <div id="triviaBox" class="ui-panel">
     <input id="triviaInput" type="text" placeholder="Type your answer…" autocomplete="off">
     <button id="triviaSubmit" class="action-btn">SUBMIT ANSWER</button>
   </div>
-  <div id="triviaSubmitted">ANSWER SUBMITTED</div>
+  <div id="triviaSubmitted" class="ui-panel">ANSWER SUBMITTED ✓</div>
 
   <!-- Polls -->
-  <div id="pollBox">
+  <div id="pollBox" class="ui-panel">
     <div id="pollQuestionText"></div>
     <div id="pollOptionsList"></div>
   </div>
-  <div id="pollSubmitted">VOTE SUBMITTED</div>
+  <div id="pollSubmitted" class="ui-panel">VOTE SUBMITTED ✓</div>
 
   <!-- Skribbl guess box -->
-  <div id="skribblBox">
+  <div id="skribblBox" class="ui-panel">
     <div id="skribblLabel">🎨 WHAT'S THEIR DOODLE?</div>
     <input id="skribblInput" type="text" placeholder="Type your guess…" autocomplete="off">
     <button id="skribblGuess" class="action-btn">GUESS</button>
   </div>
-  <div id="skribblWinner"></div>
+  <div id="skribblWinner" class="ui-panel"></div>
 
   <!-- Draw Toolbar — shown below the viewfinder when drawing is active -->
-  <div id="drawToolbar">
+  <div id="drawToolbar" class="ui-panel">
     <!-- Row 1: Brush sizes + fill + eraser -->
     <div class="tool-row">
       <button class="brush-btn" data-size="1.5" aria-label="Small brush">
@@ -331,6 +364,24 @@ import { ref, set, update, onValue, off } from "https://www.gstatic.com/firebase
 const name    = sessionStorage.getItem("fanCamName");
 const userKey = sessionStorage.getItem("fanCamUserKey");
 if (!name || !userKey) { window.location.href = "join.html"; }
+
+/* ── ANIMATED PANEL HELPERS ── */
+// showPanel: slide up + fade in
+function showPanel(el) {
+  el.classList.remove("exiting");
+  el.offsetHeight; // force reflow so transition fires from hidden state
+  el.classList.add("visible");
+}
+// hidePanel: slide down + fade out, then clean up
+function hidePanel(el) {
+  if (!el.classList.contains("visible")) return;
+  el.classList.remove("visible");
+  el.classList.add("exiting");
+  const done = () => { el.classList.remove("exiting"); };
+  el.addEventListener("transitionend", done, { once: true });
+  // Safety fallback in case transitionend doesn't fire
+  setTimeout(done, 400);
+}
 
 /* ── ELEMENTS ── */
 const preview         = document.getElementById("preview");
@@ -533,8 +584,8 @@ onValue(triviaModeRef, snap => {
   const on = snap.val() === true;
   if (!on) {
     if (triviaQListener) { off(triviaQRef); triviaQListener = null; }
-    triviaBox.classList.remove("show");
-    triviaSubmitted.classList.remove("show");
+    hidePanel(triviaBox);
+    hidePanel(triviaSubmitted);
     triviaInput.value = "";
     return;
   }
@@ -542,12 +593,12 @@ onValue(triviaModeRef, snap => {
     triviaQListener = onValue(triviaQRef, snap => {
       const d = snap.val() || {};
       if (d.show && d.text) {
-        triviaBox.classList.add("show");
-        triviaSubmitted.classList.remove("show");
+        showPanel(triviaBox);
+        hidePanel(triviaSubmitted);
         triviaInput.value = "";
       } else {
-        triviaBox.classList.remove("show");
-        triviaSubmitted.classList.remove("show");
+        hidePanel(triviaBox);
+        hidePanel(triviaSubmitted);
         triviaInput.value = "";
       }
     });
@@ -557,8 +608,8 @@ triviaSubmit.addEventListener("click", () => {
   const answer = triviaInput.value.trim();
   if (!answer) return;
   update(ref(db, `trivia/answers/${userKey}`), { answer, timestamp: Date.now() });
-  triviaBox.classList.remove("show");
-  triviaSubmitted.classList.add("show");
+  hidePanel(triviaBox);
+  showPanel(triviaSubmitted);
 });
 
 /* ── POLLS ── */
@@ -594,8 +645,8 @@ function buildPollButtons() {
         timestamp: Date.now()
       });
       setTimeout(() => {
-        pollBox.classList.remove("show");
-        pollSubmitted.classList.add("show");
+        hidePanel(pollBox);
+        showPanel(pollSubmitted);
       }, 400);
     };
     pollOptionsList.appendChild(btn);
@@ -606,44 +657,37 @@ onValue(pollsModeRef, snap => {
   const on = snap.val() === true;
 
   if (!on) {
-    // Polls turned off — detach everything and reset
     if (pollsListening) {
       off(pollsOptsRef);
       off(pollsQRef);
       pollsListening = false;
     }
-    pollBox.classList.remove("show");
-    pollSubmitted.classList.remove("show");
+    hidePanel(pollBox);
+    hidePanel(pollSubmitted);
     pollOptionsList.innerHTML = "";
     currentOptions = {};
     hasVoted = false;
     return;
   }
 
-  if (pollsListening) return; // already attached, persistent listeners handle updates
+  if (pollsListening) return;
   pollsListening = true;
 
-  // Persistent options listener — updates currentOptions any time options change.
-  // This means on reset (options set to null) currentOptions goes to {},
-  // and on new poll send (options written before show:true) it repopulates
-  // before the question listener fires.
   onValue(pollsOptsRef, snap => {
     currentOptions = snap.val() || {};
   });
 
-  // Question listener — reads from currentOptions which is always current
   onValue(pollsQRef, snap => {
     const d = snap.val() || {};
     if (d.show && d.text) {
       hasVoted = false;
-      pollSubmitted.classList.remove("show");
+      hidePanel(pollSubmitted);
       pollQuestionText.textContent = d.text;
       buildPollButtons();
-      pollBox.classList.add("show");
+      showPanel(pollBox);
     } else {
-      // Question hidden (reset) — clear UI, stay listening for next poll
-      pollBox.classList.remove("show");
-      pollSubmitted.classList.remove("show");
+      hidePanel(pollBox);
+      hidePanel(pollSubmitted);
       pollOptionsList.innerHTML = "";
       hasVoted = false;
     }
@@ -663,6 +707,12 @@ const drawPromptRef  = ref(db, "drawing/prompt");
 
 let drawActive = false;
 let drawHasSubmitted = false;
+
+// On page load, check if this user already submitted a drawing this session.
+// If so, mark as submitted so the toolbar doesn't re-appear on refresh.
+onValue(ref(db, `drawing/submissions/${userKey}`), snap => {
+  if (snap.exists()) drawHasSubmitted = true;
+}, { onlyOnce: true });
 
 function initDrawCanvas() {
   // Size canvas to its CSS display size
@@ -744,16 +794,21 @@ onValue(drawModeRef, snap => {
 onValue(drawPromptRef, snap => {
   const d = snap.val() || {};
   if (drawActive && d.show && d.text) {
-    drawHasSubmitted = false;
-    drawSubmit.textContent = "SUBMIT";
     drawPromptText.textContent = d.text;
     drawOverlay.classList.add("show");
     drawSubmitted.classList.remove("show");
-    // Init canvas after it becomes visible so dimensions are correct
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      initDrawCanvas();
-      showDrawToolbar();
-    }));
+    if (!drawHasSubmitted) {
+      // Fresh — init canvas and show tools
+      drawSubmit.textContent = "SUBMIT";
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        initDrawCanvas();
+        showDrawToolbar();
+      }));
+    } else {
+      // Already submitted this round — show the "DRAWING SENT" state, no toolbar
+      drawSubmitted.classList.add("show");
+      hideDrawToolbar();
+    }
   } else if (!d.show) {
     drawOverlay.classList.remove("show");
     hideDrawToolbar();
@@ -818,8 +873,8 @@ function stopSkribblStream() {
 onValue(skribblModeRef, snap => {
   skribblActive = snap.val() === true;
   if (!skribblActive) {
-    skribblBox.classList.remove("show");
-    skribblWinner.classList.remove("show");
+    hidePanel(skribblBox);
+    hidePanel(skribblWinner);
     skribblWinner.textContent = "";
     skribblInput.value = "";
     skribblWon = false;
@@ -827,7 +882,6 @@ onValue(skribblModeRef, snap => {
     stopSkribblStream();
     drawOverlay.classList.remove("show");
     hideDrawToolbar();
-    // Restore drawSubmit button in case it was hidden for skribbl
     drawSubmit.style.display = "";
   }
 });
@@ -853,28 +907,25 @@ onValue(skribblPromptRef, snap => {
 
   if (gameStarted) {
     if (skribblAmDrawer) {
-      // I'm the drawer — show canvas
       drawHasSubmitted = false;
       drawSubmit.style.display = "none";
       drawRestart.style.display = "";
       drawPromptText.textContent = d.text;
       drawOverlay.classList.add("show");
-      skribblBox.classList.remove("show");
+      hidePanel(skribblBox);
       requestAnimationFrame(() => requestAnimationFrame(() => {
         initDrawCanvas();
         showDrawToolbar();
         startSkribblStream();
       }));
     } else {
-      // I'm a guesser — only show guess box once game is actually started
       drawOverlay.classList.remove("show");
       hideDrawToolbar();
-      if (!skribblWon) skribblBox.classList.add("show");
+      if (!skribblWon) showPanel(skribblBox);
     }
   } else {
-    // Prompt cleared (round ended / not started yet) — hide everything
     drawOverlay.classList.remove("show");
-    skribblBox.classList.remove("show");
+    hidePanel(skribblBox);
     hideDrawToolbar();
     stopSkribblStream();
   }
@@ -889,23 +940,19 @@ onValue(skribblWinnerRef, snap => {
   skribblWon = true;
 
   if (skribblAmDrawer) {
-    // Drawer: hide the canvas — round is done
     drawOverlay.classList.remove("show");
     stopSkribblStream();
     hideDrawToolbar();
-    // Show who won
     skribblWinner.textContent = `${w.name} GOT IT!`;
-    skribblWinner.classList.add("show");
+    showPanel(skribblWinner);
   } else if (w.userKey === userKey) {
-    // I won!
-    skribblWinner.textContent = "YOU GOT IT!";
-    skribblWinner.classList.add("show");
-    skribblBox.classList.remove("show");
+    skribblWinner.textContent = "YOU GOT IT! 🎉";
+    showPanel(skribblWinner);
+    hidePanel(skribblBox);
   } else {
-    // Someone else won
     skribblWinner.textContent = `${w.name} GOT IT!`;
-    skribblWinner.classList.add("show");
-    skribblBox.classList.remove("show");
+    showPanel(skribblWinner);
+    hidePanel(skribblBox);
   }
 });
 
@@ -1001,10 +1048,10 @@ function applyDrawSettings() {
 }
 
 function showDrawToolbar() {
-  drawToolbar.classList.add("show");
+  showPanel(drawToolbar);
 }
 function hideDrawToolbar() {
-  drawToolbar.classList.remove("show");
+  hidePanel(drawToolbar);
   // Reset tool state for next round
   setToolMode("draw");
   currentColor = "#000000";
