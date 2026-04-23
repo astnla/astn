@@ -358,7 +358,7 @@
 
 <script type="module">
 import { db } from "./firebase-config.js";
-import { ref, set, update, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+import { ref, set, update, onValue, off, get } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
 /* ── SESSION CHECK ── */
 const name    = sessionStorage.getItem("fanCamName");
@@ -710,9 +710,16 @@ let drawHasSubmitted = false;
 
 // On page load, check if this user already submitted a drawing this session.
 // If so, mark as submitted so the toolbar doesn't re-appear on refresh.
+// Uses onValue (not onlyOnce) so it also catches resets — when the teacher
+// clears submissions, this fires with snap.exists()===false and resets the flag.
 onValue(ref(db, `drawing/submissions/${userKey}`), snap => {
-  if (snap.exists()) drawHasSubmitted = true;
-}, { onlyOnce: true });
+  if (!snap.exists()) {
+    // Submission was cleared (teacher reset) — allow drawing again
+    drawHasSubmitted = false;
+  } else {
+    drawHasSubmitted = true;
+  }
+});
 
 function initDrawCanvas() {
   // Size canvas to its CSS display size
@@ -787,6 +794,31 @@ onValue(drawModeRef, snap => {
     drawHasSubmitted = false;
     drawSubmit.textContent = "SUBMIT";
     hideDrawToolbar();
+  } else {
+    // Mode just turned on (or page loaded while mode was already on).
+    // Do a fresh one-time read of the prompt so late-joining students
+    // immediately receive any in-progress round without waiting for a
+    // Firebase value-change event that already fired before they connected.
+    get(drawPromptRef).then(snap => {
+      const d = snap.val() || {};
+      if (d.show && d.text) {
+        drawPromptText.textContent = d.text;
+        drawOverlay.classList.add("show");
+        drawSubmitted.classList.remove("show");
+        if (!drawHasSubmitted) {
+          drawSubmit.textContent = "SUBMIT";
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            initDrawCanvas();
+            showDrawToolbar();
+          }));
+        } else {
+          // Already submitted — confirm briefly then clear
+          drawSubmitted.classList.add("show");
+          hideDrawToolbar();
+          setTimeout(() => { drawSubmitted.classList.remove("show"); }, 3000);
+        }
+      }
+    });
   }
 });
 
@@ -798,19 +830,23 @@ onValue(drawPromptRef, snap => {
     drawOverlay.classList.add("show");
     drawSubmitted.classList.remove("show");
     if (!drawHasSubmitted) {
-      // Fresh — init canvas and show tools
+      // Fresh round — show canvas and tools
       drawSubmit.textContent = "SUBMIT";
       requestAnimationFrame(() => requestAnimationFrame(() => {
         initDrawCanvas();
         showDrawToolbar();
       }));
     } else {
-      // Already submitted this round — show the "DRAWING SENT" state, no toolbar
+      // Already submitted this round — briefly confirm then clear
       drawSubmitted.classList.add("show");
       hideDrawToolbar();
+      setTimeout(() => { drawSubmitted.classList.remove("show"); }, 3000);
     }
   } else if (!d.show) {
+    // Prompt cleared (reset) — reset submitted flag so next prompt works cleanly
+    drawHasSubmitted = false;
     drawOverlay.classList.remove("show");
+    drawSubmitted.classList.remove("show");
     hideDrawToolbar();
   }
 });
