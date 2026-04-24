@@ -115,12 +115,55 @@
     @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
 
     /* ── SKRIBBL ── */
-    #skribblBox{display:flex;flex-direction:column;gap:10px;width:min(82vw,320px);}
+    #skribblBox{display:flex;flex-direction:column;gap:12px;width:min(82vw,320px);}
     #skribblLabel{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:18px;color:white;text-align:center;line-height:1.3;}
-    #skribblInput{padding:12px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.15);color:white;font-family:"DM Sans",sans-serif;font-size:15px;font-weight:500;outline:none;transition:background 0.2s;}
-    #skribblInput::placeholder{color:rgba(255,255,255,0.45);}
-    #skribblInput:focus{background:rgba(255,255,255,0.22);}
     #skribblWinner{text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;color:white;}
+
+    /* Letter grid */
+    #skribblLetterGrid{
+      display:flex;flex-wrap:wrap;justify-content:center;
+      gap:6px;padding:4px 0;
+    }
+    .letter-word {
+      display:flex;gap:4px;align-items:flex-end;
+    }
+    .letter-cell {
+      width:30px;height:36px;
+      background:rgba(255,255,255,0.10);
+      border:none;border-bottom:2.5px solid rgba(255,255,255,0.55);
+      border-radius:4px 4px 0 0;
+      color:white;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:20px;
+      text-align:center;text-transform:uppercase;
+      outline:none;caret-color:transparent;
+      transition:border-color 0.15s,background 0.15s;
+      -webkit-user-select:auto;user-select:auto;
+    }
+    .letter-cell:focus {
+      background:rgba(255,255,255,0.18);
+      border-bottom-color:white;
+    }
+    .letter-cell.revealed {
+      color:rgba(255,255,255,0.55);
+      pointer-events:none;
+      border-bottom-color:rgba(255,255,255,0.25);
+    }
+    /* word spacer between words */
+    .letter-spacer { width:10px; }
+
+    /* "SO CLOSE!" toast */
+    #skribblCloseToast {
+      position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);
+      background:rgba(255,210,90,0.95);color:#2c2300;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:18px;
+      padding:10px 22px;border-radius:999px;
+      opacity:0;pointer-events:none;
+      transition:opacity 0.3s ease,transform 0.3s cubic-bezier(0.22,1,0.36,1);
+      white-space:nowrap;z-index:9999;
+    }
+    #skribblCloseToast.show {
+      opacity:1;transform:translateX(-50%) translateY(0);
+    }
 
     /* ── DRAWING OVERLAY ── */
     #drawOverlay{
@@ -327,10 +370,13 @@
   <!-- Skribbl guess box -->
   <div id="skribblBox" class="ui-panel">
     <div id="skribblLabel">🎨 WHAT'S THEIR DOODLE?</div>
-    <input id="skribblInput" type="text" placeholder="TAKE A GUESS…" autocomplete="off">
+    <div id="skribblLetterGrid"></div>
     <button id="skribblGuess" class="action-btn">GUESS</button>
   </div>
   <div id="skribblWinner" class="ui-panel"></div>
+
+  <!-- So Close toast (lives outside flow so it's always fixed to viewport) -->
+  <div id="skribblCloseToast">SO CLOSE! 🔥</div>
 
   <!-- Draw Toolbar — shown below the viewfinder when drawing is active -->
   <div id="drawToolbar" class="ui-panel">
@@ -871,22 +917,153 @@ onValue(ref(db, "drawing/timesUp"), snap => {
 /* ── SKRIBBL ── */
 const skribblBox     = document.getElementById("skribblBox");
 const skribblLabel   = document.getElementById("skribblLabel");
-const skribblInput   = document.getElementById("skribblInput");
 const skribblGuess   = document.getElementById("skribblGuess");
 const skribblWinner  = document.getElementById("skribblWinner");
+const skribblLetterGrid = document.getElementById("skribblLetterGrid");
+const skribblCloseToast = document.getElementById("skribblCloseToast");
 
 const skribblModeRef   = ref(db, "skribbl/mode");
 const skribblDrawerRef = ref(db, "skribbl/drawer");
 const skribblPromptRef = ref(db, "skribbl/prompt");
 const skribblWinnerRef = ref(db, "skribbl/winner");
 const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
+const skribblHintRef   = ref(db, "skribbl/hint");
+const skribblCloseRef  = ref(db, `skribbl/close/${userKey}`);
 
-let skribblActive  = false;
+let skribblActive   = false;
 let skribblAmDrawer = false;
-let skribblWon     = false;
+let skribblWon      = false;
+let skribblWordLen  = 0; // total chars including spaces, for grid
+let closeToastTimer = null;
 
-// Skribbl canvas streaming — separate from regular draw mode
-// Uses the existing drawCanvas but streams live every 300ms
+/* ── LETTER GRID ── */
+// Build the grid from a hint array: [{letter:null|" "|"a", revealed:bool}, ...]
+// Words separated by spaces get rendered as separate .letter-word groups
+function buildLetterGrid(hint) {
+  skribblLetterGrid.innerHTML = "";
+  skribblWordLen = hint.length;
+
+  // Split into word groups by space entries
+  let groups = [];
+  let current = [];
+  hint.forEach((h, i) => {
+    if (h.letter === " ") {
+      groups.push(current); current = [];
+    } else {
+      current.push({ ...h, index: i });
+    }
+  });
+  groups.push(current);
+
+  groups.forEach(group => {
+    if (!group.length) return;
+    const wordDiv = document.createElement("div");
+    wordDiv.className = "letter-word";
+    group.forEach(({ letter, revealed, index }) => {
+      const inp = document.createElement("input");
+      inp.className = "letter-cell" + (revealed ? " revealed" : "");
+      inp.type = "text";
+      inp.maxLength = 1;
+      inp.autocomplete = "off";
+      inp.dataset.index = index;
+      if (revealed && letter) inp.value = letter.toUpperCase();
+      inp.addEventListener("input", onLetterInput);
+      inp.addEventListener("keydown", onLetterKeydown);
+      wordDiv.appendChild(inp);
+    });
+    skribblLetterGrid.appendChild(wordDiv);
+    // Add spacer between words (not after last)
+    const spacer = document.createElement("div");
+    spacer.className = "letter-spacer";
+    skribblLetterGrid.appendChild(spacer);
+  });
+  // Remove trailing spacer
+  const spacers = skribblLetterGrid.querySelectorAll(".letter-spacer");
+  if (spacers.length) spacers[spacers.length - 1].remove();
+
+  // Focus first empty cell
+  focusFirstEmpty();
+}
+
+function focusFirstEmpty() {
+  const first = skribblLetterGrid.querySelector(".letter-cell:not(.revealed):not([value]),.letter-cell:not(.revealed)[value='']");
+  if (first) first.focus();
+}
+
+function clearLetterGrid() {
+  skribblLetterGrid.querySelectorAll(".letter-cell:not(.revealed)").forEach(inp => {
+    inp.value = "";
+  });
+  focusFirstEmpty();
+}
+
+function getGuessText() {
+  // Reconstruct full word from all cells in index order
+  const cells = skribblLetterGrid.querySelectorAll(".letter-cell");
+  if (!cells.length) return "";
+  // Build array indexed by data-index
+  const hint = Array.from(cells);
+  // We need to account for spaces — cells don't include space slots
+  // So reconstruct by reading cells in DOM order and inserting spaces from spacers
+  const wordDivs = skribblLetterGrid.querySelectorAll(".letter-word");
+  let parts = [];
+  wordDivs.forEach((wd, wi) => {
+    const letters = wd.querySelectorAll(".letter-cell");
+    parts.push(Array.from(letters).map(c => c.value || "_").join(""));
+  });
+  return parts.join(" ").toLowerCase();
+}
+
+function onLetterInput(e) {
+  const inp = e.target;
+  // Force uppercase display
+  inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, "");
+  // Auto-advance to next empty cell
+  if (inp.value) {
+    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell:not(.revealed)"));
+    const idx = allCells.indexOf(inp);
+    if (idx >= 0 && idx < allCells.length - 1) allCells[idx + 1].focus();
+  }
+}
+
+function onLetterKeydown(e) {
+  const inp = e.target;
+  if (e.key === "Backspace" && !inp.value) {
+    // Move to previous cell on backspace when empty
+    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell:not(.revealed)"));
+    const idx = allCells.indexOf(inp);
+    if (idx > 0) { allCells[idx - 1].value = ""; allCells[idx - 1].focus(); }
+    e.preventDefault();
+  } else if (e.key === "Enter") {
+    skribblGuess.click();
+  }
+}
+
+// Apply hint updates — fills in revealed letters without rebuilding the whole grid
+function applyHintUpdate(hint) {
+  hint.forEach((h, i) => {
+    if (h.letter === " " || !h.revealed || !h.letter) return;
+    const cell = skribblLetterGrid.querySelector(`.letter-cell[data-index="${i}"]`);
+    if (cell && !cell.classList.contains("revealed")) {
+      cell.value = h.letter.toUpperCase();
+      cell.classList.add("revealed");
+      cell.disabled = true;
+    }
+  });
+  focusFirstEmpty();
+}
+
+/* ── SO CLOSE TOAST ── */
+function showCloseToast() {
+  if (closeToastTimer) clearTimeout(closeToastTimer);
+  skribblCloseToast.classList.add("show");
+  closeToastTimer = setTimeout(() => {
+    skribblCloseToast.classList.remove("show");
+    closeToastTimer = null;
+  }, 2500);
+}
+
+/* ── CANVAS STREAM ── */
 let skribblStreamInterval = null;
 
 function startSkribblStream() {
@@ -895,7 +1072,6 @@ function startSkribblStream() {
     if (!skribblAmDrawer || !skribblActive) {
       clearInterval(skribblStreamInterval); skribblStreamInterval = null; return;
     }
-    // Compress canvas at low quality — simple line art compresses very small
     const tmp = document.createElement("canvas");
     const maxW = 400;
     const scale = Math.min(1, maxW / (drawCanvas.width || 1));
@@ -914,14 +1090,15 @@ function stopSkribblStream() {
   set(skribblLiveRef, null).catch(() => {});
 }
 
-// Mode gate
+/* ── MODE GATE ── */
 onValue(skribblModeRef, snap => {
   skribblActive = snap.val() === true;
   if (!skribblActive) {
     hidePanel(skribblBox);
     hidePanel(skribblWinner);
     skribblWinner.textContent = "";
-    skribblInput.value = "";
+    skribblLetterGrid.innerHTML = "";
+    skribblHintBuilt = false;
     skribblWon = false;
     skribblAmDrawer = false;
     stopSkribblStream();
@@ -935,21 +1112,17 @@ onValue(skribblModeRef, snap => {
 onValue(skribblDrawerRef, snap => {
   const drawerKey = snap.val();
   skribblAmDrawer = drawerKey === userKey;
-  // Don't show any UI here — wait for prompt to arrive (means START was actually hit)
-  // This prevents the guess box appearing just from clicking the mode button
   if (!skribblAmDrawer) {
-    // If drawer changed away from me, hide my draw canvas
     drawOverlay.classList.remove("show");
     stopSkribblStream();
   }
 });
 
+// Prompt — gates both drawer canvas and guesser box
 onValue(skribblPromptRef, snap => {
   const d = snap.val() || {};
   const gameStarted = d.show && d.text;
-
   if (!skribblActive) return;
-
   if (gameStarted) {
     if (skribblAmDrawer) {
       drawHasSubmitted = false;
@@ -971,19 +1144,39 @@ onValue(skribblPromptRef, snap => {
   } else {
     drawOverlay.classList.remove("show");
     hidePanel(skribblBox);
+    skribblLetterGrid.innerHTML = "";
+    skribblHintBuilt = false;
     hideDrawToolbar();
     stopSkribblStream();
   }
 });
 
-// Winner — show celebration, stop guessing, stop drawing if drawer
+// Hint updates — build grid on first arrival, patch on subsequent reveals
+let skribblHintBuilt = false;
+onValue(skribblHintRef, snap => {
+  if (!skribblActive || skribblAmDrawer) return;
+  const hint = snap.val();
+  if (!hint || !Array.isArray(hint)) { skribblHintBuilt = false; return; }
+  if (!skribblHintBuilt) {
+    buildLetterGrid(hint);
+    skribblHintBuilt = true;
+  } else {
+    applyHintUpdate(hint);
+  }
+});
+
+// "So close!" — fires when control writes our userKey to skribbl/close
+onValue(skribblCloseRef, snap => {
+  if (!snap.exists() || skribblAmDrawer || skribblWon) return;
+  showCloseToast();
+  clearLetterGrid();
+});
+
+// Winner
 onValue(skribblWinnerRef, snap => {
   const w = snap.val();
   if (!w || !skribblActive) return;
-
-  // Round is over for everyone — stop all activity
   skribblWon = true;
-
   if (skribblAmDrawer) {
     drawOverlay.classList.remove("show");
     stopSkribblStream();
@@ -1001,12 +1194,11 @@ onValue(skribblWinnerRef, snap => {
   }
 });
 
-// Guess submission — each guess gets a unique key so they don't overwrite
+// Guess submission
 skribblGuess.addEventListener("click", async () => {
-  const text = skribblInput.value.trim();
-  if (!text || skribblWon) return;
-  skribblInput.value = "";
-  // Use timestamp + userKey as unique path so multiple guesses don't overwrite
+  const text = getGuessText().trim();
+  if (!text || text.includes("_") || skribblWon) return;
+  clearLetterGrid();
   const guessKey = `${userKey}_${Date.now()}`;
   await set(ref(db, `skribbl/guesses/${guessKey}`), {
     text,
@@ -1014,9 +1206,6 @@ skribblGuess.addEventListener("click", async () => {
     guesserKey: userKey,
     timestamp: Date.now()
   }).catch(() => {});
-});
-skribblInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") skribblGuess.click();
 });
 
 /* ── DRAW TOOLBAR ── */

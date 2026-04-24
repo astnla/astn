@@ -559,15 +559,15 @@ turnOffFanCamBtn.addEventListener("click", async () => {
   if (!confirm("Turn off the fan cam? This will end the session and remove all connected students.")) return;
   stopAuto();
   els.autoLiveToggle.checked = false;
+  clearHintTimers();
   await Promise.all([
-    set(fanCamOnRef, false),
     set(ref(db,"participants"), null),
     set(ref(db,"selfies"), null),
     set(ref(db,"live"), null),
     set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
-    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null }),
     set(ref(db,"meta/resetFlag"), Date.now()),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
@@ -1002,6 +1002,7 @@ els.endSessionBtn.onclick = async () => {
   if (!confirm("End the whole session and remove everyone?")) return;
   stopAuto();
   els.autoLiveToggle.checked = false;
+  clearHintTimers();
   await Promise.all([
     set(ref(db,"participants"), null),
     set(ref(db,"selfies"), null),
@@ -1010,7 +1011,7 @@ els.endSessionBtn.onclick = async () => {
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"meta/resetFlag"), Date.now()),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
-    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null }),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
   state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
@@ -1292,6 +1293,88 @@ function updateSkribblStart() {
   els.startSkribblBtn.classList.toggle("disabled", !ready);
 }
 
+/* ── LEVENSHTEIN (edit distance) ── */
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => j === 0 ? i : 0));
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+/* ── HINT BUILDER ── */
+// Returns array of {letter, revealed} — spaces always revealed, others start null/false
+function buildHintArray(word) {
+  return word.split("").map(ch => ({
+    letter: ch === " " ? " " : null,
+    revealed: ch === " "
+  }));
+}
+
+// How many letters to reveal: floor(len/3), min 1, max 2
+// "len" = non-space characters only
+function hintRevealCount(word) {
+  const nonSpace = word.replace(/ /g, "").length;
+  return Math.min(2, Math.max(1, Math.floor(nonSpace / 3)));
+}
+
+// Pick reveal indexes: non-space, unrevealed, at least 2 apart from each other
+function pickRevealIndexes(hint, count) {
+  const candidates = hint
+    .map((h, i) => ({ ...h, i }))
+    .filter(h => h.letter !== " " && !h.revealed);
+  const picks = [];
+  let attempts = 0;
+  while (picks.length < count && attempts < 200) {
+    attempts++;
+    const idx = Math.floor(Math.random() * candidates.length);
+    const candidate = candidates[idx];
+    if (!candidate) break;
+    const tooClose = picks.some(p => Math.abs(p - candidate.i) < 2);
+    if (!tooClose) picks.push(candidate.i);
+  }
+  return picks;
+}
+
+let skribblHintTimers = [];
+let skribblCurrentHint = null;
+
+function clearHintTimers() {
+  skribblHintTimers.forEach(t => clearTimeout(t));
+  skribblHintTimers = [];
+  skribblCurrentHint = null;
+}
+
+function startHintTimers(word) {
+  clearHintTimers();
+  const hint = buildHintArray(word);
+  skribblCurrentHint = hint;
+  // Write initial all-null hint to Firebase
+  set(ref(db, "skribbl/hint"), hint).catch(() => {});
+
+  const totalReveals = hintRevealCount(word);
+  // First reveal at 30s
+  skribblHintTimers.push(setTimeout(async () => {
+    if (!skribblCurrentHint) return;
+    const [i] = pickRevealIndexes(skribblCurrentHint, 1);
+    if (i === undefined) return;
+    skribblCurrentHint[i] = { letter: word[i], revealed: true };
+    await set(ref(db, "skribbl/hint"), skribblCurrentHint).catch(() => {});
+    // Second reveal at 45s (only if word is long enough to warrant 2)
+    if (totalReveals >= 2) {
+      skribblHintTimers.push(setTimeout(async () => {
+        if (!skribblCurrentHint) return;
+        const [j] = pickRevealIndexes(skribblCurrentHint, 1);
+        if (j === undefined) return;
+        skribblCurrentHint[j] = { letter: word[j], revealed: true };
+        await set(ref(db, "skribbl/hint"), skribblCurrentHint).catch(() => {});
+      }, 15000)); // 15s after first = 45s total
+    }
+  }, 30000));
+}
+
 els.startSkribblBtn.onclick = async () => {
   const drawerKey = els.skribblDrawerSelect.value;
   const word      = els.skribblWordInput.value.trim().toLowerCase();
@@ -1302,14 +1385,18 @@ els.startSkribblBtn.onclick = async () => {
     set(ref(db,"skribbl/guesses"), null),
     set(ref(db,"skribbl/winner"),  null),
     set(ref(db,"skribbl/liveCanvas"), null),
+    set(ref(db,"skribbl/hint"), null),
+    set(ref(db,"skribbl/close"), null),
   ]);
-  // Write mode + drawer + prompt (prompt only goes to drawer via index.html listener)
+  // Write mode + drawer + prompt
   await Promise.all([
     set(ref(db,"skribbl/mode"),   true),
     set(ref(db,"skribbl/drawer"), drawerKey),
-    set(ref(db,"skribbl/word"),   word),  // for control page answer checking
+    set(ref(db,"skribbl/word"),   word),
     set(ref(db,"skribbl/prompt"), { text: word, show: true }),
   ]);
+  // Start hint timers after everything is written
+  startHintTimers(word);
   els.endSkribblBtn.classList.remove("disabled");
   els.skribblWinnerBanner.style.display = "none";
   if (els.skribblStatusArea) els.skribblStatusArea.style.display = "";
@@ -1319,6 +1406,7 @@ els.startSkribblBtn.onclick = async () => {
 
 els.endSkribblBtn.onclick = async () => {
   state.skribblWord = "";
+  clearHintTimers();
   await Promise.all([
     set(ref(db,"skribbl/mode"),   false),
     set(ref(db,"skribbl/drawer"), null),
@@ -1327,6 +1415,8 @@ els.endSkribblBtn.onclick = async () => {
     set(ref(db,"skribbl/winner"),  null),
     set(ref(db,"skribbl/liveCanvas"), null),
     set(ref(db,"skribbl/word"), null),
+    set(ref(db,"skribbl/hint"), null),
+    set(ref(db,"skribbl/close"), null),
   ]);
   els.endSkribblBtn.classList.add("disabled");
   els.skribblWordInput.value = "";
@@ -1338,31 +1428,39 @@ els.endSkribblBtn.onclick = async () => {
   updateSkribblStart();
 };
 
-// Listen to guesses — check each one against the secret word
+// Listen to guesses — check correct + close
 onValue(ref(db,"skribbl/word"), snap => { state.skribblWord = snap.val() || ""; });
 
 let skribblGuessTotal = 0;
 onChildAdded(ref(db,"skribbl/guesses"), snap => {
   const g = snap.val();
   if (!g) return;
-  const correct = state.skribblWord && g.text?.toLowerCase().trim() === state.skribblWord;
+  const guessText = g.text?.toLowerCase().trim() || "";
+  const correct = state.skribblWord && guessText === state.skribblWord;
   skribblGuessTotal++;
 
-  // Update guess count display
   if (els.skribblGuessCount) {
     els.skribblGuessCount.textContent = `${skribblGuessTotal} guess${skribblGuessTotal !== 1 ? "es" : ""} submitted`;
   }
 
   if (correct && els.skribblWinnerBanner.style.display !== "block") {
-    // First correct guess — set winner, set them live, show banner
     const winnerKey = g.guesserKey || snap.key.split("_")[0];
+    clearHintTimers(); // stop revealing once someone wins
     Promise.all([
       set(ref(db,"skribbl/winner"), { userKey: winnerKey, name: g.name, text: g.text }),
-      // Set the winner live on the fan cam!
       update(ref(db,"live"), { activeUser: winnerKey }),
     ]);
     els.skribblWinnerBanner.style.display = "block";
     els.skribblWinnerBanner.textContent = `🎉 ${g.name} got it! "${state.skribblWord}"`;
+  } else if (!correct && state.skribblWord) {
+    // "So close!" — edit distance ≤ 2 and not a trivially short guess
+    const dist = levenshtein(guessText, state.skribblWord);
+    if (dist <= 2 && guessText.length >= 2) {
+      const guesserKey = g.guesserKey;
+      if (guesserKey) {
+        set(ref(db, `skribbl/close/${guesserKey}`), { name: g.name, timestamp: Date.now() }).catch(() => {});
+      }
+    }
   }
 });
 
