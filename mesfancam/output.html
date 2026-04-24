@@ -130,6 +130,45 @@ html, body {
       transition: opacity 0.35s ease;
     }
 
+    /* ── SKRIBBL HINT UNDERSCORES (below drawing panel) ── */
+    #skribblHintDisplay {
+      flex-shrink: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: clamp(6px, 0.8vh, 10px);
+      padding: clamp(6px, 1vh, 12px) 0;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    #skribblHintDisplay.show { opacity: 1; }
+
+    .hint-word {
+      display: flex;
+      gap: clamp(3px, 0.4vh, 5px);
+      align-items: flex-end;
+    }
+    .hint-letter {
+      width: clamp(16px, 2.2vh, 28px);
+      height: clamp(20px, 2.8vh, 36px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 2.5px solid rgba(255,255,255,0.6);
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(14px, 1.9vh, 24px);
+      color: white;
+      text-transform: uppercase;
+    }
+    .hint-letter.revealed {
+      color: rgba(255,255,255,0.5);
+      border-bottom-color: rgba(255,255,255,0.25);
+    }
+    .hint-word-spacer {
+      width: clamp(8px, 1.2vh, 16px);
+    }
+
     /* ── HEADER ── */
     .header {
         font-family: 'Krona One', sans-serif;
@@ -609,6 +648,8 @@ html, body {
       <!-- Live canvas stream (skribbl mode) -->
       <img id="skribblLiveImg" alt="live drawing" style="width:100%;flex:1;object-fit:contain;display:none;background:white;">
     </div>
+    <!-- Hint underscores — only visible during skribbl mode -->
+    <div id="skribblHintDisplay"></div>
   </div>
 
   </div><!-- /stage -->
@@ -642,6 +683,7 @@ const skribblLiveImg     = document.getElementById("skribblLiveImg");
 const skribblGuessLayer  = document.getElementById("skribblGuessLayer");
 const skribblWinnerOverlay = document.getElementById("skribblWinnerOverlay");
 const skribblWinName     = document.getElementById("skribblWinName");
+const skribblHintDisplay = document.getElementById("skribblHintDisplay");
 
 const activeUserRef  = ref(db, "live/activeUser");
 const frameRef       = ref(db, "live/frame");
@@ -674,6 +716,7 @@ const skribblModeRef   = ref(db, "skribbl/mode");
 const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
 const skribblGuessRef  = ref(db, "skribbl/guesses");
 const skribblWinnerRef = ref(db, "skribbl/winner");
+const skribblHintRef   = ref(db, "skribbl/hint");
 
 let activeUser     = null;
 let lastFrame      = 0;
@@ -956,6 +999,8 @@ onValue(skribblModeRef, snap => {
     skribblGuessLayer.innerHTML = "";
     skribblWinnerOverlay.classList.remove("show");
     seenGuesses.clear();
+    skribblHintDisplay.classList.remove("show");
+    skribblHintDisplay.innerHTML = "";
     // Collapse side panel if draw reveal image isn't showing
     const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
     if (!drawRevealVisible) hideDrawPanel();
@@ -1011,6 +1056,46 @@ onValue(skribblWinnerRef, snap => {
 /* ── GATES ── */
 onValue(triviaModeRef, snap => { snap.val()===true ? startTrivia() : stopTrivia(); });
 onValue(pollsModeRef,  snap => { snap.val()===true ? startPolls()  : stopPolls();  });
+
+/* ── SKRIBBL HINT DISPLAY ── */
+function renderHint(hint) {
+  skribblHintDisplay.innerHTML = "";
+  if (!hint || !Array.isArray(hint)) { skribblHintDisplay.classList.remove("show"); return; }
+
+  // Split into word groups by space entries
+  let groups = [], current = [];
+  hint.forEach(h => {
+    if (h.letter === " ") { groups.push(current); current = []; }
+    else current.push(h);
+  });
+  groups.push(current);
+
+  groups.forEach((group, gi) => {
+    if (!group.length) return;
+    const wordDiv = document.createElement("div");
+    wordDiv.className = "hint-word";
+    group.forEach(({ letter, revealed }) => {
+      const cell = document.createElement("div");
+      cell.className = "hint-letter" + (revealed ? " revealed" : "");
+      cell.textContent = revealed && letter ? letter.toUpperCase() : "";
+      wordDiv.appendChild(cell);
+    });
+    skribblHintDisplay.appendChild(wordDiv);
+    // Add spacer between words
+    if (gi < groups.length - 1) {
+      const spacer = document.createElement("div");
+      spacer.className = "hint-word-spacer";
+      skribblHintDisplay.appendChild(spacer);
+    }
+  });
+
+  skribblHintDisplay.classList.add("show");
+}
+
+onValue(skribblHintRef, snap => {
+  if (!skribblOn) return;
+  renderHint(snap.val());
+});
 
 /* ── SLOT MACHINE NAME FLIP ── */
 function flipName(newName) {
