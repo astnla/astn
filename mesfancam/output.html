@@ -42,16 +42,14 @@ html, body {
       display: flex;
       align-items: center;
       justify-content: center;
-      /* Stage is a flex row: feed column on left, drawing panel slides in from right */
     }
 
     /* Stage wraps column + draw panel side by side */
     .stage {
       display: flex;
-      align-items: flex-start; /* top-align so we can manually offset the panel */
+      align-items: flex-start;
       gap: clamp(16px, 2vw, 36px);
       max-height: 100vh;
-      transition: gap 0.5s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     /* ── COLUMN — feed side ── */
@@ -62,17 +60,22 @@ html, body {
       width: min(56vh, calc(100vw - clamp(48px, 8vw, 160px)));
       max-height: 100vh;
       padding: clamp(14px, 2.5vh, 40px) 0;
-      flex-shrink: 0;
-      transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+      flex-shrink: 1;
+      min-width: 0;
+      transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    /* Nudge feed left when panel opens so it feels like they slide apart */
+    .stage.draw-open .column {
+      transform: translateX(calc(-1 * clamp(16px, 2vw, 36px)));
     }
 
     /* ── DRAWING SIDE PANEL ── */
     #drawPanel {
-      flex-shrink: 0;
+      flex-shrink: 1;
+      min-width: 0;
       max-height: 100vh;
       display: flex;
       flex-direction: column;
-      /* Match column top padding exactly */
       padding: clamp(14px, 2.5vh, 40px) 0 clamp(14px, 2.5vh, 40px);
       transform: translateX(calc(100% + clamp(16px, 2vw, 36px)));
       opacity: 0;
@@ -87,7 +90,6 @@ html, body {
       transform: translateX(0);
       opacity: 1;
       pointer-events: auto;
-      /* Same width as feed column, but can shrink when viewport is narrow */
       width: min(56vh, calc(100vw - clamp(48px, 8vw, 160px)));
       max-width: calc(100vw - min(56vh, calc(100vw - clamp(48px, 8vw, 160px))) - clamp(16px, 2vw, 36px) - clamp(28px, 4vw, 60px));
       overflow: visible;
