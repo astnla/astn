@@ -823,32 +823,87 @@ function setTool(t) {
 }
 
 async function activateNone() {
+  // Stop any in-flight skribbl timers FIRST so they don't fire after cleanup
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
+  clearHintTimers();
+  state.skribblWord = "";
+  skribblLeaderboardEntries = [];
+  skribblGuessTotal = 0;
+
   await Promise.all([
-    update(ref(db,"trivia"),   { mode: false }),
-    update(ref(db,"polls"),    { mode: false }),
-    update(ref(db,"drawing"),  { mode: false }),
-    set(ref(db,"skribbl/mode"), false),
+    // Trivia: turn off mode but PRESERVE answers/reveals across the session — teacher can use Reset for that
+    update(ref(db,"trivia"),  { mode: false, question: { text:"", show:false } }),
+    // Polls: turn off mode + clear question (so no stale question shows on next activation)
+    update(ref(db,"polls"),   { mode: false, question: { text:"", show:false } }),
+    // Drawing: turn off mode + clear prompt
+    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    // Skribbl: full wipe so toggling back ON shows fresh state — no stale leaderboard
+    set(ref(db,"skribbl"), {
+      mode: false, drawer: null, prompt: { text:"", show:false },
+      guesses: null, winner: null, liveCanvas: null, word: null,
+      hint: null, close: null, timeEnd: null, leaderboard: null
+    }),
   ]);
+  // Reset control UI
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
+  els.skribblCountdown.textContent = "—";
+  els.skribblCountdownFill.style.width = "100%";
+  els.endSkribblBtn.classList.add("disabled");
+  els.skribblWordInput.value = "";
+  els.skribblDrawerSelect.value = "";
+  renderSkribblLeaderboard();
+  updateSkribblStart();
   setTool("none");
   updateStats();
 }
+// Helper — wipes ALL skribbl state, used when leaving skribbl for any other mode
+async function fullWipeSkribbl() {
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
+  clearHintTimers();
+  state.skribblWord = "";
+  skribblLeaderboardEntries = [];
+  skribblGuessTotal = 0;
+  await set(ref(db,"skribbl"), {
+    mode: false, drawer: null, prompt: { text:"", show:false },
+    guesses: null, winner: null, liveCanvas: null, word: null,
+    hint: null, close: null, timeEnd: null, leaderboard: null
+  });
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
+  els.skribblCountdown.textContent = "—";
+  els.skribblCountdownFill.style.width = "100%";
+  els.endSkribblBtn.classList.add("disabled");
+  els.skribblWordInput.value = "";
+  els.skribblDrawerSelect.value = "";
+  renderSkribblLeaderboard();
+  updateSkribblStart();
+}
+
 async function activateTrivia() {
-  await update(ref(db,"polls"),  { mode: false });
-  await update(ref(db,"trivia"), { mode: true });
+  await Promise.all([
+    update(ref(db,"polls"),  { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    fullWipeSkribbl(),
+    update(ref(db,"trivia"), { mode: true }),
+  ]);
   setTool("trivia");
   updateStats();
 }
 async function activatePolls() {
-  await update(ref(db,"trivia"), { mode: false });
-  await update(ref(db,"polls"),  { mode: true });
+  await Promise.all([
+    update(ref(db,"trivia"), { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    fullWipeSkribbl(),
+    update(ref(db,"polls"),  { mode: true }),
+  ]);
   setTool("polls");
   updateStats();
 }
 
 async function activateDraw() {
   await Promise.all([
-    update(ref(db,"trivia"), { mode: false }),
-    update(ref(db,"polls"),  { mode: false }),
+    update(ref(db,"trivia"), { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"polls"),  { mode: false, question: { text:"", show:false } }),
+    fullWipeSkribbl(),
     update(ref(db,"drawing"), { mode: true }),
   ]);
   setTool("draw");
@@ -861,10 +916,21 @@ els.showDrawBtn.onclick   = activateDraw;
 
 async function activateSkribbl() {
   await Promise.all([
-    update(ref(db,"trivia"),  { mode: false }),
-    update(ref(db,"polls"),   { mode: false }),
-    update(ref(db,"drawing"), { mode: false }),
-    set(ref(db,"skribbl/mode"), true),
+    update(ref(db,"trivia"),  { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"polls"),   { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    // Reset skribbl runtime data when entering — wipe any stale data from a prior round
+    set(ref(db,"skribbl/leaderboard"), null),
+    set(ref(db,"skribbl/winner"),      null),
+    set(ref(db,"skribbl/guesses"),     null),
+    set(ref(db,"skribbl/hint"),        null),
+    set(ref(db,"skribbl/close"),       null),
+    set(ref(db,"skribbl/timeEnd"),     null),
+    set(ref(db,"skribbl/liveCanvas"),  null),
+    set(ref(db,"skribbl/prompt"),      { text:"", show:false }),
+    set(ref(db,"skribbl/drawer"),      null),
+    set(ref(db,"skribbl/word"),        null),
+    set(ref(db,"skribbl/mode"),        true),
   ]);
   setTool("skribbl");
   updateStats();

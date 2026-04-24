@@ -655,24 +655,63 @@ function endSession() {
 
 /* ── TRIVIA ── */
 let triviaQListener = null;
+let triviaAnswerListener = null;
+let triviaHasSubmitted = false;
+let triviaCurrentQuestion = ""; // tracks which question the user has answered (so a new question allows new answer)
+
+// Persistent listener — sets triviaHasSubmitted on refresh / catches reset
+onValue(ref(db, `trivia/answers/${userKey}`), snap => {
+  if (snap.exists() && snap.val()?.answer) {
+    triviaHasSubmitted = true;
+    // Reflect submitted state in UI if trivia mode is active
+    if (triviaModeActive && triviaQuestionShowing) {
+      hidePanel(triviaBox);
+      showPanel(triviaSubmitted);
+    }
+  } else {
+    // Cleared (teacher reset) — allow re-submission
+    triviaHasSubmitted = false;
+  }
+});
+
+let triviaModeActive = false;
+let triviaQuestionShowing = false;
+
 onValue(triviaModeRef, snap => {
   const on = snap.val() === true;
+  triviaModeActive = on;
   if (!on) {
     if (triviaQListener) { off(triviaQRef); triviaQListener = null; }
     hidePanel(triviaBox);
     hidePanel(triviaSubmitted);
     triviaInput.value = "";
+    triviaQuestionShowing = false;
     return;
   }
   if (!triviaQListener) {
     triviaQListener = onValue(triviaQRef, snap => {
       const d = snap.val() || {};
       if (d.show && d.text) {
+        // New question? Reset submission lock so they can answer the new one.
+        // (Only resets if the question text actually changed — not on refresh of same question.)
+        if (d.text !== triviaCurrentQuestion) {
+          triviaCurrentQuestion = d.text;
+          // Don't clear triviaHasSubmitted here directly — the answers/${userKey} listener
+          // will fire when teacher resets answers, which is the correct trigger.
+        }
+        triviaQuestionShowing = true;
         document.getElementById("triviaQuestionText").textContent = d.text;
-        showPanel(triviaBox);
-        hidePanel(triviaSubmitted);
-        triviaInput.value = "";
+        if (triviaHasSubmitted) {
+          hidePanel(triviaBox);
+          showPanel(triviaSubmitted);
+        } else {
+          showPanel(triviaBox);
+          hidePanel(triviaSubmitted);
+          triviaInput.value = "";
+        }
       } else {
+        triviaQuestionShowing = false;
+        triviaCurrentQuestion = "";
         document.getElementById("triviaQuestionText").textContent = "";
         hidePanel(triviaBox);
         hidePanel(triviaSubmitted);
@@ -682,8 +721,10 @@ onValue(triviaModeRef, snap => {
   }
 });
 triviaSubmit.addEventListener("click", () => {
+  if (triviaHasSubmitted) return; // hard guard
   const answer = triviaInput.value.trim();
   if (!answer) return;
+  triviaHasSubmitted = true;
   update(ref(db, `trivia/answers/${userKey}`), { answer, timestamp: Date.now() });
   hidePanel(triviaBox);
   showPanel(triviaSubmitted);
@@ -702,6 +743,21 @@ triviaSubmit.addEventListener("click", () => {
 let currentOptions = {};
 let hasVoted       = false;
 let pollsListening = false;
+let pollsModeActive = false;
+let pollsQuestionShowing = false;
+
+// Persistent listener — restores hasVoted on refresh + responds to teacher reset
+onValue(ref(db, `polls/votes/${userKey}`), snap => {
+  if (snap.exists() && snap.val()?.optionKey) {
+    hasVoted = true;
+    if (pollsModeActive && pollsQuestionShowing) {
+      hidePanel(pollBox);
+      showPanel(pollSubmitted);
+    }
+  } else {
+    hasVoted = false;
+  }
+});
 
 function buildPollButtons() {
   pollOptionsList.innerHTML = "";
@@ -712,7 +768,7 @@ function buildPollButtons() {
     btn.className = "poll-btn";
     btn.textContent = opt.label;
     btn.onclick = () => {
-      if (hasVoted) return;
+      if (hasVoted) return; // hard guard
       hasVoted = true;
       document.querySelectorAll(".poll-btn").forEach(b => b.classList.remove("selected"));
       btn.classList.add("selected");
@@ -732,6 +788,7 @@ function buildPollButtons() {
 
 onValue(pollsModeRef, snap => {
   const on = snap.val() === true;
+  pollsModeActive = on;
 
   if (!on) {
     if (pollsListening) {
@@ -743,7 +800,7 @@ onValue(pollsModeRef, snap => {
     hidePanel(pollSubmitted);
     pollOptionsList.innerHTML = "";
     currentOptions = {};
-    hasVoted = false;
+    pollsQuestionShowing = false;
     return;
   }
 
@@ -757,16 +814,22 @@ onValue(pollsModeRef, snap => {
   onValue(pollsQRef, snap => {
     const d = snap.val() || {};
     if (d.show && d.text) {
-      hasVoted = false;
-      hidePanel(pollSubmitted);
+      pollsQuestionShowing = true;
       pollQuestionText.textContent = d.text;
       buildPollButtons();
-      showPanel(pollBox);
+      // If they already voted (refresh / late join after voting), show submitted state
+      if (hasVoted) {
+        hidePanel(pollBox);
+        showPanel(pollSubmitted);
+      } else {
+        hidePanel(pollSubmitted);
+        showPanel(pollBox);
+      }
     } else {
+      pollsQuestionShowing = false;
       hidePanel(pollBox);
       hidePanel(pollSubmitted);
       pollOptionsList.innerHTML = "";
-      hasVoted = false;
     }
   });
 });
@@ -1270,17 +1333,23 @@ onValue(skribblLeaderboardRef, snap => {
 });
 
 // Guess submission — no longer blocked after winning (others still guess)
+let skribblSubmitting = false;
 skribblGuess.addEventListener("click", async () => {
+  if (skribblSubmitting) return;
   const text = getGuessText().trim();
   if (!text || text.includes("_") || skribblWon) return;
+  skribblSubmitting = true;
   clearLetterGrid();
   const guessKey = `${userKey}_${Date.now()}`;
-  await set(ref(db, `skribbl/guesses/${guessKey}`), {
-    text,
-    name: name || userKey,
-    guesserKey: userKey,
-    timestamp: Date.now()
-  }).catch(() => {});
+  try {
+    await set(ref(db, `skribbl/guesses/${guessKey}`), {
+      text,
+      name: name || userKey,
+      guesserKey: userKey,
+      timestamp: Date.now()
+    });
+  } catch (e) { /* ignore */ }
+  skribblSubmitting = false;
 });
 
 /* ── DRAW TOOLBAR ── */
