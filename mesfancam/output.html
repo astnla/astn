@@ -1159,6 +1159,7 @@ const skribblLbCard      = document.getElementById("skribblLbCard");
 const skribblLbRows      = document.getElementById("skribblLbRows");
 const skribblLeaderboardRef = ref(db, "skribbl/leaderboard");
 const skribblTimeEndRef     = ref(db, "skribbl/timeEnd");
+const skribblPhaseRef       = ref(db, "skribbl/phase");
 
 let skribblTimerInterval = null;
 let skribblRoundDuration = 60000;
@@ -1240,6 +1241,8 @@ function spawnFloatingGuess(text, correct) {
   setTimeout(() => el.remove(), 3600);
 }
 
+let skribblPhase = null; // "playing" | "results" | null
+
 onValue(skribblModeRef, snap => {
   skribblOn = snap.val() === true;
   if (!skribblOn) {
@@ -1261,6 +1264,21 @@ onValue(skribblModeRef, snap => {
   // Do NOT show lb panel on mode start — it slides in only when first correct guess arrives
 });
 
+// Phase listener — "results" means slide drawing panel away, keep leaderboard up
+onValue(skribblPhaseRef, snap => {
+  skribblPhase = snap.val();
+  if (!skribblOn) return;
+  if (skribblPhase === "results") {
+    // Results mode: hide the drawing panel, stop the live canvas stream display,
+    // freeze the timer at 0, and keep the leaderboard panel visible.
+    skribblLiveImg.style.display = "none";
+    skribblLiveImg.src = "";
+    hideDrawPanel();
+    stopOutputTimer();
+    // Keep hint display up but don't add fresh entries (round is over)
+  }
+});
+
 // Timer sync
 onValue(skribblTimeEndRef, snap => {
   const timeEnd = snap.val();
@@ -1272,6 +1290,8 @@ onValue(skribblTimeEndRef, snap => {
 onValue(skribblLiveRef, snap => {
   const val = snap.val();
   if (!skribblOn) return;
+  // Don't re-open the drawing panel if we're in results phase
+  if (skribblPhase === "results") return;
   if (val && typeof val === "string" && val.startsWith("data:")) {
     skribblLiveImg.src = val;
     skribblLiveImg.style.display = "block";

@@ -506,7 +506,10 @@
               <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No correct guesses yet</div>
             </div>
           </div>
-          <button id="endSkribblBtn" class="btn-danger disabled" style="font-size:13px;margin-top:4px;">END ROUND</button>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button id="endSkribblBtn" class="btn-danger disabled" style="font-size:13px;flex:1;">END ROUND</button>
+            <button id="resetSkribblBtn" class="btn-accent" style="font-size:13px;flex:1;display:none;">🔄 RESET ROUND</button>
+          </div>
         </div>
       </div>
 
@@ -600,7 +603,7 @@ turnOffFanCamBtn.addEventListener("click", async () => {
     set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
-    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null, phase:null }),
     set(ref(db,"meta/resetFlag"), Date.now()),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
@@ -652,6 +655,7 @@ const els = {
   skribblDurationSlider:document.getElementById("skribblDurationSlider"),
   skribblDurationLabel: document.getElementById("skribblDurationLabel"),
   endSkribblBtn:        document.getElementById("endSkribblBtn"),
+  resetSkribblBtn:      document.getElementById("resetSkribblBtn"),
   drawPromptInput:document.getElementById("drawPromptInput"),
   sendDrawBtn:    document.getElementById("sendDrawBtn"),
   timesUpBtn:     document.getElementById("timesUpBtn"),
@@ -683,7 +687,7 @@ const state = {
   currentLiveUser: null,
   triviaMode: false, pollsMode: false, drawMode: false,
   drawSubmissions: {}, drawReveals: {},
-  skribblMode: false, skribblWord: "",
+  skribblMode: false, skribblWord: "", skribblPhase: null,
   triviaQuestionActive: false, triviaCorrect: "",
   cardRefs: {},
   autoLiveEnabled: false, autoLiveInterval: null,
@@ -841,14 +845,16 @@ async function activateNone() {
     set(ref(db,"skribbl"), {
       mode: false, drawer: null, prompt: { text:"", show:false },
       guesses: null, winner: null, liveCanvas: null, word: null,
-      hint: null, close: null, timeEnd: null, leaderboard: null
+      hint: null, close: null, timeEnd: null, leaderboard: null, phase: null
     }),
   ]);
   // Reset control UI
   if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
   els.skribblCountdown.textContent = "—";
   els.skribblCountdownFill.style.width = "100%";
+  els.endSkribblBtn.style.display = "";
   els.endSkribblBtn.classList.add("disabled");
+  els.resetSkribblBtn.style.display = "none";
   els.skribblWordInput.value = "";
   els.skribblDrawerSelect.value = "";
   renderSkribblLeaderboard();
@@ -866,12 +872,14 @@ async function fullWipeSkribbl() {
   await set(ref(db,"skribbl"), {
     mode: false, drawer: null, prompt: { text:"", show:false },
     guesses: null, winner: null, liveCanvas: null, word: null,
-    hint: null, close: null, timeEnd: null, leaderboard: null
+    hint: null, close: null, timeEnd: null, leaderboard: null, phase: null
   });
   if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
   els.skribblCountdown.textContent = "—";
   els.skribblCountdownFill.style.width = "100%";
+  els.endSkribblBtn.style.display = "";
   els.endSkribblBtn.classList.add("disabled");
+  els.resetSkribblBtn.style.display = "none";
   els.skribblWordInput.value = "";
   els.skribblDrawerSelect.value = "";
   renderSkribblLeaderboard();
@@ -927,6 +935,7 @@ async function activateSkribbl() {
     set(ref(db,"skribbl/close"),       null),
     set(ref(db,"skribbl/timeEnd"),     null),
     set(ref(db,"skribbl/liveCanvas"),  null),
+    set(ref(db,"skribbl/phase"),       null),
     set(ref(db,"skribbl/prompt"),      { text:"", show:false }),
     set(ref(db,"skribbl/drawer"),      null),
     set(ref(db,"skribbl/word"),        null),
@@ -1229,7 +1238,7 @@ els.endSessionBtn.onclick = async () => {
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"meta/resetFlag"), Date.now()),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
-    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null, phase:null }),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
   state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
@@ -1658,43 +1667,93 @@ function startSkribblCountdown(durationSec, startEpoch) {
     if (remaining <= 0) {
       clearInterval(skribblCountdownInterval);
       skribblCountdownInterval = null;
-      endSkribblRound();
+      enterResultsPhase();
     }
   }
   tick();
   skribblCountdownInterval = setInterval(tick, 1000);
 }
 
-async function endSkribblRound() {
+// Enter results phase — round is over but we keep the leaderboard up
+// for celebration. Switches live cam to 1st place winner, turns off auto-live,
+// signals output.html to slide drawing panel away.
+async function enterResultsPhase() {
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
+  clearHintTimers();
+
+  // Persist final leaderboard ranks
+  const lb = skribblLeaderboardEntries.map((e, i) => ({ ...e, rank: i }));
+  const winnerKey = lb[0]?.userKey || null;
+
+  // If auto-live is on, pause it so the spotlight stays on the winner
+  if (state.autoLiveEnabled) {
+    stopAuto();
+    els.autoLiveToggle.checked = false;
+  }
+
+  const ops = [
+    set(ref(db,"skribbl/phase"),      "results"),
+    set(ref(db,"skribbl/timeEnd"),    null),
+    set(ref(db,"skribbl/liveCanvas"), null),
+    set(ref(db,"skribbl/leaderboard"), lb.length ? lb : null),
+    set(ref(db,"skribbl/prompt"),     { text:"", show:false }),
+    // mode stays TRUE so phones still know they're in skribbl context
+  ];
+  // Switch live cam to 1st place if there is one
+  if (winnerKey) {
+    ops.push(
+      set(ref(db,"skribbl/winner"), { userKey: winnerKey, name: lb[0].name, text: state.skribblWord || "" }),
+      update(ref(db,"live"),         { activeUser: winnerKey })
+    );
+  }
+  await Promise.all(ops);
+
+  // Control UI: replace End Round with Reset, show "Round complete"
+  els.endSkribblBtn.classList.add("disabled");
+  els.endSkribblBtn.style.display = "none";
+  els.resetSkribblBtn.style.display = "";
+  els.resetSkribblBtn.classList.remove("disabled");
+  els.skribblCountdown.textContent = "🏁";
+  els.skribblCountdownFill.style.width = "0%";
+  els.skribblGuessCount.textContent = lb.length
+    ? `Round complete — ${lb.length} got it`
+    : "Round complete — no correct guesses";
+  logEvent("skribbl", `Round ended — ${lb.length} correct guess${lb.length !== 1 ? "es" : ""}`);
+}
+
+// Reset round — full teardown back to "fresh skribbl mode" so teacher can start a new round.
+// Mode stays TRUE so the panel still shows on phones (in idle/waiting state).
+async function resetSkribblRound() {
   if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
   clearHintTimers();
   state.skribblWord = "";
-  // Write the final leaderboard to Firebase so index.html can show it
-  const lb = skribblLeaderboardEntries.map((e, i) => ({ ...e, rank: i }));
+  skribblLeaderboardEntries = [];
+  skribblGuessTotal = 0;
+
   await Promise.all([
-    set(ref(db,"skribbl/mode"),       false),
+    set(ref(db,"skribbl/phase"),      null),
     set(ref(db,"skribbl/drawer"),     null),
     set(ref(db,"skribbl/prompt"),     { text:"", show:false }),
     set(ref(db,"skribbl/guesses"),    null),
+    set(ref(db,"skribbl/winner"),     null),
     set(ref(db,"skribbl/liveCanvas"), null),
     set(ref(db,"skribbl/word"),       null),
     set(ref(db,"skribbl/hint"),       null),
     set(ref(db,"skribbl/close"),      null),
     set(ref(db,"skribbl/timeEnd"),    null),
-    set(ref(db,"skribbl/leaderboard"), lb.length ? lb : null),
-    // Keep winner pointing to 1st place so fan cam switches to them
-    lb.length
-      ? set(ref(db,"skribbl/winner"), { userKey: lb[0].userKey, name: lb[0].name, text: state.skribblWord || "" })
-      : set(ref(db,"skribbl/winner"), null),
+    set(ref(db,"skribbl/leaderboard"),null),
+    // Keep skribbl/mode = true so the panel still shows on phones
   ]);
-  els.endSkribblBtn.classList.add("disabled");
+
+  // Reset control UI back to fresh-start state
   els.skribblWordInput.value = "";
   els.skribblDrawerSelect.value = "";
   if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
   els.skribblCountdown.textContent = "—";
   els.skribblCountdownFill.style.width = "100%";
-  skribblGuessTotal = 0;
-  skribblLeaderboardEntries = [];
+  els.endSkribblBtn.style.display = "";
+  els.endSkribblBtn.classList.add("disabled");
+  els.resetSkribblBtn.style.display = "none";
   renderSkribblLeaderboard();
   updateSkribblStart();
 }
@@ -1717,12 +1776,12 @@ els.startSkribblBtn.onclick = async () => {
     set(ref(db,"skribbl/hint"),       null),
     set(ref(db,"skribbl/close"),      null),
     set(ref(db,"skribbl/leaderboard"),null),
+    set(ref(db,"skribbl/phase"),      "playing"),
   ]);
 
   const startEpoch = Date.now();
   const timeEnd    = startEpoch + duration * 1000;
 
-  // Write mode + drawer + prompt + timer
   await Promise.all([
     set(ref(db,"skribbl/mode"),    true),
     set(ref(db,"skribbl/drawer"),  drawerKey),
@@ -1733,19 +1792,25 @@ els.startSkribblBtn.onclick = async () => {
 
   startHintTimers(word);
   startSkribblCountdown(duration, startEpoch);
+  els.endSkribblBtn.style.display = "";
   els.endSkribblBtn.classList.remove("disabled");
+  els.resetSkribblBtn.style.display = "none";
   if (els.skribblStatusArea) els.skribblStatusArea.style.display = "";
   els.skribblGuessCount.textContent = "Waiting for guesses…";
 };
 
-els.endSkribblBtn.onclick = () => endSkribblRound();
+els.endSkribblBtn.onclick    = () => enterResultsPhase();
+els.resetSkribblBtn.onclick  = () => resetSkribblRound();
 
 // Listen to guesses — rank correct ones, "so close" wrong ones
 onValue(ref(db,"skribbl/word"), snap => { state.skribblWord = snap.val() || ""; });
+onValue(ref(db,"skribbl/phase"), snap => { state.skribblPhase = snap.val(); });
 
 onChildAdded(ref(db,"skribbl/guesses"), snap => {
   const g = snap.val();
   if (!g) return;
+  // Block any processing if we're in results phase (late guesses should not rank)
+  if (state.skribblPhase === "results") return;
   const guessText = g.text?.toLowerCase().trim() || "";
   const correct = state.skribblWord && guessText === state.skribblWord;
   skribblGuessTotal++;

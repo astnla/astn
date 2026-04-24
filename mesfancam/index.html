@@ -1021,6 +1021,7 @@ const skribblHintRef   = ref(db, "skribbl/hint");
 const skribblCloseRef  = ref(db, `skribbl/close/${userKey}`);
 const skribblTimeEndRef    = ref(db, "skribbl/timeEnd");
 const skribblLeaderboardRef= ref(db, "skribbl/leaderboard");
+const skribblPhaseRef      = ref(db, "skribbl/phase");
 
 let skribblActive   = false;
 let skribblAmDrawer = false;
@@ -1029,6 +1030,7 @@ let skribblWordLen  = 0;
 let closeToastTimer = null;
 let skribblTimerInterval = null;
 let skribblRoundDuration = 60; // will be calculated from timeEnd
+let skribblPhase    = null;    // "playing" | "results" | null
 
 /* ── LETTER GRID ── */
 function buildLetterGrid(hint) {
@@ -1222,12 +1224,33 @@ onValue(skribblModeRef, snap => {
     skribblHintBuilt = false;
     skribblWon = false;
     skribblAmDrawer = false;
+    skribblPhase = null;
     if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
     skribblTimerFill.style.width = "100%";
     stopSkribblStream();
     drawOverlay.classList.remove("show");
     hideDrawToolbar();
     drawSubmit.style.display = "";
+  }
+});
+
+// Phase listener — "results" freezes the round UI but keeps the leaderboard up
+onValue(skribblPhaseRef, snap => {
+  skribblPhase = snap.val();
+  if (!skribblActive) return;
+  if (skribblPhase === "results") {
+    // Stop the timer visual (drain to 0 and freeze)
+    if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
+    skribblTimerFill.style.width = "0%";
+    // Hide the guess box — round is over, no more submitting
+    hidePanel(skribblBox);
+    // If I was the drawer, close my canvas (word is out)
+    if (skribblAmDrawer) {
+      drawOverlay.classList.remove("show");
+      hideDrawToolbar();
+      stopSkribblStream();
+    }
+    // Leaderboard panel stays visible (showPanel call handled in leaderboard listener)
   }
 });
 
@@ -1246,6 +1269,8 @@ onValue(skribblPromptRef, snap => {
   const d = snap.val() || {};
   const gameStarted = d.show && d.text;
   if (!skribblActive) return;
+  // During results phase, don't re-open the drawer canvas or guess box even if prompt refires
+  if (skribblPhase === "results") return;
   if (gameStarted) {
     if (skribblAmDrawer) {
       drawHasSubmitted = false;
@@ -1336,6 +1361,7 @@ onValue(skribblLeaderboardRef, snap => {
 let skribblSubmitting = false;
 skribblGuess.addEventListener("click", async () => {
   if (skribblSubmitting) return;
+  if (skribblPhase === "results") return; // round over — no more guesses
   const text = getGuessText().trim();
   if (!text || text.includes("_") || skribblWon) return;
   skribblSubmitting = true;
