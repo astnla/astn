@@ -44,10 +44,10 @@ html, body {
       justify-content: center;
     }
 
-    /* Stage wraps column + draw panel side by side */
+    /* Stage wraps lb panel + column + draw panel side by side */
     .stage {
       display: flex;
-      align-items: flex-start;
+      align-items: stretch; /* lb panel stretches to match feed column height */
       max-height: 100vh;
     }
 
@@ -56,6 +56,7 @@ html, body {
       display: flex;
       flex-direction: column;
       align-items: stretch;
+      align-self: flex-start; /* don't stretch — keep its own intrinsic height */
       width: min(56vh, calc(100vw - clamp(48px, 8vw, 160px)));
       max-height: 100vh;
       padding: clamp(14px, 2.5vh, 40px) 0;
@@ -63,20 +64,132 @@ html, body {
       min-width: 0;
       transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    /* Nudge feed left when panel opens so it feels like they slide apart */
     .stage.draw-open .column {
       transform: translateX(calc(-1 * clamp(16px, 2vw, 36px)));
+    }
+
+    /* ── LEADERBOARD SIDE PANEL (slides in from LEFT) ── */
+    #lbPanel {
+      order: -1;
+      flex-shrink: 0;
+      align-self: stretch; /* match the stage height — same as column's natural height */
+      display: flex;
+      flex-direction: column;
+      padding: clamp(14px, 2.5vh, 40px) 0 clamp(14px, 2.5vh, 40px);
+      /* Width and gap both animate from 0 → target so it takes no layout space when hidden */
+      width: 0;
+      margin-right: 0;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition:
+        width        0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        margin-right 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity      0.4s ease;
+    }
+    #lbPanel.show {
+      width: clamp(160px, 22vh, 240px);
+      margin-right: clamp(100px, 1.8vw, 28px);
+      overflow: visible;
+      opacity: 1;
+      pointer-events: auto;
+      height: auto;
+      margin-bottom: 3.6vh;
+    }
+
+    /* Invisible header clone — aligns card top with feed top */
+    #lbPanelSpacer {
+      visibility: hidden;
+      pointer-events: none;
+      flex-shrink: 0;
+      height: calc(clamp(30px, 4vh, 48px) + clamp(10px, 1.5vh, 20px));
+    }
+
+    /* Card stretches to fill the panel — same TOTAL height as the camera column */
+    #lbPanelCard {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: clamp(10px, 1.2vh, 16px);
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: clamp(10px, 1.3vh, 18px) clamp(10px, 1.2vh, 16px);
+      gap: clamp(6px, 0.8vh, 10px);
+    }
+
+    #lbPanelTitle {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(11px, 1.4vh, 16px);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      flex-shrink: 0;
+    }
+
+    #lbPanelRows {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(4px, 0.55vh, 8px);
+      flex: 1;
+      overflow: hidden; /* don't overflow the card */
+    }
+
+    .lb-panel-row {
+      display: flex;
+      align-items: center;
+      gap: clamp(6px, 0.8vh, 10px);
+      padding: clamp(6px, 0.8vh, 11px) clamp(8px, 1vh, 12px);
+      border-radius: clamp(6px, 0.7vh, 10px);
+      background: rgba(84,209,138,0.12);
+      border: 1px solid rgba(84,209,138,0.25);
+      flex-shrink: 0;
+      animation: lbRowIn 0.4s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes lbRowIn {
+      from { opacity:0; transform:translateX(-14px); }
+      to   { opacity:1; transform:none; }
+    }
+    .lb-panel-medal {
+      font-size: clamp(14px, 1.8vh, 22px);
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .lb-panel-name {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(12px, 1.6vh, 20px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.1;
+    }
+
+    #lbPanelEmpty {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: clamp(11px, 1.3vh, 15px);
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+      padding: clamp(8px, 1vh, 14px) 0;
+      flex-shrink: 0;
     }
 
     /* ── DRAWING SIDE PANEL ── */
     #drawPanel {
       flex-shrink: 1;
+      align-self: flex-start; /* keep its own intrinsic height */
       min-width: 0;
       max-height: 100vh;
       display: flex;
       flex-direction: column;
       padding: clamp(14px, 2.5vh, 40px) 0 clamp(14px, 2.5vh, 40px);
-      transform: translateX(calc(100% + clamp(16px, 2vw, 36px)));
+      /* Gap between camera column and drawing panel */
+      margin-left: clamp(12px, 1.8vw, 28px);
+      transform: translateX(calc(100% + clamp(12px, 1.8vw, 28px)));
       opacity: 0;
       pointer-events: none;
       transition:
@@ -105,7 +218,12 @@ html, body {
       display: flex;
       flex-direction: column;
     }
+    /* Eyebrow row: label on left, countdown timer on right */
     #drawPanelEyebrow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: clamp(6px, 0.8vh, 10px);
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
       font-size: clamp(11px, 1.4vh, 16px);
@@ -115,6 +233,19 @@ html, body {
       padding: clamp(8px, 1vh, 14px) clamp(10px, 1.2vh, 16px) clamp(4px, 0.5vh, 8px);
       flex-shrink: 0;
     }
+    #drawPanelTimer {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(11px, 1.4vh, 16px);
+      letter-spacing: 1px;
+      color: var(--red);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #drawPanelTimer.show { opacity: 1; }
+    #drawPanelTimer.urgent { color: #cc0000; }
     #drawPanelImg {
       width: 100%;
       flex: 1;
@@ -541,26 +672,6 @@ html, body {
       100% { bottom: 80%; opacity: 0; transform: translateX(calc(-50% + var(--drift))) translateY(0) rotate(var(--spin)); }
     }
 
-    /* Countdown bar — sits below the drawing panel hint underscores */
-    #skribblCountdownBar {
-      width: 100%;
-      height: 5px;
-      border-radius: 99px;
-      background: rgba(255,255,255,0.15);
-      overflow: hidden;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-      flex-shrink: 0;
-    }
-    #skribblCountdownBar.show { opacity: 1; }
-    #skribblCountdownFill {
-      height: 100%;
-      border-radius: 99px;
-      background: white;
-      width: 100%;
-      transition: width 1s linear;
-    }
-
     /* Leaderboard card — lives in infoPanel like other cards */
     #skribblLbCard { display: none; }
     #skribblLbCard.show { display: block; }
@@ -613,6 +724,18 @@ html, body {
 <body>
 <div class="scene">
   <div class="stage" id="stage">
+
+  <!-- Leaderboard panel — slides in from LEFT during skribbl -->
+  <div id="lbPanel">
+    <div id="lbPanelSpacer"></div>
+    <div id="lbPanelCard">
+      <div id="lbPanelTitle">🏆 LEADERBOARD</div>
+      <div id="lbPanelRows">
+        <div id="lbPanelEmpty">Waiting…</div>
+      </div>
+    </div>
+  </div>
+
   <div class="column">
 
     <div class="header">
@@ -673,7 +796,7 @@ html, body {
         <div class="card-eyebrow">CLASS ANSWER</div>
         <div class="card-body" id="classText"></div>
       </div>
-      <!-- Skribbl leaderboard card -->
+      <!-- Skribbl leaderboard card (infoPanel version — kept for non-skribbl modes) -->
       <div class="info-card" id="skribblLbCard">
         <div class="card-eyebrow">🏆 LEADERBOARD</div>
         <div id="skribblLbRows"></div>
@@ -691,7 +814,10 @@ html, body {
       <div class="header-title">MANATEE CAM</div>
     </div>
     <div id="drawPanelCard">
-      <div id="drawPanelEyebrow">DRAWING</div>
+      <div id="drawPanelEyebrow">
+        <span id="drawPanelLabel">DRAWING</span>
+        <span id="drawPanelTimer"></span>
+      </div>
       <!-- Static reveal image (draw mode) -->
       <img id="drawPanelImg" alt="student drawing" style="display:none;">
       <!-- Live canvas stream (skribbl mode) -->
@@ -699,10 +825,6 @@ html, body {
     </div>
     <!-- Hint underscores — only visible during skribbl mode -->
     <div id="skribblHintDisplay"></div>
-    <!-- Countdown bar — below hints -->
-    <div id="skribblCountdownBar">
-      <div id="skribblCountdownFill"></div>
-    </div>
   </div>
 
   </div><!-- /stage -->
@@ -731,12 +853,17 @@ const classText        = document.getElementById("classText");
 const stage              = document.getElementById("stage");
 const drawPanel          = document.getElementById("drawPanel");
 const drawPanelEyebrow   = document.getElementById("drawPanelEyebrow");
+const drawPanelLabel     = document.getElementById("drawPanelLabel");
+const drawPanelTimer     = document.getElementById("drawPanelTimer");
 const drawPanelImg       = document.getElementById("drawPanelImg");
 const skribblLiveImg     = document.getElementById("skribblLiveImg");
 const skribblGuessLayer  = document.getElementById("skribblGuessLayer");
 const skribblWinnerOverlay = document.getElementById("skribblWinnerOverlay");
 const skribblWinName     = document.getElementById("skribblWinName");
 const skribblHintDisplay = document.getElementById("skribblHintDisplay");
+const lbPanel            = document.getElementById("lbPanel");
+const lbPanelRows        = document.getElementById("lbPanelRows");
+const lbPanelEmpty       = document.getElementById("lbPanelEmpty");
 
 const activeUserRef  = ref(db, "live/activeUser");
 const frameRef       = ref(db, "live/frame");
@@ -966,7 +1093,7 @@ function stopPolls() {
 let drawSubs = {};
 
 function showDrawPanel(imgSrc, label, crossfade = false) {
-  drawPanelEyebrow.textContent = label || "DRAWING";
+  drawPanelLabel.textContent = label || "DRAWING";
   skribblLiveImg.style.display = "none";
   const panelAlreadyOpen = drawPanel.classList.contains("show");
   if (crossfade && panelAlreadyOpen) {
@@ -1030,8 +1157,6 @@ let skribblOn = false;
 
 const skribblLbCard      = document.getElementById("skribblLbCard");
 const skribblLbRows      = document.getElementById("skribblLbRows");
-const skribblCountdownBar  = document.getElementById("skribblCountdownBar");
-const skribblCountdownFill = document.getElementById("skribblCountdownFill");
 const skribblLeaderboardRef = ref(db, "skribbl/leaderboard");
 const skribblTimeEndRef     = ref(db, "skribbl/timeEnd");
 
@@ -1040,6 +1165,56 @@ let skribblRoundDuration = 60000;
 
 const MEDALS = ["🥇","🥈","🥉"];
 
+/* ── LEADERBOARD PANEL (left side) ── */
+function renderLbPanel(entries) {
+  if (!entries || !entries.length) {
+    lbPanelRows.innerHTML = `<div id="lbPanelEmpty" style="font-family:'Barlow Condensed',sans-serif;font-size:clamp(11px,1.3vh,15px);color:rgba(255,255,255,0.3);text-align:center;padding:clamp(8px,1vh,14px) 0;">Waiting…</div>`;
+    return;
+  }
+  lbPanelRows.innerHTML = entries.map((e, i) => `
+    <div class="lb-panel-row" style="animation-delay:${i * 0.05}s">
+      <span class="lb-panel-medal">${MEDALS[i] || "#" + (i+1)}</span>
+      <span class="lb-panel-name" title="${e.name}">${e.name}</span>
+    </div>`).join("");
+}
+
+function showLbPanel() {
+  lbPanel.classList.add("show");
+  stage.classList.add("lb-open");
+}
+function hideLbPanel() {
+  lbPanel.classList.remove("show");
+  stage.classList.remove("lb-open");
+}
+
+/* ── TIMER IN DRAW PANEL EYEBROW ── */
+function startOutputTimer(timeEnd) {
+  if (skribblTimerInterval) clearInterval(skribblTimerInterval);
+  skribblRoundDuration = Math.max(1, timeEnd - Date.now());
+  drawPanelTimer.classList.add("show");
+
+  function tick() {
+    const remaining = Math.max(0, timeEnd - Date.now());
+    const secs = Math.ceil(remaining / 1000);
+    drawPanelTimer.textContent = secs + "s";
+    drawPanelTimer.classList.toggle("urgent", remaining <= 10000);
+    if (remaining <= 0) {
+      clearInterval(skribblTimerInterval);
+      skribblTimerInterval = null;
+      drawPanelTimer.textContent = "0s";
+    }
+  }
+  tick();
+  skribblTimerInterval = setInterval(tick, 500);
+}
+
+function stopOutputTimer() {
+  if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
+  drawPanelTimer.classList.remove("show", "urgent");
+  drawPanelTimer.textContent = "";
+}
+
+/* ── RENDER INLINE LB CARD (infoPanel) — kept for reference ── */
 function renderOutputLeaderboard(entries) {
   if (!entries || !entries.length) {
     skribblLbRows.innerHTML = `<div style="font-size:clamp(12px,1.4vh,16px);color:var(--muted);padding:clamp(4px,0.6vh,8px) 0;">Waiting for correct guesses…</div>`;
@@ -1050,20 +1225,6 @@ function renderOutputLeaderboard(entries) {
       <span class="lb-medal">${MEDALS[i] || "#" + (i+1)}</span>
       <span class="lb-name">${e.name}</span>
     </div>`).join("");
-}
-
-function startOutputTimer(timeEnd) {
-  if (skribblTimerInterval) clearInterval(skribblTimerInterval);
-  skribblRoundDuration = Math.max(1, timeEnd - Date.now());
-  function tick() {
-    const remaining = Math.max(0, timeEnd - Date.now());
-    const pct = (remaining / skribblRoundDuration) * 100;
-    skribblCountdownFill.style.width = pct + "%";
-    skribblCountdownFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
-    if (remaining <= 0) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
-  }
-  tick();
-  skribblTimerInterval = setInterval(tick, 500);
 }
 
 function spawnFloatingGuess(text, correct) {
@@ -1082,7 +1243,6 @@ function spawnFloatingGuess(text, correct) {
 onValue(skribblModeRef, snap => {
   skribblOn = snap.val() === true;
   if (!skribblOn) {
-    // Clear all skribbl UI
     skribblLiveImg.style.display = "none";
     skribblLiveImg.src = "";
     skribblGuessLayer.innerHTML = "";
@@ -1090,24 +1250,21 @@ onValue(skribblModeRef, snap => {
     seenGuesses.clear();
     skribblHintDisplay.classList.remove("show");
     skribblHintDisplay.innerHTML = "";
-    skribblCountdownBar.classList.remove("show");
-    if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
-    // Hide leaderboard card
+    stopOutputTimer();
+    hideLbPanel();
+    renderLbPanel([]);
     hideCard(skribblLbCard, "skribblLb");
     skribblLbRows.innerHTML = "";
     const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
     if (!drawRevealVisible) hideDrawPanel();
   }
+  // Do NOT show lb panel on mode start — it slides in only when first correct guess arrives
 });
 
 // Timer sync
 onValue(skribblTimeEndRef, snap => {
   const timeEnd = snap.val();
-  if (!skribblOn || !timeEnd) {
-    skribblCountdownBar.classList.remove("show");
-    return;
-  }
-  skribblCountdownBar.classList.add("show");
+  if (!skribblOn || !timeEnd) { stopOutputTimer(); return; }
   startOutputTimer(timeEnd);
 });
 
@@ -1119,7 +1276,7 @@ onValue(skribblLiveRef, snap => {
     skribblLiveImg.src = val;
     skribblLiveImg.style.display = "block";
     drawPanelImg.style.display = "none";
-    drawPanelEyebrow.textContent = "🎨 LIVE DRAWING";
+    drawPanelLabel.textContent = "🎨 LIVE DRAWING";
     stage.classList.add("draw-open");
     drawPanel.classList.add("show");
   }
@@ -1129,19 +1286,18 @@ onValue(skribblLiveRef, snap => {
 onValue(skribblLeaderboardRef, snap => {
   if (!skribblOn) return;
   const lb = snap.val();
-  if (!lb) {
-    // Round just started — show empty leaderboard card
-    renderOutputLeaderboard([]);
-    showCard(skribblLbCard, "skribblLb");
-    return;
-  }
-  const entries = Array.isArray(lb) ? lb : Object.values(lb);
+  const entries = lb ? (Array.isArray(lb) ? lb : Object.values(lb)) : [];
   entries.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
-  renderOutputLeaderboard(entries);
-  showCard(skribblLbCard, "skribblLb");
 
-  // Flash winner overlay briefly for each new 1st-place entry
-  if (entries.length >= 1) {
+  if (entries.length === 0) return; // no correct guesses yet — don't show panel
+
+  // First correct guess — slide the panel in
+  if (!lbPanel.classList.contains("show")) showLbPanel();
+
+  renderLbPanel(entries);
+
+  // Flash winner overlay briefly for the very first correct guess
+  if (entries.length === 1) {
     const first = entries[0];
     if (!skribblWinnerOverlay.classList.contains("show")) {
       skribblWinName.textContent = `${first.name} GOT IT FIRST!`;
@@ -1151,7 +1307,7 @@ onValue(skribblLeaderboardRef, snap => {
   }
 });
 
-// Floating guesses — wrong ones only (correct ones are shown on leaderboard)
+// Floating guesses — wrong ones bubble up
 const seenGuesses = new Set();
 onValue(skribblGuessRef, snap => {
   if (!skribblOn) return;
@@ -1159,7 +1315,6 @@ onValue(skribblGuessRef, snap => {
   Object.entries(all).forEach(([key, g]) => {
     if (seenGuesses.has(key)) return;
     seenGuesses.add(key);
-    // Only float wrong guesses — correct ones appear on leaderboard
     spawnFloatingGuess(`${g.name}: ${g.text}`, false);
   });
 });
