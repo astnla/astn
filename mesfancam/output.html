@@ -541,7 +541,51 @@ html, body {
       100% { bottom: 80%; opacity: 0; transform: translateX(calc(-50% + var(--drift))) translateY(0) rotate(var(--spin)); }
     }
 
-    /* Winner banner over feed */
+    /* Countdown bar — sits below the drawing panel hint underscores */
+    #skribblCountdownBar {
+      width: 100%;
+      height: 5px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.15);
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      flex-shrink: 0;
+    }
+    #skribblCountdownBar.show { opacity: 1; }
+    #skribblCountdownFill {
+      height: 100%;
+      border-radius: 99px;
+      background: white;
+      width: 100%;
+      transition: width 1s linear;
+    }
+
+    /* Leaderboard card — lives in infoPanel like other cards */
+    #skribblLbCard { display: none; }
+    #skribblLbCard.show { display: block; }
+    #skribblLbRows { display: flex; flex-direction: column; gap: clamp(5px,0.7vh,9px); margin-top: clamp(6px,0.9vh,12px); }
+    .lb-row {
+      display: flex; align-items: center; gap: clamp(8px,1vh,14px);
+      padding: clamp(7px,1vh,13px) clamp(10px,1.2vh,16px);
+      border-radius: clamp(6px,0.8vh,12px);
+      background: rgba(84,209,138,0.12);
+      border: 1px solid rgba(84,209,138,0.28);
+      animation: lbSlide 0.4s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes lbSlide {
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:none; }
+    }
+    .lb-medal { font-size: clamp(16px,2.2vh,28px); flex-shrink:0; }
+    .lb-name  {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(14px,1.9vh,26px);
+      flex: 1;
+    }
+
+    /* Winner banner over feed — now just a brief flash, leaderboard is the main UI */
     #skribblWinnerOverlay {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -629,6 +673,11 @@ html, body {
         <div class="card-eyebrow">CLASS ANSWER</div>
         <div class="card-body" id="classText"></div>
       </div>
+      <!-- Skribbl leaderboard card -->
+      <div class="info-card" id="skribblLbCard">
+        <div class="card-eyebrow">🏆 LEADERBOARD</div>
+        <div id="skribblLbRows"></div>
+      </div>
     </div>
 
   </div>
@@ -650,6 +699,10 @@ html, body {
     </div>
     <!-- Hint underscores — only visible during skribbl mode -->
     <div id="skribblHintDisplay"></div>
+    <!-- Countdown bar — below hints -->
+    <div id="skribblCountdownBar">
+      <div id="skribblCountdownFill"></div>
+    </div>
   </div>
 
   </div><!-- /stage -->
@@ -717,7 +770,6 @@ const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
 const skribblGuessRef  = ref(db, "skribbl/guesses");
 const skribblWinnerRef = ref(db, "skribbl/winner");
 const skribblHintRef   = ref(db, "skribbl/hint");
-
 let activeUser     = null;
 let lastFrame      = 0;
 let lastHeartbeat  = 0;
@@ -975,7 +1027,44 @@ onValue(drawRevealRef, snap => {
 
 /* ── SKRIBBL SIDE PANEL ── */
 let skribblOn = false;
-let floatCount = 0;
+
+const skribblLbCard      = document.getElementById("skribblLbCard");
+const skribblLbRows      = document.getElementById("skribblLbRows");
+const skribblCountdownBar  = document.getElementById("skribblCountdownBar");
+const skribblCountdownFill = document.getElementById("skribblCountdownFill");
+const skribblLeaderboardRef = ref(db, "skribbl/leaderboard");
+const skribblTimeEndRef     = ref(db, "skribbl/timeEnd");
+
+let skribblTimerInterval = null;
+let skribblRoundDuration = 60000;
+
+const MEDALS = ["🥇","🥈","🥉"];
+
+function renderOutputLeaderboard(entries) {
+  if (!entries || !entries.length) {
+    skribblLbRows.innerHTML = `<div style="font-size:clamp(12px,1.4vh,16px);color:var(--muted);padding:clamp(4px,0.6vh,8px) 0;">Waiting for correct guesses…</div>`;
+    return;
+  }
+  skribblLbRows.innerHTML = entries.map((e, i) => `
+    <div class="lb-row" style="animation-delay:${i * 0.06}s">
+      <span class="lb-medal">${MEDALS[i] || "#" + (i+1)}</span>
+      <span class="lb-name">${e.name}</span>
+    </div>`).join("");
+}
+
+function startOutputTimer(timeEnd) {
+  if (skribblTimerInterval) clearInterval(skribblTimerInterval);
+  skribblRoundDuration = Math.max(1, timeEnd - Date.now());
+  function tick() {
+    const remaining = Math.max(0, timeEnd - Date.now());
+    const pct = (remaining / skribblRoundDuration) * 100;
+    skribblCountdownFill.style.width = pct + "%";
+    skribblCountdownFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
+    if (remaining <= 0) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
+  }
+  tick();
+  skribblTimerInterval = setInterval(tick, 500);
+}
 
 function spawnFloatingGuess(text, correct) {
   const el = document.createElement("div");
@@ -1001,10 +1090,25 @@ onValue(skribblModeRef, snap => {
     seenGuesses.clear();
     skribblHintDisplay.classList.remove("show");
     skribblHintDisplay.innerHTML = "";
-    // Collapse side panel if draw reveal image isn't showing
+    skribblCountdownBar.classList.remove("show");
+    if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
+    // Hide leaderboard card
+    hideCard(skribblLbCard, "skribblLb");
+    skribblLbRows.innerHTML = "";
     const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
     if (!drawRevealVisible) hideDrawPanel();
   }
+});
+
+// Timer sync
+onValue(skribblTimeEndRef, snap => {
+  const timeEnd = snap.val();
+  if (!skribblOn || !timeEnd) {
+    skribblCountdownBar.classList.remove("show");
+    return;
+  }
+  skribblCountdownBar.classList.add("show");
+  startOutputTimer(timeEnd);
 });
 
 // Live canvas stream from drawer
@@ -1021,8 +1125,33 @@ onValue(skribblLiveRef, snap => {
   }
 });
 
-// Floating guesses
-// seenGuesses is module-scoped so mode listener can clear it on round end
+// Leaderboard — fills in live as correct guesses come in
+onValue(skribblLeaderboardRef, snap => {
+  if (!skribblOn) return;
+  const lb = snap.val();
+  if (!lb) {
+    // Round just started — show empty leaderboard card
+    renderOutputLeaderboard([]);
+    showCard(skribblLbCard, "skribblLb");
+    return;
+  }
+  const entries = Array.isArray(lb) ? lb : Object.values(lb);
+  entries.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
+  renderOutputLeaderboard(entries);
+  showCard(skribblLbCard, "skribblLb");
+
+  // Flash winner overlay briefly for each new 1st-place entry
+  if (entries.length >= 1) {
+    const first = entries[0];
+    if (!skribblWinnerOverlay.classList.contains("show")) {
+      skribblWinName.textContent = `${first.name} GOT IT FIRST!`;
+      skribblWinnerOverlay.classList.add("show");
+      setTimeout(() => skribblWinnerOverlay.classList.remove("show"), 2500);
+    }
+  }
+});
+
+// Floating guesses — wrong ones only (correct ones are shown on leaderboard)
 const seenGuesses = new Set();
 onValue(skribblGuessRef, snap => {
   if (!skribblOn) return;
@@ -1030,27 +1159,9 @@ onValue(skribblGuessRef, snap => {
   Object.entries(all).forEach(([key, g]) => {
     if (seenGuesses.has(key)) return;
     seenGuesses.add(key);
+    // Only float wrong guesses — correct ones appear on leaderboard
     spawnFloatingGuess(`${g.name}: ${g.text}`, false);
   });
-});
-
-// Winner — show overlay, then auto-dismiss after 3s and slide drawing away
-onValue(skribblWinnerRef, snap => {
-  const w = snap.val();
-  if (!w || !skribblOn) return;
-  spawnFloatingGuess(`${w.name}: ${w.text}`, true);
-  skribblWinName.textContent = `${w.name} GUESSED IT!`;
-  skribblWinnerOverlay.classList.add("show");
-  // Clear floating guesses
-  setTimeout(() => skribblGuessLayer.innerHTML = "", 500);
-  // After 3s: fade winner overlay and slide drawing panel away
-  setTimeout(() => {
-    skribblWinnerOverlay.classList.remove("show");
-    // Slide drawing panel away so we see the winner on the fan cam
-    skribblLiveImg.style.display = "none";
-    skribblLiveImg.src = "";
-    hideDrawPanel();
-  }, 3000);
 });
 
 /* ── GATES ── */

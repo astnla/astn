@@ -117,7 +117,24 @@
     /* ── SKRIBBL ── */
     #skribblBox{display:flex;flex-direction:column;gap:12px;width:min(82vw,320px);}
     #skribblLabel{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:18px;color:white;text-align:center;line-height:1.3;}
-    #skribblWinner{text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;color:white;}
+
+    /* Countdown timer bar */
+    #skribblTimerBar{width:100%;height:5px;border-radius:99px;background:rgba(255,255,255,0.12);overflow:hidden;}
+    #skribblTimerFill{height:100%;border-radius:99px;background:white;transition:width 1s linear;}
+
+    /* Live leaderboard on index */
+    #skribblLeaderboardBox{display:flex;flex-direction:column;gap:8px;width:min(82vw,320px);}
+    #skribblLeaderboardTitle{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:20px;color:white;text-align:center;}
+    #skribblLeaderboardList{display:flex;flex-direction:column;gap:6px;}
+    .skribbl-lb-row{
+      display:flex;align-items:center;gap:10px;
+      padding:9px 12px;border-radius:10px;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.15);
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:17px;color:white;
+      animation:fadeUp 0.3s ease both;
+    }
+    .skribbl-lb-row.mine{background:rgba(84,209,138,0.15);border-color:rgba(84,209,138,0.5);}
 
     /* Letter grid */
     #skribblLetterGrid{
@@ -374,10 +391,15 @@
   <!-- Skribbl guess box -->
   <div id="skribblBox" class="ui-panel">
     <div id="skribblLabel">🎨 WHAT'S THEIR DOODLE?</div>
+    <div id="skribblTimerBar"><div id="skribblTimerFill" style="width:100%;"></div></div>
     <div id="skribblLetterGrid"></div>
     <button id="skribblGuess" class="action-btn">GUESS</button>
   </div>
-  <div id="skribblWinner" class="ui-panel"></div>
+  <!-- Skribbl leaderboard — shown to everyone once round is active (replaces winner panel) -->
+  <div id="skribblLeaderboardBox" class="ui-panel">
+    <div id="skribblLeaderboardTitle">🏆 LEADERBOARD</div>
+    <div id="skribblLeaderboardList"></div>
+  </div>
 
   <!-- So Close toast (lives outside flow so it's always fixed to viewport) -->
   <div id="skribblCloseToast">SO CLOSE! 🔥</div>
@@ -919,46 +941,42 @@ onValue(ref(db, "drawing/timesUp"), snap => {
 });
 
 /* ── SKRIBBL ── */
-const skribblBox     = document.getElementById("skribblBox");
-const skribblLabel   = document.getElementById("skribblLabel");
-const skribblGuess   = document.getElementById("skribblGuess");
-const skribblWinner  = document.getElementById("skribblWinner");
-const skribblLetterGrid = document.getElementById("skribblLetterGrid");
-const skribblCloseToast = document.getElementById("skribblCloseToast");
+const skribblBox          = document.getElementById("skribblBox");
+const skribblLabel        = document.getElementById("skribblLabel");
+const skribblGuess        = document.getElementById("skribblGuess");
+const skribblLeaderboardBox  = document.getElementById("skribblLeaderboardBox");
+const skribblLeaderboardList = document.getElementById("skribblLeaderboardList");
+const skribblLetterGrid   = document.getElementById("skribblLetterGrid");
+const skribblCloseToast   = document.getElementById("skribblCloseToast");
+const skribblTimerFill    = document.getElementById("skribblTimerFill");
 
 const skribblModeRef   = ref(db, "skribbl/mode");
 const skribblDrawerRef = ref(db, "skribbl/drawer");
 const skribblPromptRef = ref(db, "skribbl/prompt");
-const skribblWinnerRef = ref(db, "skribbl/winner");
 const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
 const skribblHintRef   = ref(db, "skribbl/hint");
 const skribblCloseRef  = ref(db, `skribbl/close/${userKey}`);
+const skribblTimeEndRef    = ref(db, "skribbl/timeEnd");
+const skribblLeaderboardRef= ref(db, "skribbl/leaderboard");
 
 let skribblActive   = false;
 let skribblAmDrawer = false;
-let skribblWon      = false;
-let skribblWordLen  = 0; // total chars including spaces, for grid
+let skribblWon      = false;   // true only for THIS user — keeps guess box hidden after they get it
+let skribblWordLen  = 0;
 let closeToastTimer = null;
+let skribblTimerInterval = null;
+let skribblRoundDuration = 60; // will be calculated from timeEnd
 
 /* ── LETTER GRID ── */
-// Build the grid from a hint array: [{letter:null|" "|"a", revealed:bool}, ...]
-// Words separated by spaces get rendered as separate .letter-word groups
 function buildLetterGrid(hint) {
   skribblLetterGrid.innerHTML = "";
   skribblWordLen = hint.length;
-
-  // Split into word groups by space entries
-  let groups = [];
-  let current = [];
+  let groups = [], current = [];
   hint.forEach((h, i) => {
-    if (h.letter === " ") {
-      groups.push(current); current = [];
-    } else {
-      current.push({ ...h, index: i });
-    }
+    if (h.letter === " ") { groups.push(current); current = []; }
+    else current.push({ ...h, index: i });
   });
   groups.push(current);
-
   groups.forEach(group => {
     if (!group.length) return;
     const wordDiv = document.createElement("div");
@@ -966,11 +984,8 @@ function buildLetterGrid(hint) {
     group.forEach(({ letter, revealed, index }) => {
       const inp = document.createElement("input");
       inp.className = "letter-cell" + (revealed ? " revealed" : "");
-      inp.type = "text";
-      inp.maxLength = 1;
-      inp.autocomplete = "off";
+      inp.type = "text"; inp.maxLength = 1; inp.autocomplete = "off";
       inp.dataset.index = index;
-      // Revealed letters show as placeholder — visible hint, still typeable
       if (revealed && letter) inp.placeholder = letter.toUpperCase();
       inp.addEventListener("input", onLetterInput);
       inp.addEventListener("keydown", onLetterKeydown);
@@ -978,35 +993,24 @@ function buildLetterGrid(hint) {
       wordDiv.appendChild(inp);
     });
     skribblLetterGrid.appendChild(wordDiv);
-    // Add spacer between words (not after last)
     const spacer = document.createElement("div");
     spacer.className = "letter-spacer";
     skribblLetterGrid.appendChild(spacer);
   });
-  // Remove trailing spacer
   const spacers = skribblLetterGrid.querySelectorAll(".letter-spacer");
   if (spacers.length) spacers[spacers.length - 1].remove();
-
-  // Focus first empty cell
   focusFirstEmpty();
 }
 
 function focusFirstEmpty() {
-  // Find first cell with no typed value (placeholder-only revealed cells count as empty)
   const first = skribblLetterGrid.querySelector(".letter-cell:not([value]),.letter-cell[value='']");
   if (first) first.focus();
 }
 
-// Tapping a cell focuses it directly — no jumping to first empty
-function onLetterClick(e) {
-  e.target.focus();
-}
+function onLetterClick(e) { e.target.focus(); }
 
 function clearLetterGrid() {
-  // Clear typed values but preserve revealed placeholders
-  skribblLetterGrid.querySelectorAll(".letter-cell").forEach(inp => {
-    inp.value = "";
-  });
+  skribblLetterGrid.querySelectorAll(".letter-cell").forEach(inp => { inp.value = ""; });
   focusFirstEmpty();
 }
 
@@ -1016,7 +1020,6 @@ function getGuessText() {
   let parts = [];
   wordDivs.forEach(wd => {
     const letters = wd.querySelectorAll(".letter-cell");
-    // For each cell: use typed value if present, otherwise fall back to placeholder (revealed hint)
     parts.push(Array.from(letters).map(c => c.value || c.placeholder || "_").join(""));
   });
   return parts.join(" ").toLowerCase();
@@ -1024,36 +1027,27 @@ function getGuessText() {
 
 function onLetterInput(e) {
   const inp = e.target;
-  // Sanitize — strip anything non-alpha that slipped through
   inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, "");
 }
 
 function onLetterKeydown(e) {
   const inp = e.target;
   const key = e.key;
-
-  // A-Z: handle the whole thing here so fast typers never miss a cell
   if (/^[a-zA-Z]$/.test(key)) {
     e.preventDefault();
-    inp.value = key.toUpperCase(); // overwrite whatever was there
-    // Advance to next cell immediately — before browser renders anything
+    inp.value = key.toUpperCase();
     const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
     const idx = allCells.indexOf(inp);
     const next = allCells.slice(idx + 1).find(c => !c.value);
     if (next) next.focus();
     return;
   }
-
   if (key === "Backspace") {
-    if (inp.value) {
-      inp.value = "";
-    } else {
+    if (inp.value) { inp.value = ""; }
+    else {
       const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
       const idx = allCells.indexOf(inp);
-      if (idx > 0) {
-        allCells[idx - 1].value = "";
-        allCells[idx - 1].focus();
-      }
+      if (idx > 0) { allCells[idx - 1].value = ""; allCells[idx - 1].focus(); }
     }
     e.preventDefault();
   } else if (key === "ArrowLeft") {
@@ -1071,7 +1065,6 @@ function onLetterKeydown(e) {
   }
 }
 
-// Apply hint updates — sets placeholder on newly revealed letters, never interrupts typing
 function applyHintUpdate(hint) {
   hint.forEach((h, i) => {
     if (h.letter === " " || !h.revealed || !h.letter) return;
@@ -1079,8 +1072,6 @@ function applyHintUpdate(hint) {
     if (cell && !cell.classList.contains("revealed")) {
       cell.placeholder = h.letter.toUpperCase();
       cell.classList.add("revealed");
-      // Don't clear their typed value if they already typed something here
-      // Don't steal focus — let them keep typing uninterrupted
     }
   });
 }
@@ -1093,6 +1084,41 @@ function showCloseToast() {
     skribblCloseToast.classList.remove("show");
     closeToastTimer = null;
   }, 2500);
+}
+
+/* ── COUNTDOWN TIMER ── */
+function startSkribblTimer(timeEnd) {
+  if (skribblTimerInterval) clearInterval(skribblTimerInterval);
+  const total = timeEnd - Date.now();
+  skribblRoundDuration = total > 0 ? total : 60000;
+
+  function tick() {
+    const remaining = Math.max(0, timeEnd - Date.now());
+    const pct = (remaining / skribblRoundDuration) * 100;
+    skribblTimerFill.style.width = pct + "%";
+    skribblTimerFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
+    if (remaining <= 0) {
+      clearInterval(skribblTimerInterval);
+      skribblTimerInterval = null;
+    }
+  }
+  tick();
+  skribblTimerInterval = setInterval(tick, 500);
+}
+
+/* ── LEADERBOARD RENDER ── */
+const MEDALS = ["🥇","🥈","🥉"];
+function renderLeaderboard(entries) {
+  if (!entries || !entries.length) {
+    skribblLeaderboardList.innerHTML = `<div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:15px;color:rgba(255,255,255,0.4);padding:8px 0;">No correct guesses yet</div>`;
+    return;
+  }
+  skribblLeaderboardList.innerHTML = entries.map((e, i) => `
+    <div class="skribbl-lb-row${e.userKey === userKey ? " mine" : ""}">
+      <span style="font-size:20px;">${MEDALS[i] || "#" + (i+1)}</span>
+      <span style="flex:1;">${e.name}</span>
+      ${e.userKey === userKey ? `<span style="font-size:13px;opacity:0.7;">YOU</span>` : ""}
+    </div>`).join("");
 }
 
 /* ── CANVAS STREAM ── */
@@ -1127,12 +1153,14 @@ onValue(skribblModeRef, snap => {
   skribblActive = snap.val() === true;
   if (!skribblActive) {
     hidePanel(skribblBox);
-    hidePanel(skribblWinner);
-    skribblWinner.textContent = "";
+    hidePanel(skribblLeaderboardBox);
+    skribblLeaderboardList.innerHTML = "";
     skribblLetterGrid.innerHTML = "";
     skribblHintBuilt = false;
     skribblWon = false;
     skribblAmDrawer = false;
+    if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
+    skribblTimerFill.style.width = "100%";
     stopSkribblStream();
     drawOverlay.classList.remove("show");
     hideDrawToolbar();
@@ -1171,6 +1199,7 @@ onValue(skribblPromptRef, snap => {
     } else {
       drawOverlay.classList.remove("show");
       hideDrawToolbar();
+      // Show guess box only if this user hasn't guessed correctly yet
       if (!skribblWon) showPanel(skribblBox);
     }
   } else {
@@ -1183,7 +1212,14 @@ onValue(skribblPromptRef, snap => {
   }
 });
 
-// Hint updates — build grid on first arrival, patch on subsequent reveals
+// Timer — sync from Firebase timeEnd
+onValue(skribblTimeEndRef, snap => {
+  const timeEnd = snap.val();
+  if (!skribblActive || !timeEnd) return;
+  startSkribblTimer(timeEnd);
+});
+
+// Hint updates
 let skribblHintBuilt = false;
 onValue(skribblHintRef, snap => {
   if (!skribblActive || skribblAmDrawer) return;
@@ -1197,36 +1233,43 @@ onValue(skribblHintRef, snap => {
   }
 });
 
-// "So close!" — fires when control writes our userKey to skribbl/close
+// "So close!" toast
 onValue(skribblCloseRef, snap => {
   if (!snap.exists() || skribblAmDrawer || skribblWon) return;
   showCloseToast();
   clearLetterGrid();
 });
 
-// Winner
-onValue(skribblWinnerRef, snap => {
-  const w = snap.val();
-  if (!w || !skribblActive) return;
-  skribblWon = true;
-  if (skribblAmDrawer) {
-    drawOverlay.classList.remove("show");
-    stopSkribblStream();
-    hideDrawToolbar();
-    skribblWinner.textContent = `${w.name} GOT IT!`;
-    showPanel(skribblWinner);
-  } else if (w.userKey === userKey) {
-    skribblWinner.textContent = "YOU GOT IT! 🎉";
-    showPanel(skribblWinner);
+// Leaderboard — live updates as people guess correctly
+onValue(skribblLeaderboardRef, snap => {
+  if (!skribblActive) return;
+  const lb = snap.val();
+  const entries = lb ? (Array.isArray(lb) ? lb : Object.values(lb)) : [];
+  // Sort by rank in case Firebase returns out of order
+  entries.sort((a, b) => (a.rank ?? a.ts ?? 0) - (b.rank ?? b.ts ?? 0));
+
+  // Check if this user just got onto the leaderboard
+  const myEntry = entries.find(e => e.userKey === userKey);
+  if (myEntry && !skribblWon) {
+    skribblWon = true;
+    // Hide guess box, show leaderboard
     hidePanel(skribblBox);
+  }
+
+  // Show leaderboard panel to everyone (drawer sees it too after round starts having entries)
+  if (entries.length > 0) {
+    renderLeaderboard(entries);
+    showPanel(skribblLeaderboardBox);
   } else {
-    skribblWinner.textContent = `${w.name} GOT IT!`;
-    showPanel(skribblWinner);
-    hidePanel(skribblBox);
+    renderLeaderboard([]);
+    // Only show leaderboard panel if we already have it open
+    if (!skribblLeaderboardBox.classList.contains("visible")) {
+      hidePanel(skribblLeaderboardBox);
+    }
   }
 });
 
-// Guess submission
+// Guess submission — no longer blocked after winning (others still guess)
 skribblGuess.addEventListener("click", async () => {
   const text = getGuessText().trim();
   if (!text || text.includes("_") || skribblWon) return;

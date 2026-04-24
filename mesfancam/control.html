@@ -476,12 +476,37 @@
             <input id="skribblWordInput" class="input" placeholder="e.g. Manatee…">
             <button id="startSkribblBtn" class="btn-accent disabled" style="font-size:13px;">START</button>
           </div>
-          <div id="skribblStatusArea" style="display:none;">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">status</div>
-            <div id="skribblGuessCount" style="padding:8px;background:rgba(0,0,0,0.15);border-radius:12px;border:1px solid var(--line);font-size:13px;color:var(--muted);text-align:center;">Waiting for guesses…</div>
-            <div id="skribblWinnerBanner" style="display:none;padding:12px;border-radius:12px;background:rgba(84,209,138,0.15);border:1px solid var(--good);color:var(--good);font-weight:900;font-size:15px;text-align:center;"></div>
+
+          <!-- Duration slider -->
+          <div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">round duration</div>
+              <div id="skribblDurationLabel" style="font-size:13px;font-weight:900;color:var(--accent);">60s</div>
+            </div>
+            <input type="range" id="skribblDurationSlider" min="30" max="120" step="15" value="60"
+              style="width:100%;accent-color:var(--accent);cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
+              <span>30s</span><span>60s</span><span>90s</span><span>120s</span>
+            </div>
           </div>
-          <button id="endSkribblBtn" class="btn-danger disabled" style="font-size:13px;">END ROUND</button>
+
+          <div id="skribblStatusArea" style="display:none;margin-top:2px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">status</div>
+            <!-- Countdown bar -->
+            <div style="position:relative;background:rgba(0,0,0,0.15);border-radius:12px;border:1px solid var(--line);padding:10px 12px;text-align:center;">
+              <div id="skribblCountdown" style="font-size:22px;font-weight:900;color:var(--accent);line-height:1;">—</div>
+              <div id="skribblCountdownBar" style="margin-top:6px;height:4px;border-radius:99px;background:rgba(255,255,255,0.1);overflow:hidden;">
+                <div id="skribblCountdownFill" style="height:100%;background:var(--accent);width:100%;transition:width 1s linear;border-radius:99px;"></div>
+              </div>
+              <div id="skribblGuessCount" style="font-size:11px;color:var(--muted);margin-top:6px;">Waiting for guesses…</div>
+            </div>
+            <!-- Live leaderboard -->
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:10px;">leaderboard</div>
+            <div id="skribblLeaderboard" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;min-height:32px;">
+              <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No correct guesses yet</div>
+            </div>
+          </div>
+          <button id="endSkribblBtn" class="btn-danger disabled" style="font-size:13px;margin-top:4px;">END ROUND</button>
         </div>
       </div>
 
@@ -575,7 +600,7 @@ turnOffFanCamBtn.addEventListener("click", async () => {
     set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
-    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null }),
     set(ref(db,"meta/resetFlag"), Date.now()),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
@@ -618,11 +643,15 @@ const els = {
   skribblDrawerSelect:document.getElementById("skribblDrawerSelect"),
   skribblWordInput:   document.getElementById("skribblWordInput"),
   startSkribblBtn:    document.getElementById("startSkribblBtn"),
-  skribblGuessList:   document.getElementById("skribblGuessList"),
-  skribblWinnerBanner: document.getElementById("skribblWinnerBanner"),
-  skribblStatusArea:   document.getElementById("skribblStatusArea"),
-  skribblGuessCount:   document.getElementById("skribblGuessCount"),
-  endSkribblBtn:       document.getElementById("endSkribblBtn"),
+  skribblWinnerBanner:  null, // removed — leaderboard replaces it
+  skribblStatusArea:    document.getElementById("skribblStatusArea"),
+  skribblGuessCount:    document.getElementById("skribblGuessCount"),
+  skribblLeaderboard:   document.getElementById("skribblLeaderboard"),
+  skribblCountdown:     document.getElementById("skribblCountdown"),
+  skribblCountdownFill: document.getElementById("skribblCountdownFill"),
+  skribblDurationSlider:document.getElementById("skribblDurationSlider"),
+  skribblDurationLabel: document.getElementById("skribblDurationLabel"),
+  endSkribblBtn:        document.getElementById("endSkribblBtn"),
   drawPromptInput:document.getElementById("drawPromptInput"),
   sendDrawBtn:    document.getElementById("sendDrawBtn"),
   timesUpBtn:     document.getElementById("timesUpBtn"),
@@ -1123,6 +1152,7 @@ els.endSessionBtn.onclick = async () => {
   stopAuto();
   els.autoLiveToggle.checked = false;
   clearHintTimers();
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
   logEvent("session", "Session ended manually");
   await exportSessionZip();
   await Promise.all([
@@ -1133,7 +1163,7 @@ els.endSessionBtn.onclick = async () => {
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"meta/resetFlag"), Date.now()),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
-    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null }),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
   state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
@@ -1520,63 +1550,133 @@ function startHintTimers(word) {
   }, 30000));
 }
 
-els.startSkribblBtn.onclick = async () => {
-  const drawerKey = els.skribblDrawerSelect.value;
-  const word      = els.skribblWordInput.value.trim().toLowerCase();
-  if (!drawerKey || !word) return;
-  state.skribblWord = word;
-  // Clear previous round data
-  await Promise.all([
-    set(ref(db,"skribbl/guesses"), null),
-    set(ref(db,"skribbl/winner"),  null),
-    set(ref(db,"skribbl/liveCanvas"), null),
-    set(ref(db,"skribbl/hint"), null),
-    set(ref(db,"skribbl/close"), null),
-  ]);
-  // Write mode + drawer + prompt
-  await Promise.all([
-    set(ref(db,"skribbl/mode"),   true),
-    set(ref(db,"skribbl/drawer"), drawerKey),
-    set(ref(db,"skribbl/word"),   word),
-    set(ref(db,"skribbl/prompt"), { text: word, show: true }),
-  ]);
-  // Start hint timers after everything is written
-  startHintTimers(word);
-  els.endSkribblBtn.classList.remove("disabled");
-  els.skribblWinnerBanner.style.display = "none";
-  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "";
-  if (els.skribblGuessCount) els.skribblGuessCount.textContent = "Waiting for guesses…";
-  skribblGuessTotal = 0;
-};
+/* ── DURATION SLIDER ── */
+els.skribblDurationSlider.addEventListener("input", () => {
+  els.skribblDurationLabel.textContent = els.skribblDurationSlider.value + "s";
+});
 
-els.endSkribblBtn.onclick = async () => {
-  state.skribblWord = "";
+/* ── SKRIBBL TIMED ROUND ── */
+let skribblCountdownInterval = null;
+let skribblLeaderboardEntries = []; // [{ userKey, name, rank, ts }]
+let skribblGuessTotal = 0;
+
+function skribblLeaderboardMedals(rank) {
+  if (rank === 0) return "🥇";
+  if (rank === 1) return "🥈";
+  if (rank === 2) return "🥉";
+  return `#${rank + 1}`;
+}
+
+function renderSkribblLeaderboard() {
+  if (!skribblLeaderboardEntries.length) {
+    els.skribblLeaderboard.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No correct guesses yet</div>`;
+    return;
+  }
+  els.skribblLeaderboard.innerHTML = skribblLeaderboardEntries.map((e, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:rgba(84,209,138,0.10);border:1px solid rgba(84,209,138,0.25);">
+      <span style="font-size:16px;flex-shrink:0;">${skribblLeaderboardMedals(i)}</span>
+      <span style="font-size:14px;font-weight:900;flex:1;">${e.name}</span>
+    </div>`).join("");
+}
+
+function startSkribblCountdown(durationSec, startEpoch) {
+  if (skribblCountdownInterval) clearInterval(skribblCountdownInterval);
+  const endEpoch = startEpoch + durationSec * 1000;
+
+  function tick() {
+    const remaining = Math.max(0, Math.ceil((endEpoch - Date.now()) / 1000));
+    els.skribblCountdown.textContent = remaining + "s";
+    const pct = (remaining / durationSec) * 100;
+    els.skribblCountdownFill.style.width = pct + "%";
+    els.skribblCountdownFill.style.background = remaining <= 10 ? "var(--danger)" : "var(--accent)";
+    if (remaining <= 0) {
+      clearInterval(skribblCountdownInterval);
+      skribblCountdownInterval = null;
+      endSkribblRound();
+    }
+  }
+  tick();
+  skribblCountdownInterval = setInterval(tick, 1000);
+}
+
+async function endSkribblRound() {
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
   clearHintTimers();
+  state.skribblWord = "";
+  // Write the final leaderboard to Firebase so index.html can show it
+  const lb = skribblLeaderboardEntries.map((e, i) => ({ ...e, rank: i }));
   await Promise.all([
-    set(ref(db,"skribbl/mode"),   false),
-    set(ref(db,"skribbl/drawer"), null),
-    set(ref(db,"skribbl/prompt"), { text:"", show:false }),
-    set(ref(db,"skribbl/guesses"), null),
-    set(ref(db,"skribbl/winner"),  null),
+    set(ref(db,"skribbl/mode"),       false),
+    set(ref(db,"skribbl/drawer"),     null),
+    set(ref(db,"skribbl/prompt"),     { text:"", show:false }),
+    set(ref(db,"skribbl/guesses"),    null),
     set(ref(db,"skribbl/liveCanvas"), null),
-    set(ref(db,"skribbl/word"), null),
-    set(ref(db,"skribbl/hint"), null),
-    set(ref(db,"skribbl/close"), null),
+    set(ref(db,"skribbl/word"),       null),
+    set(ref(db,"skribbl/hint"),       null),
+    set(ref(db,"skribbl/close"),      null),
+    set(ref(db,"skribbl/timeEnd"),    null),
+    set(ref(db,"skribbl/leaderboard"), lb.length ? lb : null),
+    // Keep winner pointing to 1st place so fan cam switches to them
+    lb.length
+      ? set(ref(db,"skribbl/winner"), { userKey: lb[0].userKey, name: lb[0].name, text: state.skribblWord || "" })
+      : set(ref(db,"skribbl/winner"), null),
   ]);
   els.endSkribblBtn.classList.add("disabled");
   els.skribblWordInput.value = "";
   els.skribblDrawerSelect.value = "";
-  els.skribblWinnerBanner.style.display = "none";
   if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
-  if (els.skribblGuessCount) els.skribblGuessCount.textContent = "Waiting for guesses…";
+  els.skribblCountdown.textContent = "—";
+  els.skribblCountdownFill.style.width = "100%";
   skribblGuessTotal = 0;
+  skribblLeaderboardEntries = [];
+  renderSkribblLeaderboard();
   updateSkribblStart();
+}
+
+els.startSkribblBtn.onclick = async () => {
+  const drawerKey = els.skribblDrawerSelect.value;
+  const word      = els.skribblWordInput.value.trim().toLowerCase();
+  const duration  = parseInt(els.skribblDurationSlider.value, 10);
+  if (!drawerKey || !word) return;
+  state.skribblWord = word;
+  skribblLeaderboardEntries = [];
+  skribblGuessTotal = 0;
+  renderSkribblLeaderboard();
+
+  // Clear previous round data
+  await Promise.all([
+    set(ref(db,"skribbl/guesses"),    null),
+    set(ref(db,"skribbl/winner"),     null),
+    set(ref(db,"skribbl/liveCanvas"), null),
+    set(ref(db,"skribbl/hint"),       null),
+    set(ref(db,"skribbl/close"),      null),
+    set(ref(db,"skribbl/leaderboard"),null),
+  ]);
+
+  const startEpoch = Date.now();
+  const timeEnd    = startEpoch + duration * 1000;
+
+  // Write mode + drawer + prompt + timer
+  await Promise.all([
+    set(ref(db,"skribbl/mode"),    true),
+    set(ref(db,"skribbl/drawer"),  drawerKey),
+    set(ref(db,"skribbl/word"),    word),
+    set(ref(db,"skribbl/prompt"),  { text: word, show: true }),
+    set(ref(db,"skribbl/timeEnd"), timeEnd),
+  ]);
+
+  startHintTimers(word);
+  startSkribblCountdown(duration, startEpoch);
+  els.endSkribblBtn.classList.remove("disabled");
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "";
+  els.skribblGuessCount.textContent = "Waiting for guesses…";
 };
 
-// Listen to guesses — check correct + close
+els.endSkribblBtn.onclick = () => endSkribblRound();
+
+// Listen to guesses — rank correct ones, "so close" wrong ones
 onValue(ref(db,"skribbl/word"), snap => { state.skribblWord = snap.val() || ""; });
 
-let skribblGuessTotal = 0;
 onChildAdded(ref(db,"skribbl/guesses"), snap => {
   const g = snap.val();
   if (!g) return;
@@ -1584,26 +1684,32 @@ onChildAdded(ref(db,"skribbl/guesses"), snap => {
   const correct = state.skribblWord && guessText === state.skribblWord;
   skribblGuessTotal++;
   logEvent("skribbl", `${g.name} guessed "${g.text}"${correct ? ` ✓ CORRECT (word: "${state.skribblWord}")` : ""}`);
-
   if (els.skribblGuessCount) {
     els.skribblGuessCount.textContent = `${skribblGuessTotal} guess${skribblGuessTotal !== 1 ? "es" : ""} submitted`;
   }
 
-  if (correct && els.skribblWinnerBanner.style.display !== "block") {
-    const winnerKey = g.guesserKey || snap.key.split("_")[0];
-    clearHintTimers(); // stop revealing once someone wins
-    if (state.autoLiveEnabled) {
-      stopAuto();
-      els.autoLiveToggle.checked = false;
+  if (correct) {
+    const guesserKey = g.guesserKey;
+    // Only add each user once to the leaderboard
+    const alreadyIn = skribblLeaderboardEntries.some(e => e.userKey === guesserKey);
+    if (!alreadyIn) {
+      const rank = skribblLeaderboardEntries.length;
+      skribblLeaderboardEntries.push({ userKey: guesserKey, name: g.name, rank, ts: g.timestamp || Date.now() });
+      renderSkribblLeaderboard();
+      // Write leaderboard + winner to Firebase so output.html updates live
+      const lb = skribblLeaderboardEntries.map((e, i) => ({ ...e, rank: i }));
+      Promise.all([
+        set(ref(db,"skribbl/leaderboard"), lb),
+        // winner always = 1st correct guess (for fan cam switch)
+        rank === 0
+          ? Promise.all([
+              set(ref(db,"skribbl/winner"), { userKey: guesserKey, name: g.name, text: g.text }),
+              update(ref(db,"live"), { activeUser: guesserKey }),
+            ])
+          : Promise.resolve(),
+      ]).catch(() => {});
     }
-    Promise.all([
-      set(ref(db,"skribbl/winner"), { userKey: winnerKey, name: g.name, text: g.text }),
-      update(ref(db,"live"), { activeUser: winnerKey }),
-    ]);
-    els.skribblWinnerBanner.style.display = "block";
-    els.skribblWinnerBanner.textContent = `🎉 ${g.name} got it! "${state.skribblWord}"`;
-  } else if (!correct && state.skribblWord) {
-    // "So close!" — edit distance ≤ 2 and not a trivially short guess
+  } else if (state.skribblWord) {
     const dist = levenshtein(guessText, state.skribblWord);
     if (dist <= 2 && guessText.length >= 2) {
       const guesserKey = g.guesserKey;
