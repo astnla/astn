@@ -561,6 +561,7 @@ turnOffFanCamBtn.addEventListener("click", async () => {
   els.autoLiveToggle.checked = false;
   clearHintTimers();
   await Promise.all([
+    set(fanCamOnRef, false),
     set(ref(db,"participants"), null),
     set(ref(db,"selfies"), null),
     set(ref(db,"live"), null),
