@@ -1024,45 +1024,49 @@ function getGuessText() {
 
 function onLetterInput(e) {
   const inp = e.target;
+  // Sanitize — strip anything non-alpha that slipped through
   inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, "");
-  if (inp.value) {
-    // Advance to next cell that has no typed value yet
-    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
-    const idx = allCells.indexOf(inp);
-    // Find the next cell after this one that is empty (no typed value)
-    const next = allCells.slice(idx + 1).find(c => !c.value);
-    if (next) next.focus();
-  }
 }
 
 function onLetterKeydown(e) {
   const inp = e.target;
-  if (e.key === "Backspace") {
+  const key = e.key;
+
+  // A-Z: handle the whole thing here so fast typers never miss a cell
+  if (/^[a-zA-Z]$/.test(key)) {
+    e.preventDefault();
+    inp.value = key.toUpperCase(); // overwrite whatever was there
+    // Advance to next cell immediately — before browser renders anything
+    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
+    const idx = allCells.indexOf(inp);
+    const next = allCells.slice(idx + 1).find(c => !c.value);
+    if (next) next.focus();
+    return;
+  }
+
+  if (key === "Backspace") {
     if (inp.value) {
-      // Clear current cell, stay here
       inp.value = "";
-      e.preventDefault();
     } else {
-      // Move to previous cell and clear it
       const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
       const idx = allCells.indexOf(inp);
       if (idx > 0) {
         allCells[idx - 1].value = "";
         allCells[idx - 1].focus();
       }
-      e.preventDefault();
     }
-  } else if (e.key === "ArrowLeft") {
+    e.preventDefault();
+  } else if (key === "ArrowLeft") {
     const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
     const idx = allCells.indexOf(inp);
     if (idx > 0) allCells[idx - 1].focus();
     e.preventDefault();
-  } else if (e.key === "ArrowRight") {
+  } else if (key === "ArrowRight") {
     const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
     const idx = allCells.indexOf(inp);
     if (idx < allCells.length - 1) allCells[idx + 1].focus();
     e.preventDefault();
-  } else if (e.key === "Enter") {
+  } else if (key === "Enter") {
     skribblGuess.click();
   }
 }
