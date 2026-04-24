@@ -1446,6 +1446,10 @@ onChildAdded(ref(db,"skribbl/guesses"), snap => {
   if (correct && els.skribblWinnerBanner.style.display !== "block") {
     const winnerKey = g.guesserKey || snap.key.split("_")[0];
     clearHintTimers(); // stop revealing once someone wins
+    if (state.autoLiveEnabled) {
+      stopAuto();
+      els.autoLiveToggle.checked = false;
+    }
     Promise.all([
       set(ref(db,"skribbl/winner"), { userKey: winnerKey, name: g.name, text: g.text }),
       update(ref(db,"live"), { activeUser: winnerKey }),
