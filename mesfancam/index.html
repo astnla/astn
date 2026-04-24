@@ -143,10 +143,14 @@
       background:rgba(255,255,255,0.18);
       border-bottom-color:white;
     }
+    /* Revealed: placeholder style — visible but not "filled in" */
     .letter-cell.revealed {
-      color:rgba(255,255,255,0.55);
-      pointer-events:none;
       border-bottom-color:rgba(255,255,255,0.25);
+    }
+    /* The hint letter shows as a faded placeholder */
+    .letter-cell.revealed::placeholder {
+      color:rgba(255,255,255,0.45);
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:20px;
     }
     /* word spacer between words */
     .letter-spacer { width:10px; }
@@ -966,9 +970,11 @@ function buildLetterGrid(hint) {
       inp.maxLength = 1;
       inp.autocomplete = "off";
       inp.dataset.index = index;
-      if (revealed && letter) inp.value = letter.toUpperCase();
+      // Revealed letters show as placeholder — visible hint, still typeable
+      if (revealed && letter) inp.placeholder = letter.toUpperCase();
       inp.addEventListener("input", onLetterInput);
       inp.addEventListener("keydown", onLetterKeydown);
+      inp.addEventListener("click", onLetterClick);
       wordDiv.appendChild(inp);
     });
     skribblLetterGrid.appendChild(wordDiv);
@@ -986,71 +992,93 @@ function buildLetterGrid(hint) {
 }
 
 function focusFirstEmpty() {
-  const first = skribblLetterGrid.querySelector(".letter-cell:not(.revealed):not([value]),.letter-cell:not(.revealed)[value='']");
+  // Find first cell with no typed value (placeholder-only revealed cells count as empty)
+  const first = skribblLetterGrid.querySelector(".letter-cell:not([value]),.letter-cell[value='']");
   if (first) first.focus();
 }
 
+// Tapping a cell focuses it directly — no jumping to first empty
+function onLetterClick(e) {
+  e.target.focus();
+}
+
 function clearLetterGrid() {
-  skribblLetterGrid.querySelectorAll(".letter-cell:not(.revealed)").forEach(inp => {
+  // Clear typed values but preserve revealed placeholders
+  skribblLetterGrid.querySelectorAll(".letter-cell").forEach(inp => {
     inp.value = "";
   });
   focusFirstEmpty();
 }
 
 function getGuessText() {
-  // Reconstruct full word from all cells in index order
-  const cells = skribblLetterGrid.querySelectorAll(".letter-cell");
-  if (!cells.length) return "";
-  // Build array indexed by data-index
-  const hint = Array.from(cells);
-  // We need to account for spaces — cells don't include space slots
-  // So reconstruct by reading cells in DOM order and inserting spaces from spacers
   const wordDivs = skribblLetterGrid.querySelectorAll(".letter-word");
+  if (!wordDivs.length) return "";
   let parts = [];
-  wordDivs.forEach((wd, wi) => {
+  wordDivs.forEach(wd => {
     const letters = wd.querySelectorAll(".letter-cell");
-    parts.push(Array.from(letters).map(c => c.value || "_").join(""));
+    // For each cell: use typed value if present, otherwise fall back to placeholder (revealed hint)
+    parts.push(Array.from(letters).map(c => c.value || c.placeholder || "_").join(""));
   });
   return parts.join(" ").toLowerCase();
 }
 
 function onLetterInput(e) {
   const inp = e.target;
-  // Force uppercase display
   inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, "");
-  // Auto-advance to next empty cell
   if (inp.value) {
-    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell:not(.revealed)"));
+    // Advance to next cell that has no typed value yet
+    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
     const idx = allCells.indexOf(inp);
-    if (idx >= 0 && idx < allCells.length - 1) allCells[idx + 1].focus();
+    // Find the next cell after this one that is empty (no typed value)
+    const next = allCells.slice(idx + 1).find(c => !c.value);
+    if (next) next.focus();
   }
 }
 
 function onLetterKeydown(e) {
   const inp = e.target;
-  if (e.key === "Backspace" && !inp.value) {
-    // Move to previous cell on backspace when empty
-    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell:not(.revealed)"));
+  if (e.key === "Backspace") {
+    if (inp.value) {
+      // Clear current cell, stay here
+      inp.value = "";
+      e.preventDefault();
+    } else {
+      // Move to previous cell and clear it
+      const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
+      const idx = allCells.indexOf(inp);
+      if (idx > 0) {
+        allCells[idx - 1].value = "";
+        allCells[idx - 1].focus();
+      }
+      e.preventDefault();
+    }
+  } else if (e.key === "ArrowLeft") {
+    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
     const idx = allCells.indexOf(inp);
-    if (idx > 0) { allCells[idx - 1].value = ""; allCells[idx - 1].focus(); }
+    if (idx > 0) allCells[idx - 1].focus();
+    e.preventDefault();
+  } else if (e.key === "ArrowRight") {
+    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
+    const idx = allCells.indexOf(inp);
+    if (idx < allCells.length - 1) allCells[idx + 1].focus();
     e.preventDefault();
   } else if (e.key === "Enter") {
     skribblGuess.click();
   }
 }
 
-// Apply hint updates — fills in revealed letters without rebuilding the whole grid
+// Apply hint updates — sets placeholder on newly revealed letters, never interrupts typing
 function applyHintUpdate(hint) {
   hint.forEach((h, i) => {
     if (h.letter === " " || !h.revealed || !h.letter) return;
     const cell = skribblLetterGrid.querySelector(`.letter-cell[data-index="${i}"]`);
     if (cell && !cell.classList.contains("revealed")) {
-      cell.value = h.letter.toUpperCase();
+      cell.placeholder = h.letter.toUpperCase();
       cell.classList.add("revealed");
-      cell.disabled = true;
+      // Don't clear their typed value if they already typed something here
+      // Don't steal focus — let them keep typing uninterrupted
     }
   });
-  focusFirstEmpty();
 }
 
 /* ── SO CLOSE TOAST ── */
