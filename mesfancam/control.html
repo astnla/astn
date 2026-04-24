@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CONTROL ROOM</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     :root {
       --line: rgba(255,255,255,0.10);
@@ -355,6 +356,10 @@
   <!-- TOP BAR -->
   <div class="card topbar">
     <div class="topbar-brand">MANATEE <span>CAM</span> — CONTROL ROOM</div>
+    <label class="auto-pill" id="logPill" title="Save session export on end">
+      <input class="switch" type="checkbox" id="logToggle" checked>
+      SAVE EXPORT
+    </label>
     <button id="turnOffFanCamBtn" class="btn-ghost" style="font-size:13px;padding:10px 16px;">TURN OFF</button>
     <button id="endSessionBtn" class="btn-danger" style="font-size:13px;padding:10px 16px;">END SESSION</button>
   </div>
@@ -560,6 +565,8 @@ turnOffFanCamBtn.addEventListener("click", async () => {
   stopAuto();
   els.autoLiveToggle.checked = false;
   clearHintTimers();
+  logEvent("session", "Fan cam turned off — session ended");
+  await exportSessionZip();
   await Promise.all([
     set(fanCamOnRef, false),
     set(ref(db,"participants"), null),
@@ -656,7 +663,119 @@ const state = {
   draftPollOptions: [],
 };
 
-/* ── TOOL TABS ── */
+/* ── SESSION LOG & EXPORT ── */
+const logToggle = document.getElementById("logToggle");
+const logPill   = document.getElementById("logPill");
+logToggle.onchange = () => logPill.classList.toggle("on", logToggle.checked);
+logPill.classList.toggle("on", logToggle.checked);
+
+let sessionLog      = [];
+let sessionStart    = null;
+// Persists ALL drawing submissions for the whole session regardless of resets
+// key: uid, value: { data, prompt, name }
+let sessionDrawings = {};
+
+function logEvent(type, detail) {
+  if (!logToggle.checked) return;
+  const ts = new Date();
+  if (!sessionStart) sessionStart = ts;
+  sessionLog.push({ ts, type, detail });
+}
+
+function fmtTime(ts) {
+  return ts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function buildLogText() {
+  const lines = [];
+  const now = new Date();
+  lines.push("═══════════════════════════════════════════════════════");
+  lines.push("  MANATEE CAM — SESSION LOG");
+  lines.push(`  Generated: ${now.toLocaleDateString()} at ${fmtTime(now)}`);
+  if (sessionStart) lines.push(`  Session started: ${fmtTime(sessionStart)}`);
+  lines.push("═══════════════════════════════════════════════════════");
+  lines.push("");
+  if (!sessionLog.length) { lines.push("  No events recorded."); return lines.join("\n"); }
+  let lastType = null;
+  for (const e of sessionLog) {
+    if (e.type !== lastType) { lines.push(""); lastType = e.type; }
+    lines.push(`  [${fmtTime(e.ts)}] ${e.detail}`);
+  }
+  lines.push("");
+  lines.push("═══════════════════════════════════════════════════════");
+  lines.push(`  END OF LOG — ${sessionLog.length} events`);
+  lines.push("═══════════════════════════════════════════════════════");
+  return lines.join("\n");
+}
+
+// Converts a dataURL to a Uint8Array for JSZip
+function dataURLtoBytes(dataURL) {
+  const base64 = dataURL.split(",")[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+// Guess file extension from dataURL mime type
+function extFromDataURL(dataURL) {
+  const mime = dataURL.split(";")[0].split(":")[1] || "";
+  if (mime.includes("webp")) return "webp";
+  if (mime.includes("png"))  return "png";
+  if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
+  return "png";
+}
+
+// Sanitize a name for use as a filename
+function safeName(str) {
+  return (str || "unknown").replace(/[^a-zA-Z0-9_\-]/g, "_").slice(0, 40);
+}
+
+async function exportSessionZip() {
+  if (!logToggle.checked) return;
+  const zip = new JSZip();
+  const selfiesFolder   = zip.folder("selfies");
+  const drawingsFolder  = zip.folder("drawings");
+
+  // Selfies
+  for (const [uid, dataURL] of Object.entries(state.selfies)) {
+    if (!dataURL || !dataURL.startsWith("data:")) continue;
+    const name = safeName(state.participants[uid]?.name || uid);
+    const ext  = extFromDataURL(dataURL);
+    selfiesFolder.file(`${name}.${ext}`, dataURLtoBytes(dataURL));
+  }
+
+  // Drawings (all submissions across all draw rounds this session)
+  for (const [uid, entry] of Object.entries(sessionDrawings)) {
+    if (!entry?.data || !entry.data.startsWith("data:")) continue;
+    const name   = safeName(entry.name || state.participants[uid]?.name || uid);
+    const prompt = safeName(entry.prompt || "drawing");
+    const ext    = extFromDataURL(entry.data);
+    drawingsFolder.file(`${name}_${prompt}.${ext}`, dataURLtoBytes(entry.data));
+  }
+
+  // Log
+  zip.file("session_log.txt", buildLogText());
+
+  // Timestamp for filename
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}`;
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `manatee_cam_session_${stamp}.zip`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+  // Reset log for next session
+  sessionLog = [];
+  sessionStart = null;
+  sessionDrawings = {};
+}
+
+
 let currentTool = "none";
 
 function setTool(t) {
@@ -1004,6 +1123,8 @@ els.endSessionBtn.onclick = async () => {
   stopAuto();
   els.autoLiveToggle.checked = false;
   clearHintTimers();
+  logEvent("session", "Session ended manually");
+  await exportSessionZip();
   await Promise.all([
     set(ref(db,"participants"), null),
     set(ref(db,"selfies"), null),
@@ -1168,12 +1289,14 @@ els.resetDrawBtn.onclick = async () => {
 /* ── FIREBASE LISTENERS ── */
 onValue(ref(db,"trivia/mode"), snap => {
   state.triviaMode = snap.val() === true;
+  if (state.triviaMode) logEvent("mode", "Trivia mode activated");
   els.triviaToggle.checked = state.triviaMode;
   Object.keys(state.participants).forEach(patchCard);
 });
 
 onValue(ref(db,"trivia/question"), snap => {
   const q = snap.val() || {};
+  if (q.show && q.text && !state.triviaQuestionActive) logEvent("trivia", `Question sent: "${q.text}"`);
   state.triviaQuestionActive = q.show === true && !!q.text;
   Object.keys(state.participants).forEach(patchCard);
 });
@@ -1188,7 +1311,16 @@ onValue(ref(db,"trivia/correct"), snap => {
 });
 
 onValue(ref(db,"trivia/answers"), snap => {
+  const prev = state.answers;
   state.answers = snap.val() || {};
+  // Log new answers
+  Object.entries(state.answers).forEach(([uid, a]) => {
+    if (!prev[uid] && a?.answer) {
+      const name = state.participants[uid]?.name || uid;
+      const correct = state.triviaCorrect && a.answer.toLowerCase().trim() === state.triviaCorrect;
+      logEvent("trivia", `${name} answered "${a.answer}"${correct ? " ✓ CORRECT" : ""}`);
+    }
+  });
   updateWinnerStat();
   syncOrder();
 });
@@ -1200,15 +1332,23 @@ onValue(ref(db,"trivia/reveal"), snap => {
 
 onValue(ref(db,"polls/mode"), snap => {
   state.pollsMode = snap.val() === true;
+  if (state.pollsMode) logEvent("mode", "Polls mode activated");
   els.pollsToggle.checked = state.pollsMode;
 });
 
 onValue(ref(db,"polls/options"), snap => { state.pollOptions = snap.val() || {}; });
 
 onValue(ref(db,"polls/votes"), snap => {
+  const prev = state.pollVotes;
   state.pollVotes = snap.val() || {};
+  // Log new votes
+  Object.entries(state.pollVotes).forEach(([uid, v]) => {
+    if (!prev[uid] && v?.label) {
+      const name = state.participants[uid]?.name || uid;
+      logEvent("poll", `${name} voted "${v.label}"`);
+    }
+  });
   syncOrder();
-  // Tally and write totals
   const options = state.pollOptions || {};
   const optKeys = Object.keys(options);
   if (!optKeys.length) return;
@@ -1251,6 +1391,8 @@ onValue(ref(db,"live/activeUser"), async snap => {
 
 onChildAdded(ref(db,"participants"),   snap => {
   state.participants[snap.key] = snap.val() || {};
+  const p = state.participants[snap.key];
+  logEvent("join", `${p.name || snap.key} joined the session`);
   ensureCard(snap.key); syncOrder();
   if (state.autoLiveEnabled) rebuildCycle();
   updateStats();
@@ -1263,6 +1405,8 @@ onChildChanged(ref(db,"participants"), snap => {
   updateStats();
 });
 onChildRemoved(ref(db,"participants"), snap => {
+  const name = state.participants[snap.key]?.name || snap.key;
+  logEvent("leave", `${name} left the session`);
   delete state.participants[snap.key];
   removeCard(snap.key);
   if (state.autoLiveEnabled) rebuildCycle();
@@ -1439,6 +1583,7 @@ onChildAdded(ref(db,"skribbl/guesses"), snap => {
   const guessText = g.text?.toLowerCase().trim() || "";
   const correct = state.skribblWord && guessText === state.skribblWord;
   skribblGuessTotal++;
+  logEvent("skribbl", `${g.name} guessed "${g.text}"${correct ? ` ✓ CORRECT (word: "${state.skribblWord}")` : ""}`);
 
   if (els.skribblGuessCount) {
     els.skribblGuessCount.textContent = `${skribblGuessTotal} guess${skribblGuessTotal !== 1 ? "es" : ""} submitted`;
@@ -1471,6 +1616,7 @@ onChildAdded(ref(db,"skribbl/guesses"), snap => {
 
 onValue(ref(db,"skribbl/mode"), snap => {
   state.skribblMode = snap.val() === true;
+  if (state.skribblMode) logEvent("mode", "What's My Doodle? mode activated");
   if (state.skribblMode) setTool("skribbl");
   else if (!state.triviaMode && !state.pollsMode && !state.drawMode) setTool("none");
   updateStats();
@@ -1478,9 +1624,24 @@ onValue(ref(db,"skribbl/mode"), snap => {
 
 onValue(ref(db,"drawing/mode"), snap => {
   state.drawMode = snap.val() === true;
+  if (state.drawMode) logEvent("mode", "Sketchers mode activated");
   Object.keys(state.participants).forEach(patchCard);
 });
-onChildAdded(ref(db,"drawing/submissions"),   snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildAdded(ref(db,"drawing/submissions"),   snap => {
+  state.drawSubmissions[snap.key] = snap.val();
+  if (state.participants[snap.key]) {
+    const name   = state.participants[snap.key]?.name || snap.key;
+    const prompt = els.drawPromptInput?.value?.trim() || "drawing";
+    // Store in persistent accumulator — survives resets
+    sessionDrawings[`${snap.key}_${Date.now()}`] = {
+      data:   snap.val()?.data,
+      name,
+      prompt
+    };
+    logEvent("drawing", `${name} submitted their drawing (prompt: "${prompt}")`);
+    patchCard(snap.key);
+  }
+});
 onChildChanged(ref(db,"drawing/submissions"), snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
 onChildRemoved(ref(db,"drawing/submissions"), snap => { delete state.drawSubmissions[snap.key]; if(state.participants[snap.key]) patchCard(snap.key); });
 onChildAdded(ref(db,"drawing/reveal"),   snap => { state.drawReveals[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
