@@ -105,7 +105,7 @@ html, body {
       background: rgba(255,255,255,0.95);
       border-radius: clamp(10px, 1.2vh, 16px);
       overflow: hidden;
-      flex-shrink: 1;
+      flex: 1;        /* grow to fill panel, pushing hint to bottom */
       min-height: 0;
       box-shadow: 0 12px 48px rgba(0,0,0,0.4);
       display: flex;
@@ -154,7 +154,7 @@ html, body {
       display: flex;
       align-items: center;
       justify-content: center;
-      border-bottom: 2.5px solid rgba(255,255,255,0.6);
+      border-bottom: 2.5px solid rgba(255,255,255,0.7);
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
       font-size: clamp(14px, 1.9vh, 24px);
@@ -162,8 +162,8 @@ html, body {
       text-transform: uppercase;
     }
     .hint-letter.revealed {
-      color: rgba(255,255,255,0.5);
-      border-bottom-color: rgba(255,255,255,0.25);
+      color: white;
+      border-bottom-color: rgba(255,255,255,0.5);
     }
     .hint-word-spacer {
       width: clamp(8px, 1.2vh, 16px);
