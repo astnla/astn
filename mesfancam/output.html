@@ -48,7 +48,7 @@ html, body {
     /* Stage wraps column + draw panel side by side */
     .stage {
       display: flex;
-      align-items: center;
+      align-items: flex-start; /* top-align so we can manually offset the panel */
       gap: clamp(16px, 2vw, 36px);
       max-height: 100vh;
       transition: gap 0.5s cubic-bezier(0.22, 1, 0.36, 1);
@@ -62,7 +62,7 @@ html, body {
       width: min(56vh, calc(100vw - clamp(48px, 8vw, 160px)));
       max-height: 100vh;
       padding: clamp(14px, 2.5vh, 40px) 0;
-      flex-shrink: 0; /* never shrinks — feed stays the same size */
+      flex-shrink: 0;
       transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
@@ -72,8 +72,8 @@ html, body {
       max-height: 100vh;
       display: flex;
       flex-direction: column;
-      gap: clamp(8px, 1vh, 14px);
-      padding: clamp(14px, 2.5vh, 40px) 0;
+      /* Match column top padding exactly */
+      padding: clamp(14px, 2.5vh, 40px) 0 clamp(14px, 2.5vh, 40px);
       transform: translateX(calc(100% + clamp(16px, 2vw, 36px)));
       opacity: 0;
       pointer-events: none;
@@ -87,8 +87,9 @@ html, body {
       transform: translateX(0);
       opacity: 1;
       pointer-events: auto;
-      /* Take remaining viewport width after the feed column, gap, and side margins */
-      width: calc(100vw - min(56vh, calc(100vw - clamp(48px, 8vw, 160px))) - clamp(16px, 2vw, 36px) - clamp(28px, 4vw, 80px));
+      /* Same width as feed column, but can shrink when viewport is narrow */
+      width: min(56vh, calc(100vw - clamp(48px, 8vw, 160px)));
+      max-width: calc(100vw - min(56vh, calc(100vw - clamp(48px, 8vw, 160px))) - clamp(16px, 2vw, 36px) - clamp(28px, 4vw, 60px));
       overflow: visible;
     }
 
@@ -97,8 +98,8 @@ html, body {
       background: rgba(255,255,255,0.95);
       border-radius: clamp(10px, 1.2vh, 16px);
       overflow: hidden;
-      flex-shrink: 1;
-      min-height: 0;
+      width: 100%;
+      aspect-ratio: 3 / 4;
       box-shadow: 0 12px 48px rgba(0,0,0,0.4);
       display: flex;
       flex-direction: column;
@@ -633,6 +634,12 @@ html, body {
 
   <!-- Drawing side panel — slides in from right (shared by draw reveal + skribbl live) -->
   <div id="drawPanel">
+    <!-- Invisible header clone — keeps card top aligned with feed top at all viewport sizes -->
+    <div class="header" aria-hidden="true" style="visibility:hidden;pointer-events:none;">
+      <div class="header-accent"></div>
+      <img src="assets/mestv.png" alt="">
+      <div class="header-title">MANATEE CAM</div>
+    </div>
     <div id="drawPanelCard">
       <div id="drawPanelEyebrow">DRAWING</div>
       <!-- Static reveal image (draw mode) -->
