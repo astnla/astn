@@ -1225,6 +1225,7 @@ onValue(skribblModeRef, snap => {
     skribblWon = false;
     skribblAmDrawer = false;
     skribblPhase = null;
+    skribblLatestEntries = [];
     if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
     skribblTimerFill.style.width = "100%";
     stopSkribblStream();
@@ -1250,8 +1251,9 @@ onValue(skribblPhaseRef, snap => {
       hideDrawToolbar();
       stopSkribblStream();
     }
-    // Show the leaderboard now to everyone — including the drawer who was hidden from it during play
-    if (skribblLeaderboardList.children.length > 0) {
+    // Render leaderboard from cached entries — drawer never rendered them during play
+    if (skribblLatestEntries.length > 0) {
+      renderLeaderboard(skribblLatestEntries);
       showPanel(skribblLeaderboardBox);
     }
   }
@@ -1331,6 +1333,12 @@ onValue(skribblCloseRef, snap => {
   clearLetterGrid();
 });
 
+// Cache of the latest leaderboard entries — needed so the drawer's phone
+// can render the leaderboard at the moment phase flips to "results"
+// (the drawer skips rendering during play, so without the cache they'd
+// see an empty leaderboard until the next snap which may never come)
+let skribblLatestEntries = [];
+
 // Leaderboard — live updates as people guess correctly
 onValue(skribblLeaderboardRef, snap => {
   if (!skribblActive) return;
@@ -1338,6 +1346,7 @@ onValue(skribblLeaderboardRef, snap => {
   const entries = lb ? (Array.isArray(lb) ? lb : Object.values(lb)) : [];
   // Sort by rank in case Firebase returns out of order
   entries.sort((a, b) => (a.rank ?? a.ts ?? 0) - (b.rank ?? b.ts ?? 0));
+  skribblLatestEntries = entries;
 
   // Check if this user just got onto the leaderboard
   const myEntry = entries.find(e => e.userKey === userKey);

@@ -1279,6 +1279,7 @@ function revealFullWord(word) {
 }
 
 onValue(skribblPhaseRef, snap => {
+  const prevPhase = skribblPhase;
   skribblPhase = snap.val();
   if (!skribblOn) return;
   if (skribblPhase === "results") {
@@ -1289,11 +1290,18 @@ onValue(skribblPhaseRef, snap => {
     // Reveal every letter of the word in the hint display below the drawing
     revealFullWord(skribblCurrentWord);
     // Drawing stays visible — drawer's last frame is still up via skribblLiveImg
-  } else {
-    // Back to "playing" or null — restore the live drawing label
-    if (skribblPhase === "playing") {
-      drawPanelLabel.textContent = "🎨 LIVE DRAWING";
-    }
+  } else if (skribblPhase === "playing") {
+    // New round started — restore live drawing label
+    drawPanelLabel.textContent = "🎨 LIVE DRAWING";
+  } else if (skribblPhase === null && prevPhase === "results") {
+    // Reset — clear the frozen drawing and tear down the panel
+    skribblLiveImg.style.display = "none";
+    skribblLiveImg.src = "";
+    skribblHintDisplay.classList.remove("show");
+    skribblHintDisplay.innerHTML = "";
+    drawPanelLabel.textContent = "DRAWING";
+    const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
+    if (!drawRevealVisible) hideDrawPanel();
   }
 });
 
