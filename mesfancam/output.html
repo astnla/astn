@@ -279,7 +279,7 @@ html, body {
       display: flex;
       align-items: center;
       justify-content: center;
-      border-bottom: 2.5px solid rgba(255,255,255,0.6);
+      border-bottom: 2.5px solid white;
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
       font-size: clamp(14px, 1.9vh, 24px);
@@ -287,8 +287,8 @@ html, body {
       text-transform: uppercase;
     }
     .hint-letter.revealed {
-      color: rgba(255,255,255,0.5);
-      border-bottom-color: rgba(255,255,255,0.25);
+      color: white;
+      border-bottom-color: white;
     }
     .hint-word-spacer {
       width: clamp(8px, 1.2vh, 16px);
@@ -722,6 +722,11 @@ html, body {
   </style>
 </head>
 <body>
+<!-- Skribbl audio cues — preloaded, played by phase/leaderboard/timer events -->
+<audio id="sndStart"   src="assets/start.mp3"   preload="auto"></audio>
+<audio id="sndTick"    src="assets/tick.mp3"    preload="auto"></audio>
+<audio id="sndCorrect" src="assets/correct.mp3" preload="auto"></audio>
+<audio id="sndEnd"     src="assets/end.mp3"     preload="auto"></audio>
 <div class="scene">
   <div class="stage" id="stage">
 
@@ -1194,12 +1199,18 @@ function startOutputTimer(timeEnd) {
   if (skribblTimerInterval) clearInterval(skribblTimerInterval);
   skribblRoundDuration = Math.max(1, timeEnd - Date.now());
   drawPanelTimer.classList.add("show");
+  let lastTickedSec = null;
 
   function tick() {
     const remaining = Math.max(0, timeEnd - Date.now());
     const secs = Math.ceil(remaining / 1000);
     drawPanelTimer.textContent = secs + "s";
     drawPanelTimer.classList.toggle("urgent", remaining <= 10000);
+    // Tick sound during the final 10s — fire once per integer-second crossing
+    if (secs > 0 && secs <= 10 && secs !== lastTickedSec) {
+      lastTickedSec = secs;
+      playSnd(sndTick);
+    }
     if (remaining <= 0) {
       clearInterval(skribblTimerInterval);
       skribblTimerInterval = null;
@@ -1243,6 +1254,21 @@ function spawnFloatingGuess(text, correct) {
 }
 
 let skribblPhase = null; // "playing" | "results" | null
+let prevLbCount  = 0;    // track leaderboard growth so we play correct.mp3 only on new entries
+
+/* ── SKRIBBL AUDIO ── */
+const sndStart   = document.getElementById("sndStart");
+const sndTick    = document.getElementById("sndTick");
+const sndCorrect = document.getElementById("sndCorrect");
+const sndEnd     = document.getElementById("sndEnd");
+function playSnd(el) {
+  if (!el) return;
+  try {
+    el.currentTime = 0;
+    const p = el.play();
+    if (p && p.catch) p.catch(() => { /* autoplay-blocked; ignore */ });
+  } catch (e) { /* ignore */ }
+}
 
 onValue(skribblModeRef, snap => {
   skribblOn = snap.val() === true;
@@ -1259,6 +1285,7 @@ onValue(skribblModeRef, snap => {
     renderLbPanel([]);
     hideCard(skribblLbCard, "skribblLb");
     skribblLbRows.innerHTML = "";
+    prevLbCount = 0;
     const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
     if (!drawRevealVisible) hideDrawPanel();
   }
@@ -1290,9 +1317,12 @@ onValue(skribblPhaseRef, snap => {
     // Reveal every letter of the word in the hint display below the drawing
     revealFullWord(skribblCurrentWord);
     // Drawing stays visible — drawer's last frame is still up via skribblLiveImg
+    // Play end-of-round cue (only on the actual transition into results)
+    if (prevPhase !== "results") playSnd(sndEnd);
   } else if (skribblPhase === "playing") {
-    // New round started — restore live drawing label
+    // New round started — restore live drawing label + play start cue
     drawPanelLabel.textContent = "🎨 LIVE DRAWING";
+    if (prevPhase !== "playing") playSnd(sndStart);
   } else if (skribblPhase === null && prevPhase === "results") {
     // Reset — clear the frozen drawing and tear down the panel
     skribblLiveImg.style.display = "none";
@@ -1346,8 +1376,15 @@ onValue(skribblLeaderboardRef, snap => {
   if (entries.length === 0) {
     if (lbPanel.classList.contains("show")) hideLbPanel();
     renderLbPanel([]);
+    prevLbCount = 0;
     return;
   }
+
+  // Play correct cue when a new entry appears
+  if (entries.length > prevLbCount) {
+    playSnd(sndCorrect);
+  }
+  prevLbCount = entries.length;
 
   // First correct guess — slide the panel in
   if (!lbPanel.classList.contains("show")) showLbPanel();
@@ -1365,14 +1402,27 @@ onValue(skribblLeaderboardRef, snap => {
   }
 });
 
-// Floating guesses — wrong ones bubble up
+// Floating guesses — only WRONG guesses bubble up.
+// Correct guesses are intentionally hidden from the float so they don't
+// leak the answer to other players watching the screen.
 const seenGuesses = new Set();
+let skribblGuessFirstSnap = true;
 onValue(skribblGuessRef, snap => {
   if (!skribblOn) return;
   const all = snap.val() || {};
+  // First snapshot on listener attach — mark all existing as seen but don't float them
+  if (skribblGuessFirstSnap) {
+    skribblGuessFirstSnap = false;
+    Object.keys(all).forEach(k => seenGuesses.add(k));
+    return;
+  }
   Object.entries(all).forEach(([key, g]) => {
     if (seenGuesses.has(key)) return;
     seenGuesses.add(key);
+    const guessText = (g.text || "").toLowerCase().trim();
+    const word      = (skribblCurrentWord || "").toLowerCase().trim();
+    // Skip floating if this guess matches the secret word (correct guess)
+    if (word && guessText === word) return;
     spawnFloatingGuess(`${g.name}: ${g.text}`, false);
   });
 });
