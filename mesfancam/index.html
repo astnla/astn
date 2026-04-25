@@ -1237,6 +1237,7 @@ onValue(skribblModeRef, snap => {
 
 // Phase listener — "results" freezes the round UI but keeps the leaderboard up
 onValue(skribblPhaseRef, snap => {
+  const prevPhase = skribblPhase;
   skribblPhase = snap.val();
   if (!skribblActive) return;
   if (skribblPhase === "results") {
@@ -1256,17 +1257,35 @@ onValue(skribblPhaseRef, snap => {
       renderLeaderboard(skribblLatestEntries);
       showPanel(skribblLeaderboardBox);
     }
+  } else if (skribblPhase === null && prevPhase === "results") {
+    // Round was reset — clear per-round client state so the next round starts fresh.
+    // Without this, last round's correct guessers carry over skribblWon=true and
+    // the prompt listener won't show their guess box on the next prompt.
+    skribblWon = false;
+    skribblHintBuilt = false;
+    skribblLatestEntries = [];
+    skribblLetterGrid.innerHTML = "";
+    skribblLeaderboardList.innerHTML = "";
+    hidePanel(skribblLeaderboardBox);
+    skribblTimerFill.style.width = "100%";
   }
 });
 
-// Who is the drawer?
+// Who is the drawer? Track previous so we only act on actual transitions.
+let skribblWasDrawer = false;
 onValue(skribblDrawerRef, snap => {
   const drawerKey = snap.val();
-  skribblAmDrawer = drawerKey === userKey;
-  if (!skribblAmDrawer) {
+  const isNowDrawer = drawerKey === userKey;
+  skribblAmDrawer = isNowDrawer;
+  // Only run stream cleanup if THIS user was previously the drawer and isn't anymore.
+  // Without this guard, every non-drawer phone hitting refresh would write
+  // null to skribbl/liveCanvas (via stopSkribblStream), wiping the drawing on
+  // the output page until the actual drawer's next frame arrives 300ms later.
+  if (!isNowDrawer && skribblWasDrawer) {
     drawOverlay.classList.remove("show");
     stopSkribblStream();
   }
+  skribblWasDrawer = isNowDrawer;
 });
 
 // Prompt — gates both drawer canvas and guesser box
