@@ -1694,7 +1694,7 @@ async function enterResultsPhase() {
   const ops = [
     set(ref(db,"skribbl/phase"),      "results"),
     set(ref(db,"skribbl/timeEnd"),    null),
-    set(ref(db,"skribbl/liveCanvas"), null),
+    // Keep liveCanvas — the final drawing frame stays visible during results
     set(ref(db,"skribbl/leaderboard"), lb.length ? lb : null),
     set(ref(db,"skribbl/prompt"),     { text:"", show:false }),
     // mode stays TRUE so phones still know they're in skribbl context

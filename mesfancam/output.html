@@ -897,6 +897,7 @@ const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
 const skribblGuessRef  = ref(db, "skribbl/guesses");
 const skribblWinnerRef = ref(db, "skribbl/winner");
 const skribblHintRef   = ref(db, "skribbl/hint");
+const skribblWordRef   = ref(db, "skribbl/word");
 let activeUser     = null;
 let lastFrame      = 0;
 let lastHeartbeat  = 0;
@@ -1265,17 +1266,34 @@ onValue(skribblModeRef, snap => {
 });
 
 // Phase listener — "results" means slide drawing panel away, keep leaderboard up
+let skribblCurrentWord = "";
+onValue(skribblWordRef, snap => { skribblCurrentWord = snap.val() || ""; });
+
+// Reveal the full word as filled-in hint cells (used in results phase)
+function revealFullWord(word) {
+  if (!word) return;
+  const fullHint = word.split("").map(ch =>
+    ch === " " ? { letter: " ", revealed: false } : { letter: ch, revealed: true }
+  );
+  renderHint(fullHint);
+}
+
 onValue(skribblPhaseRef, snap => {
   skribblPhase = snap.val();
   if (!skribblOn) return;
   if (skribblPhase === "results") {
-    // Results mode: hide the drawing panel, stop the live canvas stream display,
-    // freeze the timer at 0, and keep the leaderboard panel visible.
-    skribblLiveImg.style.display = "none";
-    skribblLiveImg.src = "";
-    hideDrawPanel();
+    // Freeze the timer at 0
     stopOutputTimer();
-    // Keep hint display up but don't add fresh entries (round is over)
+    // Update the eyebrow label on the drawing panel: "LIVE DRAWING" → "IT WAS A..."
+    drawPanelLabel.textContent = "🎨 IT WAS...";
+    // Reveal every letter of the word in the hint display below the drawing
+    revealFullWord(skribblCurrentWord);
+    // Drawing stays visible — drawer's last frame is still up via skribblLiveImg
+  } else {
+    // Back to "playing" or null — restore the live drawing label
+    if (skribblPhase === "playing") {
+      drawPanelLabel.textContent = "🎨 LIVE DRAWING";
+    }
   }
 });
 
@@ -1299,6 +1317,13 @@ onValue(skribblLiveRef, snap => {
     drawPanelLabel.textContent = "🎨 LIVE DRAWING";
     stage.classList.add("draw-open");
     drawPanel.classList.add("show");
+  } else if (val === null) {
+    // Reset — clear the drawing
+    skribblLiveImg.style.display = "none";
+    skribblLiveImg.src = "";
+    // Hide the drawing panel unless a static draw-mode reveal is in it
+    const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
+    if (!drawRevealVisible) hideDrawPanel();
   }
 });
 
@@ -1309,7 +1334,12 @@ onValue(skribblLeaderboardRef, snap => {
   const entries = lb ? (Array.isArray(lb) ? lb : Object.values(lb)) : [];
   entries.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
 
-  if (entries.length === 0) return; // no correct guesses yet — don't show panel
+  // Reset cleared the leaderboard — hide the panel
+  if (entries.length === 0) {
+    if (lbPanel.classList.contains("show")) hideLbPanel();
+    renderLbPanel([]);
+    return;
+  }
 
   // First correct guess — slide the panel in
   if (!lbPanel.classList.contains("show")) showLbPanel();

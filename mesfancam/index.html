@@ -1250,7 +1250,10 @@ onValue(skribblPhaseRef, snap => {
       hideDrawToolbar();
       stopSkribblStream();
     }
-    // Leaderboard panel stays visible (showPanel call handled in leaderboard listener)
+    // Show the leaderboard now to everyone — including the drawer who was hidden from it during play
+    if (skribblLeaderboardList.children.length > 0) {
+      showPanel(skribblLeaderboardBox);
+    }
   }
 });
 
@@ -1344,17 +1347,22 @@ onValue(skribblLeaderboardRef, snap => {
     hidePanel(skribblBox);
   }
 
-  // Show leaderboard panel to everyone (drawer sees it too after round starts having entries)
-  if (entries.length > 0) {
-    renderLeaderboard(entries);
-    showPanel(skribblLeaderboardBox);
-  } else {
+  // Reset / round end with no entries — hide the panel
+  if (entries.length === 0) {
     renderLeaderboard([]);
-    // Only show leaderboard panel if we already have it open
-    if (!skribblLeaderboardBox.classList.contains("visible")) {
-      hidePanel(skribblLeaderboardBox);
-    }
+    hidePanel(skribblLeaderboardBox);
+    return;
   }
+
+  // During PLAY phase, the drawer doesn't see the leaderboard (less clutter while drawing).
+  // It appears for them in RESULTS phase to celebrate together.
+  if (skribblAmDrawer && skribblPhase !== "results") {
+    hidePanel(skribblLeaderboardBox);
+    return;
+  }
+
+  renderLeaderboard(entries);
+  showPanel(skribblLeaderboardBox);
 });
 
 // Guess submission — no longer blocked after winning (others still guess)
