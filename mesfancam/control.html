@@ -531,6 +531,12 @@
             <input class="switch" type="checkbox" id="autoLiveToggle">
             AUTO LIVE
           </label>
+          <label id="autoDurationWrap" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;background:rgba(0,0,0,0.18);border:1px solid var(--line);border-radius:99px;padding:4px 12px;">
+            <span>EVERY</span>
+            <input type="range" id="autoDurationSlider" min="3" max="15" step="1" value="5"
+              style="width:80px;accent-color:var(--accent);cursor:pointer;">
+            <span id="autoDurationLabel" style="font-weight:900;color:var(--accent);min-width:24px;text-align:right;">5s</span>
+          </label>
           <button id="clearLiveBtn" class="btn-ghost" style="font-size:12px;padding:8px 12px;">clear live</button>
         </div>
       </div>
@@ -634,6 +640,9 @@ const els = {
   memberSub:      document.getElementById("memberSub"),
   grid:           document.getElementById("participantGrid"),
   autoLiveToggle: document.getElementById("autoLiveToggle"),
+  autoDurationWrap:   document.getElementById("autoDurationWrap"),
+  autoDurationSlider: document.getElementById("autoDurationSlider"),
+  autoDurationLabel:  document.getElementById("autoDurationLabel"),
   autoPill:       document.getElementById("autoPill"),
   endSessionBtn:  document.getElementById("endSessionBtn"),
   clearLiveBtn:   document.getElementById("clearLiveBtn"),
@@ -692,7 +701,18 @@ const state = {
   cardRefs: {},
   autoLiveEnabled: false, autoLiveInterval: null,
   revealModeEnabled: false,
-  autoCycle: [], autoIndex: 0,
+  autoShown: new Set(),  // userKeys shown in current round; cleared when round completes
+  autoLastShown: null,   // most recent userKey shown — prevents back-to-back repeats
+  autoRound: 1,          // round number (for logging/debugging)
+  autoDurationSec: 5,    // slider value
+  autoLiveStartTs: 0,    // when current pick went live (for min-dwell calculations)
+
+  // Skribbl correct-guess spotlight system
+  skribblDrawer: null,        // current drawer userKey (excluded from auto cycle)
+  spotlightActive: false,     // true while a guesser-spotlight is running
+  spotlightQueue: [],         // pending [{userKey, name}] (max 1 pending)
+  spotlightTimer: null,       // timeout handle for current spotlight
+  spotlightDurationMs: 4000,  // how long each correct guesser stays on cam
   draftPollOptions: [],
 };
 
@@ -866,6 +886,7 @@ async function activateNone() {
 async function fullWipeSkribbl() {
   if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
   clearHintTimers();
+  clearSpotlight();
   state.skribblWord = "";
   skribblLeaderboardEntries = [];
   skribblGuessTotal = 0;
@@ -1187,35 +1208,184 @@ function removeCard(uid) {
   delete state.cardRefs[uid];
 }
 
-/* ── AUTO LIVE ── */
-function rebuildCycle() {
-  const active = Object.entries(state.participants)
-    .filter(([, p]) => p?.cameraActive).map(([id]) => id);
-  for (let i = active.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [active[i], active[j]] = [active[j], active[i]];
-  }
-  state.autoCycle = active; state.autoIndex = 0;
+/* ── AUTO LIVE ──
+ * Fairness algorithm: every active participant is shown exactly once per "round"
+ * before anyone repeats. Joins, leaves, and camera-toggles do NOT reset the round
+ * — that was the old bug where the shown-history got wiped on every change.
+ *
+ * Each tick we build the eligible pool: participants whose camera is on AND who
+ * haven't been shown yet this round. Pick one at random from the pool. If pool
+ * is empty, the round is complete: clear shown-set, increment round, repeat.
+ *
+ * Extra safeguards:
+ *  - Never pick the user who is currently live (prevents back-to-back if rounds
+ *    happen to align such that the same person is last-of-round-N and first-of-round-N+1).
+ *  - If the only eligible person is the currently-live one, we let them stay rather
+ *    than flicker off and back.
+ */
+
+function getActiveUserKeys() {
+  return Object.entries(state.participants)
+    .filter(([, p]) => p?.cameraActive)
+    .map(([id]) => id);
 }
+
+function pickNextAutoLive() {
+  const active = getActiveUserKeys();
+  if (!active.length) return null;
+
+  // Drop anyone who's LEFT the session entirely from the shown-set.
+  // Important: we do NOT drop people who merely turned their camera off — they
+  // already had their turn, and clearing them would let camera-toggling game the
+  // rotation (turn off → turn back on → get another spot in the same round).
+  for (const k of [...state.autoShown]) {
+    if (!state.participants[k]) state.autoShown.delete(k);
+  }
+
+  // While skribbl mode is on, exclude the drawer from the auto cycle —
+  // they're already implicitly "the star" (their drawing is on screen) and
+  // cutting to their concentration face adds nothing.
+  let candidates = active;
+  if (state.skribblMode && state.skribblDrawer) {
+    candidates = candidates.filter(k => k !== state.skribblDrawer);
+    if (!candidates.length) return null; // only drawer is active — nobody to cycle to
+  }
+
+  // Build pool: candidates AND not-yet-shown this round
+  let pool = candidates.filter(k => !state.autoShown.has(k));
+
+  // Round complete → start a new round
+  if (pool.length === 0) {
+    state.autoShown.clear();
+    state.autoRound++;
+    logEvent("auto-live", `Round ${state.autoRound} starting — every participant gets a turn`);
+    pool = candidates.slice();
+  }
+
+  // Avoid back-to-back same person if there's a choice
+  if (pool.length > 1 && state.autoLastShown && pool.includes(state.autoLastShown)) {
+    pool = pool.filter(k => k !== state.autoLastShown);
+  }
+
+  // Random pick from pool
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// Single shared tick function — used by both startAuto and applyAutoDuration
+async function autoTick() {
+  // Don't pick a new person while a guesser-spotlight is active.
+  // The spotlight system writes its own live.activeUser values and resumes us when done.
+  if (state.spotlightActive) return;
+
+  const next = pickNextAutoLive();
+  if (!next) return; // nobody eligible — wait for next tick
+
+  state.autoShown.add(next);
+  state.autoLastShown = next;
+  state.autoLiveStartTs = Date.now();
+  await update(ref(db, "live"), { activeUser: next });
+}
+
 function startAuto() {
-  stopAuto(); state.autoLiveEnabled = true; rebuildCycle();
-  state.autoLiveInterval = setInterval(async () => {
-    if (!Object.values(state.participants).some(p => p?.cameraActive)) return;
-    if (!state.autoCycle.length || state.autoIndex >= state.autoCycle.length) rebuildCycle();
-    const next = state.autoCycle[state.autoIndex++];
-    if (next) await update(ref(db, "live"), { activeUser: next });
-  }, 5000);
+  stopAuto();
+  state.autoLiveEnabled = true;
+  state.autoShown = new Set();
+  state.autoRound = 1;
+  state.autoLastShown = null;
+  els.autoDurationWrap.style.display = "inline-flex";
+
+  // Fire immediately so the first pick happens without a delay
+  autoTick();
+  state.autoLiveInterval = setInterval(autoTick, state.autoDurationSec * 1000);
+
   els.autoPill.classList.add("on");
   updateStats();
 }
+
 function stopAuto() {
   state.autoLiveEnabled = false;
   clearInterval(state.autoLiveInterval);
   state.autoLiveInterval = null;
+  clearSpotlight(); // cancel any pending guesser-spotlight
   els.autoPill.classList.remove("on");
+  els.autoDurationWrap.style.display = "none";
   updateStats();
 }
+
+// Restart the interval when the slider changes (so the new pace takes effect immediately)
+function applyAutoDuration() {
+  state.autoDurationSec = parseInt(els.autoDurationSlider.value, 10);
+  els.autoDurationLabel.textContent = state.autoDurationSec + "s";
+  if (state.autoLiveEnabled) {
+    clearInterval(state.autoLiveInterval);
+    state.autoLiveInterval = setInterval(autoTick, state.autoDurationSec * 1000);
+  }
+}
+
 els.autoLiveToggle.onchange = () => els.autoLiveToggle.checked ? startAuto() : stopAuto();
+els.autoDurationSlider.oninput = applyAutoDuration;
+
+/* ── SKRIBBL CORRECT-GUESS SPOTLIGHT ──
+ * When a guesser gets it right, briefly cut to their camera so everyone sees
+ * their reaction, then return to the auto-live cycle. Only active in skribbl
+ * mode. Queue depth of 1 (current + 1 pending) prevents strobing if multiple
+ * people guess in rapid succession; further correct guesses while the queue
+ * is full are dropped (they still go on the leaderboard, just no spotlight).
+ *
+ * Spotlighted users are also added to autoShown so they don't get a second
+ * turn in the same auto-live round — the spotlight effectively pulls their
+ * normal turn forward rather than granting a bonus one.
+ */
+
+function spotlightGuesser(userKey, name) {
+  // Only operate in skribbl mode and only if auto-live is on
+  // (manual mode means the operator is in control of the cam — don't override)
+  if (!state.skribblMode || !state.autoLiveEnabled) return;
+  // Don't spotlight the drawer (shouldn't happen — drawer can't guess — but defensive)
+  if (userKey === state.skribblDrawer) return;
+  // Don't spotlight if their camera isn't on
+  if (!state.participants[userKey]?.cameraActive) return;
+
+  // If a spotlight is already running, queue this one (max 1 pending)
+  if (state.spotlightActive) {
+    if (state.spotlightQueue.length < 1) {
+      state.spotlightQueue.push({ userKey, name });
+    }
+    // else: drop — preserves screen rhythm during rapid-fire correct guesses
+    return;
+  }
+
+  runSpotlight(userKey, name);
+}
+
+function runSpotlight(userKey, name) {
+  state.spotlightActive = true;
+  state.autoShown.add(userKey);     // pull their auto-live turn forward
+  state.autoLastShown = userKey;    // and treat as most-recent for back-to-back guard
+  update(ref(db, "live"), { activeUser: userKey }).catch(() => {});
+  logEvent("auto-live", `Spotlight on ${name} (correct guess)`);
+
+  state.spotlightTimer = setTimeout(() => {
+    state.spotlightTimer = null;
+    state.spotlightActive = false;
+
+    // Pull next from queue if any
+    if (state.spotlightQueue.length) {
+      const nxt = state.spotlightQueue.shift();
+      runSpotlight(nxt.userKey, nxt.name);
+    } else {
+      // Queue empty → resume normal auto-live with an immediate tick
+      // so we don't stare at the last spotlit person until the next interval.
+      if (state.autoLiveEnabled && state.skribblMode) autoTick();
+    }
+  }, state.spotlightDurationMs);
+}
+
+function clearSpotlight() {
+  if (state.spotlightTimer) { clearTimeout(state.spotlightTimer); state.spotlightTimer = null; }
+  state.spotlightActive = false;
+  state.spotlightQueue = [];
+}
 
 els.clearLiveBtn.onclick = async () => {
   await Promise.all([set(ref(db,"live/activeUser"),null), set(ref(db,"live/frame"),null)]);
@@ -1499,22 +1669,25 @@ onChildAdded(ref(db,"participants"),   snap => {
   const p = state.participants[snap.key];
   logEvent("join", `${p.name || snap.key} joined the session`);
   ensureCard(snap.key); syncOrder();
-  if (state.autoLiveEnabled) rebuildCycle();
+  // New joiners are eligible immediately (no rebuildCycle needed — they're just
+  // added to the active pool and will be picked when not in the shown-set)
   updateStats();
   rebuildDrawerSelect();
 });
 onChildChanged(ref(db,"participants"), snap => {
   state.participants[snap.key] = snap.val() || {};
   patchCard(snap.key);
-  if (state.autoLiveEnabled) rebuildCycle();
+  // Camera toggles handled naturally by pickNextAutoLive's filter
   updateStats();
 });
 onChildRemoved(ref(db,"participants"), snap => {
   const name = state.participants[snap.key]?.name || snap.key;
   logEvent("leave", `${name} left the session`);
   delete state.participants[snap.key];
+  // Also drop them from the shown-set so the round-end calculation is accurate
+  if (state.autoShown) state.autoShown.delete(snap.key);
+  if (state.autoLastShown === snap.key) state.autoLastShown = null;
   removeCard(snap.key);
-  if (state.autoLiveEnabled) rebuildCycle();
   updateStats();
   if (!Object.keys(state.participants).length) els.grid.innerHTML = `<div class="empty">No participants yet.</div>`;
 });
@@ -1805,6 +1978,7 @@ els.resetSkribblBtn.onclick  = () => resetSkribblRound();
 // Listen to guesses — rank correct ones, "so close" wrong ones
 onValue(ref(db,"skribbl/word"), snap => { state.skribblWord = snap.val() || ""; });
 onValue(ref(db,"skribbl/phase"), snap => { state.skribblPhase = snap.val(); });
+onValue(ref(db,"skribbl/drawer"), snap => { state.skribblDrawer = snap.val() || null; });
 
 onChildAdded(ref(db,"skribbl/guesses"), snap => {
   const g = snap.val();
@@ -1827,18 +2001,19 @@ onChildAdded(ref(db,"skribbl/guesses"), snap => {
       const rank = skribblLeaderboardEntries.length;
       skribblLeaderboardEntries.push({ userKey: guesserKey, name: g.name, rank, ts: g.timestamp || Date.now() });
       renderSkribblLeaderboard();
-      // Write leaderboard + winner to Firebase so output.html updates live
+      // Write leaderboard + winner to Firebase
       const lb = skribblLeaderboardEntries.map((e, i) => ({ ...e, rank: i }));
-      Promise.all([
-        set(ref(db,"skribbl/leaderboard"), lb),
-        // winner always = 1st correct guess (for fan cam switch)
-        rank === 0
-          ? Promise.all([
-              set(ref(db,"skribbl/winner"), { userKey: guesserKey, name: g.name, text: g.text }),
-              update(ref(db,"live"), { activeUser: guesserKey }),
-            ])
-          : Promise.resolve(),
-      ]).catch(() => {});
+      const writes = [set(ref(db,"skribbl/leaderboard"), lb)];
+      if (rank === 0) {
+        // Mark 1st place as the round winner (for output.html celebration overlay
+        // and the eventual results-phase live cam pin)
+        writes.push(set(ref(db,"skribbl/winner"), { userKey: guesserKey, name: g.name, text: g.text }));
+      }
+      Promise.all(writes).catch(() => {});
+
+      // Spotlight every correct guesser briefly (queues if multiple in rapid succession).
+      // If auto-live is OFF, this no-ops — operator is in manual control of the cam.
+      spotlightGuesser(guesserKey, g.name);
     }
   } else if (state.skribblWord) {
     const dist = levenshtein(guessText, state.skribblWord);
