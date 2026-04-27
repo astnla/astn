@@ -432,6 +432,28 @@ html, body {
       opacity: 1;
     }
 
+    /* Drawing round timer — thin progress bar overlaid on the bottom edge of the feed.
+       Visible only during a timed drawing round. Drains as time runs out. */
+    #drawTimerOverlay {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 12;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    #drawTimerOverlay.show { opacity: 1; }
+    #drawTimerOverlayFill {
+      height: 100%;
+      background: white;
+      width: 100%;
+      transition: width 1s linear, background 0.4s ease;
+    }
+
     /* LIVE pip */
     #livePip {
       position: absolute;
@@ -782,6 +804,8 @@ html, body {
 <audio id="sndEnd"     src="assets/end.mp3"     preload="auto"></audio>
 <!-- Activity send cue — plays when teacher sends trivia / poll / drawing prompt -->
 <audio id="sndSent"    src="assets/sent.mp3"    preload="auto"></audio>
+<!-- Drawing round time-up cue -->
+<audio id="sndTime"    src="assets/time.mp3"    preload="auto"></audio>
 <div class="scene">
   <div class="stage" id="stage">
 
@@ -829,6 +853,10 @@ html, body {
       </div>
       <div id="livePip">
         <span class="live-dot"></span>LIVE
+      </div>
+      <!-- Drawing round timer — thin bar at the bottom of the feed -->
+      <div id="drawTimerOverlay">
+        <div id="drawTimerOverlayFill"></div>
       </div>
       <!-- Winner overlay -->
       <div id="skribblWinnerOverlay">
@@ -1194,10 +1222,73 @@ function hideDrawPanel() {
 let revealModeOn = false;
 onValue(ref(db, "meta/revealMode"), snap => { revealModeOn = snap.val() === true; });
 
+let drawingModeOn = false;
 onValue(drawModeRef, snap => {
-  if (!snap.val()) { hideDrawPanel(); drawSubs = {}; }
+  drawingModeOn = snap.val() === true;
+  if (!drawingModeOn) {
+    hideDrawPanel();
+    drawSubs = {};
+    stopOutputDrawTimer(); // tear down the bar when leaving drawing mode entirely
+  }
 });
 onValue(drawSubRef, snap => { drawSubs = snap.val() || {}; });
+
+/* ── DRAWING ROUND TIMER ──
+ * Thin bar overlaid on the bottom edge of the camera feed. Visible only during
+ * a timed drawing round. Drains as time runs out; turns red in the last 10s.
+ */
+const drawTimerOverlay     = document.getElementById("drawTimerOverlay");
+const drawTimerOverlayFill = document.getElementById("drawTimerOverlayFill");
+let outputDrawTimerInterval = null;
+let outputDrawTimerDurationMs = 60000;
+function startOutputDrawTimer(timeEnd) {
+  if (outputDrawTimerInterval) clearInterval(outputDrawTimerInterval);
+  outputDrawTimerDurationMs = Math.max(1, timeEnd - Date.now());
+  drawTimerOverlay.classList.add("show");
+  let lastTickedSec = null;
+  function tick() {
+    const remaining = Math.max(0, timeEnd - Date.now());
+    const secs = Math.ceil(remaining / 1000);
+    const pct = (remaining / outputDrawTimerDurationMs) * 100;
+    drawTimerOverlayFill.style.width = pct + "%";
+    drawTimerOverlayFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
+    // Tick sound during final 10s — fire once per integer-second crossing
+    if (secs > 0 && secs <= 10 && secs !== lastTickedSec) {
+      lastTickedSec = secs;
+      playSnd(sndTick);
+    }
+    if (remaining <= 0) {
+      clearInterval(outputDrawTimerInterval);
+      outputDrawTimerInterval = null;
+      // Hide a moment after zero so viewers see the empty bar briefly
+      setTimeout(() => drawTimerOverlay.classList.remove("show"), 800);
+    }
+  }
+  tick();
+  outputDrawTimerInterval = setInterval(tick, 500);
+}
+function stopOutputDrawTimer() {
+  if (outputDrawTimerInterval) { clearInterval(outputDrawTimerInterval); outputDrawTimerInterval = null; }
+  drawTimerOverlay.classList.remove("show");
+  drawTimerOverlayFill.style.width = "100%";
+}
+onValue(ref(db, "drawing/timeEnd"), snap => {
+  const timeEnd = snap.val();
+  if (!drawingModeOn || !timeEnd) { stopOutputDrawTimer(); return; }
+  startOutputDrawTimer(timeEnd);
+});
+
+/* Drawing round ended — fires whether by timer expiry or manual Times Up button.
+   First-snap guard prevents the sound from replaying on output refresh if
+   drawing/timesUp is still set in Firebase from an earlier round. */
+let drawTimesUpFirstSnap = true;
+onValue(ref(db, "drawing/timesUp"), snap => {
+  const ts = snap.val();
+  if (drawTimesUpFirstSnap) { drawTimesUpFirstSnap = false; return; }
+  if (!drawingModeOn) return;
+  if (!ts) return;
+  playSnd(sndTime);
+});
 
 // Drawing prompt listener — purely for the sent.mp3 cue.
 // Output doesn't display the drawing prompt itself (that's only on phones), but we still
@@ -1365,6 +1456,7 @@ const sndTick    = document.getElementById("sndTick");
 const sndCorrect = document.getElementById("sndCorrect");
 const sndEnd     = document.getElementById("sndEnd");
 const sndSent    = document.getElementById("sndSent");
+const sndTime    = document.getElementById("sndTime");
 function playSnd(el) {
   if (!el) return;
   try {
@@ -1640,9 +1732,13 @@ setInterval(() => {
   else        { showFeed(); hideBad(); }
 }, 500);
 
-/* ── VISIBILITY ── */
+/* ── VISIBILITY ──
+ * Pause/resume the live image stream on tab visibility (real bandwidth saver).
+ * Do NOT tear down trivia/polls listeners — those are tiny JSON listeners and the
+ * teardown was asymmetric (no restore on show), making them vanish until a refresh.
+ */
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) { stopStream(); stopTrivia(); stopPolls(); }
+  if (document.hidden) { stopStream(); }
   else if (activeUser) { ensureStream(); }
 });
 </script>

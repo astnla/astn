@@ -217,11 +217,23 @@
       font-size:15px;cursor:pointer;transition:opacity 0.15s;
     }
     .draw-btn:active{opacity:0.7;}
+    .draw-btn:disabled{opacity:0.35;cursor:default;pointer-events:none;}
     /* Draw overlay is white bg — use bordered styles for contrast */
+    #drawUndo{background:rgba(0,0,0,0.04);color:#00031F;border:2px solid #00031F;flex:0.7;}
+    #drawUndo:active{background:rgba(0,0,0,0.08);}
     #drawRestart{background:rgba(255, 0, 0, 0.1);color:#cc0000;border:2px solid #cc0000;}
     #drawRestart:active{background:rgba(204,0,0,0.08);}
     #drawSubmit{background:rgba(0, 0, 0, 0.08);color:rgb(0, 0, 0);border:2px solid #00031F;}
     #drawSubmit:active{background:#111;}
+    /* Optional countdown bar above the canvas — only shown when control sets a duration */
+    #drawTimerBar{
+      width:100%;height:5px;border-radius:99px;
+      background:rgba(0,0,0,0.10);overflow:hidden;
+      flex-shrink:0;margin:6px 10px 4px;width:calc(100% - 20px);
+      display:none;
+    }
+    #drawTimerBar.show{display:block;}
+    #drawTimerFill{height:100%;border-radius:99px;background:#00031F;transition:width 1s linear;}
     #drawSubmitted{
       position:absolute;inset:0;z-index:21;
       background:white;border-radius:12px;
@@ -362,8 +374,11 @@
     <!-- Drawing overlay — slides up over camera when drawing mode is active -->
     <div id="drawOverlay">
       <div id="drawPromptLabel">DRAW: <span id="drawPromptText"></span></div>
+      <!-- Optional countdown bar — shown only when control sets a duration -->
+      <div id="drawTimerBar"><div id="drawTimerFill" style="width:100%;"></div></div>
       <canvas id="drawCanvas"></canvas>
       <div id="drawActions">
+        <button class="draw-btn" id="drawUndo" disabled>↶ UNDO</button>
         <button class="draw-btn" id="drawRestart">RESTART</button>
         <button class="draw-btn" id="drawSubmit">SUBMIT</button>
       </div>
@@ -841,6 +856,9 @@ const drawPromptText = document.getElementById("drawPromptText");
 const drawCanvas     = document.getElementById("drawCanvas");
 const drawRestart    = document.getElementById("drawRestart");
 const drawSubmit     = document.getElementById("drawSubmit");
+const drawUndoBtn    = document.getElementById("drawUndo");
+const drawTimerBar   = document.getElementById("drawTimerBar");
+const drawTimerFill  = document.getElementById("drawTimerFill");
 const drawCtx        = drawCanvas.getContext("2d");
 const drawModeRef    = ref(db, "drawing/mode");
 const drawPromptRef  = ref(db, "drawing/prompt");
@@ -870,6 +888,36 @@ function initDrawCanvas() {
   drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
   // Apply current tool settings (color/size/mode)
   applyDrawSettings();
+  // Reset undo stack — every fresh canvas init starts with a blank baseline snapshot
+  resetUndoStack();
+}
+
+/* ── UNDO STACK ──
+ * Each completed stroke (or fill) pushes a canvas snapshot onto the stack.
+ * Undo pops the latest and redraws. Capped at 20 entries to control memory.
+ * Used by both regular draw mode and skribbl drawer canvas.
+ */
+const UNDO_MAX = 20;
+let undoStack = [];
+
+function captureUndoSnapshot() {
+  try {
+    if (undoStack.length >= UNDO_MAX) undoStack.shift();
+    undoStack.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+    drawUndoBtn.disabled = undoStack.length <= 1;
+  } catch (e) { /* getImageData can throw if canvas size is 0 — ignore */ }
+}
+function performUndo() {
+  if (undoStack.length <= 1) return;
+  undoStack.pop();                     // discard current state
+  const prev = undoStack[undoStack.length - 1];
+  drawCtx.putImageData(prev, 0, 0);
+  drawUndoBtn.disabled = undoStack.length <= 1;
+}
+function resetUndoStack() {
+  undoStack = [];
+  // Push the blank baseline so the very first stroke can be undone back to white
+  captureUndoSnapshot();
 }
 
 // Drawing input — works with both touch and mouse
@@ -893,20 +941,28 @@ drawCanvas.addEventListener("pointermove", e => {
   const { x, y } = getPos(e);
   drawCtx.lineTo(x, y); drawCtx.stroke();
 });
-drawCanvas.addEventListener("pointerup",     () => isPainting = false);
-drawCanvas.addEventListener("pointercancel", () => isPainting = false);
+drawCanvas.addEventListener("pointerup",     () => {
+  if (isPainting) { isPainting = false; captureUndoSnapshot(); }
+});
+drawCanvas.addEventListener("pointercancel", () => {
+  if (isPainting) { isPainting = false; captureUndoSnapshot(); }
+});
 
 drawRestart.addEventListener("click", () => {
   drawCtx.fillStyle = "white";
   drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
   applyDrawSettings();
+  resetUndoStack(); // clear undo history when canvas is wiped
 });
+
+drawUndoBtn.addEventListener("click", performUndo);
 
 drawSubmit.addEventListener("click", async () => {
   if (drawHasSubmitted) return;
   drawHasSubmitted = true;
   drawSubmit.textContent = "SENDING…";
   hideDrawToolbar();
+  stopDrawTimer(); // they're done — stop their countdown bar
   // Compress to PNG at 480px wide max
   const tmp = document.createElement("canvas");
   const maxW = 480;
@@ -934,6 +990,7 @@ onValue(drawModeRef, snap => {
     drawHasSubmitted = false;
     drawSubmit.textContent = "SUBMIT";
     hideDrawToolbar();
+    stopDrawTimer(); // any in-flight countdown should die when mode turns off
   } else {
     // Mode just turned on (or page loaded while mode was already on).
     // Do a fresh one-time read of the prompt so late-joining students
@@ -999,8 +1056,52 @@ onValue(drawPromptRef, snap => {
 onValue(ref(db, "drawing/timesUp"), snap => {
   if (!snap.val()) return;
   if (!drawActive) return;
+  stopDrawTimer();
   if (drawHasSubmitted) return;
+  // Set a friendly "TIME'S UP!" message for this round only — drawSubmit.click()
+  // will fade in the drawSubmitted panel using its existing animation.
+  // We override the text BEFORE clicking so the user sees TIME'S UP, not DRAWING SENT.
+  const submittedLabel = drawSubmitted.querySelector("div");
+  if (submittedLabel) submittedLabel.textContent = "⏱ TIME'S UP!";
   drawSubmit.click();
+  // After the fade-out runs, restore the default label so a future round starts fresh
+  setTimeout(() => {
+    if (submittedLabel) submittedLabel.textContent = "DRAWING SENT";
+  }, 3500);
+});
+
+/* ── DRAWING COUNTDOWN TIMER ──
+ * Optional: control may set drawing/timeEnd if a duration is configured.
+ * If absent, the bar stays hidden and nothing changes (manual times-up only).
+ */
+let drawTimerInterval = null;
+let drawRoundDurationMs = 60000;
+function startDrawTimer(timeEnd) {
+  if (drawTimerInterval) clearInterval(drawTimerInterval);
+  drawRoundDurationMs = Math.max(1, timeEnd - Date.now());
+  drawTimerBar.classList.add("show");
+  function tick() {
+    const remaining = Math.max(0, timeEnd - Date.now());
+    const pct = (remaining / drawRoundDurationMs) * 100;
+    drawTimerFill.style.width = pct + "%";
+    drawTimerFill.style.background = remaining <= 10000 ? "#cc0000" : "#00031F";
+    if (remaining <= 0) {
+      clearInterval(drawTimerInterval);
+      drawTimerInterval = null;
+    }
+  }
+  tick();
+  drawTimerInterval = setInterval(tick, 500);
+}
+function stopDrawTimer() {
+  if (drawTimerInterval) { clearInterval(drawTimerInterval); drawTimerInterval = null; }
+  drawTimerBar.classList.remove("show");
+  drawTimerFill.style.width = "100%";
+}
+onValue(ref(db, "drawing/timeEnd"), snap => {
+  const timeEnd = snap.val();
+  if (!drawActive || !timeEnd) { stopDrawTimer(); return; }
+  startDrawTimer(timeEnd);
 });
 
 /* ── SKRIBBL ── */
@@ -1557,6 +1658,7 @@ drawCanvas.addEventListener("pointerdown", e => {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top)  * scaleY;
     floodFill(drawCanvas, drawCtx, x, y, currentColor);
+    captureUndoSnapshot(); // fill is a single discrete action — snapshot immediately
     return;
   }
   applyDrawSettings();

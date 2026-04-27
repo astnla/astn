@@ -456,6 +456,27 @@
         <div class="feature-block">
           <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">drawing prompt</div>
           <textarea id="drawPromptInput" placeholder="e.g. Manatee wearing sunglasses…" style="min-height:60px;"></textarea>
+
+          <!-- Optional duration: OFF = manual times-up, otherwise auto-times-up at zero -->
+          <div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">duration</div>
+              <div id="drawDurationLabel" style="font-size:13px;font-weight:900;color:var(--accent);">OFF</div>
+            </div>
+            <input type="range" id="drawDurationSlider" min="0" max="240" step="30" value="0"
+              style="width:100%;accent-color:var(--accent);cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
+              <span>OFF</span><span>1m</span><span>2m</span><span>3m</span><span>4m</span>
+            </div>
+          </div>
+
+          <div id="drawCountdownBox" style="display:none;margin-top:6px;background:rgba(0,0,0,0.15);border-radius:12px;border:1px solid var(--line);padding:10px 12px;text-align:center;">
+            <div id="drawCountdown" style="font-size:22px;font-weight:900;color:var(--accent);line-height:1;">—</div>
+            <div style="margin-top:6px;height:4px;border-radius:99px;background:rgba(255,255,255,0.1);overflow:hidden;">
+              <div id="drawCountdownFill" style="height:100%;background:var(--accent);width:100%;transition:width 1s linear;border-radius:99px;"></div>
+            </div>
+          </div>
+
           <div class="send-row" style="margin-top:4px;">
             <button id="sendDrawBtn" class="btn-accent disabled" style="flex:1;font-size:14px;">SEND</button>
             <button id="timesUpBtn" class="btn-ghost disabled" style="font-size:13px;" title="Auto-submit drawings for anyone who hasn't sent yet">⏱ TIME'S UP</button>
@@ -599,6 +620,7 @@ turnOffFanCamBtn.addEventListener("click", async () => {
   stopAuto();
   els.autoLiveToggle.checked = false;
   clearHintTimers();
+  stopDrawCountdown();
   logEvent("session", "Fan cam turned off — session ended");
   await exportSessionZip();
   await Promise.all([
@@ -608,7 +630,7 @@ turnOffFanCamBtn.addEventListener("click", async () => {
     set(ref(db,"live"), null),
     set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
-    set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
+    set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null, timeEnd:null, timesUp:null }),
     set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null, phase:null }),
     set(ref(db,"meta/resetFlag"), Date.now()),
   ]);
@@ -668,6 +690,11 @@ const els = {
   drawPromptInput:document.getElementById("drawPromptInput"),
   sendDrawBtn:    document.getElementById("sendDrawBtn"),
   timesUpBtn:     document.getElementById("timesUpBtn"),
+  drawDurationSlider: document.getElementById("drawDurationSlider"),
+  drawDurationLabel:  document.getElementById("drawDurationLabel"),
+  drawCountdownBox:   document.getElementById("drawCountdownBox"),
+  drawCountdown:      document.getElementById("drawCountdown"),
+  drawCountdownFill:  document.getElementById("drawCountdownFill"),
   resetDrawBtn:   document.getElementById("resetDrawBtn"),
   showNoneBtn:    document.getElementById("showNoneBtn"),
   showTriviaBtn:  document.getElementById("showTriviaBtn"),
@@ -1397,6 +1424,7 @@ els.endSessionBtn.onclick = async () => {
   stopAuto();
   els.autoLiveToggle.checked = false;
   clearHintTimers();
+  stopDrawCountdown();
   if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
   logEvent("session", "Session ended manually");
   await exportSessionZip();
@@ -1407,7 +1435,7 @@ els.endSessionBtn.onclick = async () => {
     set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"meta/resetFlag"), Date.now()),
-    set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null }),
+    set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null, timeEnd:null, timesUp:null }),
     set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null, phase:null }),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
@@ -1508,44 +1536,111 @@ els.resetPollBtn.onclick = async () => {
 els.drawPromptInput.addEventListener("input", () => {
   els.sendDrawBtn.classList.toggle("disabled", !els.drawPromptInput.value.trim());
 });
+
+// Duration slider — 0 means OFF (manual times-up only). Otherwise seconds.
+els.drawDurationSlider.addEventListener("input", () => {
+  const v = parseInt(els.drawDurationSlider.value, 10);
+  els.drawDurationLabel.textContent = v === 0 ? "OFF" : (v >= 60 ? `${Math.floor(v/60)}m${v%60 ? ` ${v%60}s` : ""}` : `${v}s`);
+});
+
+let drawCountdownInterval = null;
+function startDrawCountdown(durationSec, startEpoch) {
+  if (drawCountdownInterval) clearInterval(drawCountdownInterval);
+  const endEpoch = startEpoch + durationSec * 1000;
+  els.drawCountdownBox.style.display = "";
+
+  function tick() {
+    const remaining = Math.max(0, Math.ceil((endEpoch - Date.now()) / 1000));
+    els.drawCountdown.textContent = remaining >= 60
+      ? `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,"0")}`
+      : `${remaining}s`;
+    const pct = (remaining / durationSec) * 100;
+    els.drawCountdownFill.style.width = pct + "%";
+    els.drawCountdownFill.style.background = remaining <= 10 ? "var(--danger)" : "var(--accent)";
+    if (remaining <= 0) {
+      clearInterval(drawCountdownInterval);
+      drawCountdownInterval = null;
+      // Auto-fire the times-up button — only if it's still enabled
+      if (!els.timesUpBtn.classList.contains("disabled")) {
+        els.timesUpBtn.click();
+      }
+    }
+  }
+  tick();
+  drawCountdownInterval = setInterval(tick, 1000);
+}
+function stopDrawCountdown() {
+  if (drawCountdownInterval) { clearInterval(drawCountdownInterval); drawCountdownInterval = null; }
+  els.drawCountdownBox.style.display = "none";
+  els.drawCountdown.textContent = "—";
+  els.drawCountdownFill.style.width = "100%";
+}
+
 els.sendDrawBtn.onclick = async () => {
   const text = els.drawPromptInput.value.trim();
   if (!text) return;
-  await update(ref(db,"drawing"), { prompt: { text, show: true } });
+  const durationSec = parseInt(els.drawDurationSlider.value, 10);
+  const startEpoch = Date.now();
+  const writes = [
+    update(ref(db,"drawing"), { prompt: { text, show: true } }),
+  ];
+  if (durationSec > 0) {
+    // Phones use this to render their own countdown bar
+    writes.push(set(ref(db,"drawing/timeEnd"), startEpoch + durationSec * 1000));
+  } else {
+    // Make sure stale timeEnd from a previous round doesn't linger
+    writes.push(set(ref(db,"drawing/timeEnd"), null));
+  }
+  await Promise.all(writes);
   flashSent(els.sendDrawBtn);
   els.timesUpBtn.classList.remove("disabled");
+  els.timesUpBtn.textContent = "⏱ TIME'S UP";
+  if (durationSec > 0) startDrawCountdown(durationSec, startEpoch);
+  else stopDrawCountdown();
 };
 
 els.timesUpBtn.onclick = async () => {
   if (els.timesUpBtn.classList.contains("disabled")) return;
-  // For every participant who has camera on but hasn't submitted a drawing yet,
-  // write a blank white canvas submission so their card shows something
+  els.timesUpBtn.classList.add("disabled");
+  els.timesUpBtn.textContent = "WAITING…";
+  stopDrawCountdown();
+  await set(ref(db,"drawing/timeEnd"), null);
+
+  const ts = Date.now();
+
+  // Step 1: Signal phones to auto-submit. Phones receive this and call drawSubmit.click()
+  // which writes their real drawing to drawing/submissions/${userKey}.
+  await set(ref(db,"drawing/timesUp"), ts);
+
+  // Step 2: Wait briefly for late submissions to flush from phones.
+  // 2s is plenty for a small PNG round-trip even on weak Wi-Fi.
+  await new Promise(r => setTimeout(r, 2000));
+
+  // Step 3: NOW check who's still missing and fill ONLY those with the placeholder.
+  // By this point, anyone who was actively drawing has had their real PNG arrive.
   const blankCanvas = document.createElement("canvas");
   blankCanvas.width = 480; blankCanvas.height = 640;
   const bCtx = blankCanvas.getContext("2d");
   bCtx.fillStyle = "white"; bCtx.fillRect(0, 0, 480, 640);
-  // Write a "times up" label on blank canvas
   bCtx.fillStyle = "#ccc";
   bCtx.font = "bold 48px sans-serif";
   bCtx.textAlign = "center";
   bCtx.fillText("TIME'S UP", 240, 340);
   const blankPng = blankCanvas.toDataURL("image/png");
-  const ts = Date.now();
-  // Signal index.html to auto-submit, and fill in blanks for non-submitters
+
   const ops = [];
-  ops.push(set(ref(db,"drawing/timesUp"), ts));
-  // Fill blank for any participant who hasn't submitted
   Object.keys(state.participants).forEach(uid => {
     if (!state.drawSubmissions[uid]) {
       ops.push(set(ref(db, `drawing/submissions/${uid}`), { data: blankPng, timestamp: ts, timesUp: true }));
     }
   });
-  await Promise.all(ops);
-  els.timesUpBtn.classList.add("disabled");
+  if (ops.length) await Promise.all(ops);
+
   els.timesUpBtn.textContent = "SUBMITTED";
 };
 els.resetDrawBtn.onclick = async () => {
-  await update(ref(db,"drawing"), { prompt: { text:"", show:false }, submissions: null, reveal: null, timesUp: null });
+  stopDrawCountdown();
+  await update(ref(db,"drawing"), { prompt: { text:"", show:false }, submissions: null, reveal: null, timesUp: null, timeEnd: null });
   els.drawPromptInput.value = "";
   els.sendDrawBtn.classList.add("disabled");
   els.timesUpBtn.classList.add("disabled");
@@ -2044,17 +2139,36 @@ onChildAdded(ref(db,"drawing/submissions"),   snap => {
   if (state.participants[snap.key]) {
     const name   = state.participants[snap.key]?.name || snap.key;
     const prompt = els.drawPromptInput?.value?.trim() || "drawing";
-    // Store in persistent accumulator — survives resets
-    sessionDrawings[`${snap.key}_${Date.now()}`] = {
-      data:   snap.val()?.data,
-      name,
-      prompt
-    };
+    // Skip "TIME'S UP" placeholder writes — they're not actual user drawings.
+    // If the user later submits their real drawing, onChildChanged will catch it.
+    if (!snap.val()?.timesUp) {
+      sessionDrawings[`${snap.key}_${Date.now()}`] = {
+        data:   snap.val()?.data,
+        name,
+        prompt
+      };
+    }
     logEvent("drawing", `${name} submitted their drawing (prompt: "${prompt}")`);
     patchCard(snap.key);
   }
 });
-onChildChanged(ref(db,"drawing/submissions"), snap => { state.drawSubmissions[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildChanged(ref(db,"drawing/submissions"), snap => {
+  state.drawSubmissions[snap.key] = snap.val();
+  if (state.participants[snap.key]) {
+    // If a real drawing arrives AFTER a placeholder was written, capture it for export.
+    // (timesUp:true means this is still a placeholder — skip; otherwise it's a real PNG.)
+    if (!snap.val()?.timesUp) {
+      const name   = state.participants[snap.key]?.name || snap.key;
+      const prompt = els.drawPromptInput?.value?.trim() || "drawing";
+      sessionDrawings[`${snap.key}_${Date.now()}`] = {
+        data:   snap.val()?.data,
+        name,
+        prompt
+      };
+    }
+    patchCard(snap.key);
+  }
+});
 onChildRemoved(ref(db,"drawing/submissions"), snap => { delete state.drawSubmissions[snap.key]; if(state.participants[snap.key]) patchCard(snap.key); });
 onChildAdded(ref(db,"drawing/reveal"),   snap => { state.drawReveals[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
 onChildChanged(ref(db,"drawing/reveal"), snap => { state.drawReveals[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
