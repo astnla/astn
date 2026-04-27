@@ -1180,7 +1180,7 @@ function renderLeaderboard(entries) {
   }
   skribblLeaderboardList.innerHTML = entries.map((e, i) => `
     <div class="skribbl-lb-row${e.userKey === userKey ? " mine" : ""}">
-      <span style="font-size:20px;">${MEDALS[i] || "#" + (i+1)}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:20px;min-width:1.5em;text-align:center;">${MEDALS[i] || (i+1)}</span>
       <span style="flex:1;">${e.name}</span>
       ${e.userKey === userKey ? `<span style="font-size:13px;opacity:0.7;">YOU</span>` : ""}
     </div>`).join("");

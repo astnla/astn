@@ -1812,7 +1812,7 @@ function skribblLeaderboardMedals(rank) {
   if (rank === 0) return "🥇";
   if (rank === 1) return "🥈";
   if (rank === 2) return "🥉";
-  return `#${rank + 1}`;
+  return `${rank + 1}`;
 }
 
 function renderSkribblLeaderboard() {
@@ -1822,7 +1822,7 @@ function renderSkribblLeaderboard() {
   }
   els.skribblLeaderboard.innerHTML = skribblLeaderboardEntries.map((e, i) => `
     <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:rgba(84,209,138,0.10);border:1px solid rgba(84,209,138,0.25);">
-      <span style="font-size:16px;flex-shrink:0;">${skribblLeaderboardMedals(i)}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;flex-shrink:0;min-width:1.5em;text-align:center;">${skribblLeaderboardMedals(i)}</span>
       <span style="font-size:14px;font-weight:900;flex:1;">${e.name}</span>
     </div>`).join("");
 }
