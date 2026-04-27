@@ -780,6 +780,8 @@ html, body {
 <audio id="sndTick"    src="assets/tick.mp3"    preload="auto"></audio>
 <audio id="sndCorrect" src="assets/correct.mp3" preload="auto"></audio>
 <audio id="sndEnd"     src="assets/end.mp3"     preload="auto"></audio>
+<!-- Activity send cue — plays when teacher sends trivia / poll / drawing prompt -->
+<audio id="sndSent"    src="assets/sent.mp3"    preload="auto"></audio>
 <div class="scene">
   <div class="stage" id="stage">
 
@@ -1042,9 +1044,15 @@ function stopStream() {
 function startTrivia() {
   if (triviaOn) return;
   triviaOn = true;
+  let triviaWasShown = false;
+  let triviaFirstSnap = true; // skip the first snap so sent.mp3 doesn't replay on output refresh
   onValue(triviaQRef, snap => {
     const d = snap.val() || {};
-    if (d.show && d.text) {
+    const isShown = !!(d.show && d.text);
+    if (!triviaFirstSnap && isShown && !triviaWasShown) playSnd(sndSent);
+    triviaFirstSnap = false;
+    triviaWasShown = isShown;
+    if (isShown) {
       questionEyebrow.textContent = "QUESTION";
       questionText.textContent = d.text;
       showCard(questionCard, "question");
@@ -1122,9 +1130,15 @@ function startPolls() {
   });
 
   // Question controls visibility — render bars immediately on show
+  let pollWasShown = false;
+  let pollFirstSnap = true; // skip the first snap so sent.mp3 doesn't replay on output refresh
   onValue(pollsQRef, snap => {
     const d = snap.val() || {};
-    if (d.show && d.text) {
+    const isShown = !!(d.show && d.text);
+    if (!pollFirstSnap && isShown && !pollWasShown) playSnd(sndSent);
+    pollFirstSnap = false;
+    pollWasShown = isShown;
+    if (isShown) {
       questionEyebrow.textContent = "POLL";
       questionText.textContent = d.text;
       showCard(questionCard, "question");
@@ -1184,6 +1198,19 @@ onValue(drawModeRef, snap => {
   if (!snap.val()) { hideDrawPanel(); drawSubs = {}; }
 });
 onValue(drawSubRef, snap => { drawSubs = snap.val() || {}; });
+
+// Drawing prompt listener — purely for the sent.mp3 cue.
+// Output doesn't display the drawing prompt itself (that's only on phones), but we still
+// want to ring the sent sound on the speakers when teacher pushes a new drawing prompt.
+let drawPromptWasShown = false;
+let drawPromptFirstSnap = true; // skip the first snap so sent.mp3 doesn't replay on output refresh
+onValue(ref(db, "drawing/prompt"), snap => {
+  const d = snap.val() || {};
+  const isShown = !!(d.show && d.text);
+  if (!drawPromptFirstSnap && isShown && !drawPromptWasShown) playSnd(sndSent);
+  drawPromptFirstSnap = false;
+  drawPromptWasShown = isShown;
+});
 
 // Debounce hide so that when reveal mode swaps reveals (clear → set new),
 // the brief null state doesn't collapse the panel before the new image arrives.
@@ -1337,6 +1364,7 @@ const sndStart   = document.getElementById("sndStart");
 const sndTick    = document.getElementById("sndTick");
 const sndCorrect = document.getElementById("sndCorrect");
 const sndEnd     = document.getElementById("sndEnd");
+const sndSent    = document.getElementById("sndSent");
 function playSnd(el) {
   if (!el) return;
   try {
