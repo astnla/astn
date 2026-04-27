@@ -213,6 +213,7 @@ html, body {
 
     /* Drawing panel card */
     #drawPanelCard {
+      position: relative; /* anchor for #skribblGuessLayer */
       background: rgba(255,255,255,0.95);
       border-radius: clamp(10px, 1.2vh, 16px);
       overflow: hidden;
@@ -643,7 +644,7 @@ html, body {
     @keyframes breathe   { 0%,100%{opacity:.4;} 50%{opacity:1;} }
     @keyframes livePulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(.4);opacity:.4;} }
 
-    /* ── SKRIBBL ── */
+    /* ── SKRIBBL — FLOATING GUESS REACTIONS ── */
     #skribblGuessLayer {
       position: absolute; inset: 0;
       pointer-events: none; overflow: hidden;
@@ -651,29 +652,70 @@ html, body {
     }
     .floating-guess {
       position: absolute;
-      left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.65);
-      backdrop-filter: blur(6px);
-      border: 1px solid rgba(255,255,255,0.15);
+      /* JS sets --start-x, --end-x, --tilt, --drift-y, --rise */
+      left: var(--start-x);
+      bottom: -10%;
+      transform: translate(-50%, 0) scale(0.4) rotate(0deg);
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1.5px solid rgba(255, 255, 255, 0.18);
       color: white;
-      padding: clamp(6px,0.8vh,10px) clamp(10px,1.2vh,16px);
+      padding: clamp(8px, 1vh, 14px) clamp(14px, 1.5vh, 22px);
       border-radius: 99px;
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 700;
-      font-size: clamp(13px, 1.6vh, 20px);
+      font-size: clamp(14px, 1.7vh, 22px);
+      letter-spacing: 0.02em;
       white-space: nowrap;
-      animation: floatUp 3.5s ease-out forwards;
+      text-transform: uppercase;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      opacity: 0;
+      animation:
+        guessPopIn   0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+        guessDrift   5s    cubic-bezier(0.22, 1, 0.36, 1) 0.45s forwards,
+        guessFadeOut 1.2s  ease-in 4.25s forwards;
     }
-    .floating-guess.correct {
-      background: rgba(84,209,138,0.85);
-      color: #09180f;
-      font-size: clamp(16px, 2vh, 26px);
+    .floating-guess .guess-name {
+      display: inline-block;
+      opacity: 0.55;
+      font-weight: 700;
+      margin-right: 0.4em;
+    }
+    .floating-guess .guess-text {
+      display: inline-block;
       font-weight: 900;
+      color: #fff;
     }
-    @keyframes floatUp {
-      0%   { bottom: 5%; opacity: 1; transform: translateX(-50%) translateY(0) rotate(0deg); }
-      60%  { opacity: 1; }
-      100% { bottom: 80%; opacity: 0; transform: translateX(calc(-50% + var(--drift))) translateY(0) rotate(var(--spin)); }
+    /* Correct-guess styling kept in case it's ever re-enabled — but currently unused
+       since correct guesses are filtered out of the float layer. */
+    .floating-guess.correct {
+      background: rgba(84, 209, 138, 0.92);
+      color: #09180f;
+      border-color: rgba(255, 255, 255, 0.4);
+      font-size: clamp(16px, 2vh, 26px);
+    }
+    .floating-guess.correct .guess-name { opacity: 0.7; color: #09180f; }
+    .floating-guess.correct .guess-text { color: #09180f; }
+
+    /* Pop into existence with a slight overshoot — gives the bubble personality */
+    @keyframes guessPopIn {
+      0%   { opacity: 0; transform: translate(-50%, 0) scale(0.4) rotate(0deg); }
+      70%  { opacity: 1; transform: translate(-50%, -20px) scale(1.08) rotate(var(--tilt)); }
+      100% { opacity: 1; transform: translate(-50%, -28px) scale(1) rotate(var(--tilt)); }
+    }
+    /* Drift diagonally upward toward the end-x position with a gentle vertical sway */
+    @keyframes guessDrift {
+      0%   { transform: translate(-50%, -28px) scale(1) rotate(var(--tilt)); }
+      100% {
+        left: var(--end-x);
+        transform: translate(-50%, calc(-1 * var(--rise))) scale(1) rotate(calc(var(--tilt) * -0.5));
+      }
+    }
+    /* Soft fade out near the end of the drift */
+    @keyframes guessFadeOut {
+      0%   { opacity: 1; }
+      100% { opacity: 0; }
     }
 
     /* Leaderboard card — lives in infoPanel like other cards */
@@ -786,8 +828,6 @@ html, body {
       <div id="livePip">
         <span class="live-dot"></span>LIVE
       </div>
-      <!-- Floating guesses layer -->
-      <div id="skribblGuessLayer"></div>
       <!-- Winner overlay -->
       <div id="skribblWinnerOverlay">
         <div class="win-label">🎉 CORRECT!</div>
@@ -838,6 +878,8 @@ html, body {
       <img id="drawPanelImg" alt="student drawing" style="display:none;">
       <!-- Live canvas stream (skribbl mode) -->
       <img id="skribblLiveImg" alt="live drawing" style="width:100%;flex:1;object-fit:contain;display:none;background:white;">
+      <!-- Floating guesses layer — overlays the drawing so reactions show where eyes are -->
+      <div id="skribblGuessLayer"></div>
     </div>
     <!-- Hint underscores — only visible during skribbl mode -->
     <div id="skribblHintDisplay"></div>
@@ -1254,14 +1296,37 @@ function renderOutputLeaderboard(entries) {
 function spawnFloatingGuess(text, correct) {
   const el = document.createElement("div");
   el.className = "floating-guess" + (correct ? " correct" : "");
-  el.textContent = (correct ? "✓ " : "") + text;
-  const drift = (Math.random() - 0.5) * 60;
-  const spin  = (Math.random() - 0.5) * 12;
-  el.style.setProperty("--drift", drift + "px");
-  el.style.setProperty("--spin",  spin  + "deg");
-  el.style.bottom = "5%";
+
+  // Split "NAME: TEXT" into separate spans so the styling can dim the name
+  const colonIdx = text.indexOf(":");
+  if (colonIdx > 0 && !correct) {
+    const name  = text.slice(0, colonIdx).trim();
+    const guess = text.slice(colonIdx + 1).trim();
+    el.innerHTML =
+      `<span class="guess-name">${name}</span>` +
+      `<span class="guess-text">${guess}</span>`;
+  } else {
+    // Fallback / correct path — just plain text
+    el.textContent = (correct ? "✓ " : "") + text;
+  }
+
+  // Random horizontal start (10%–90%) and end (drift across by ±25%)
+  const startPct = 12 + Math.random() * 76;
+  const drift    = (Math.random() - 0.5) * 50; // -25% to +25%
+  const endPct   = Math.max(5, Math.min(95, startPct + drift));
+  // Random rise distance (45vh to 70vh) so bubbles don't all converge
+  const rise     = 45 + Math.random() * 25;
+  // Subtle rotation tilt — tighter range than before so it feels intentional
+  const tilt     = (Math.random() - 0.5) * 10;
+
+  el.style.setProperty("--start-x", startPct + "%");
+  el.style.setProperty("--end-x",   endPct   + "%");
+  el.style.setProperty("--rise",    rise     + "vh");
+  el.style.setProperty("--tilt",    tilt     + "deg");
+
   skribblGuessLayer.appendChild(el);
-  setTimeout(() => el.remove(), 3600);
+  // Remove after animation completes (0.45 + 5 + 0.7 = ~6.15s — give buffer)
+  setTimeout(() => el.remove(), 6500);
 }
 
 let skribblPhase = null; // "playing" | "results" | null
