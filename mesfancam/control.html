@@ -875,7 +875,7 @@ function setTool(t) {
 
 async function activateNone() {
   // Stop any in-flight skribbl timers FIRST so they don't fire after cleanup
-  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
   clearHintTimers();
   state.skribblWord = "";
   skribblLeaderboardEntries = [];
@@ -911,7 +911,7 @@ async function activateNone() {
 }
 // Helper — wipes ALL skribbl state, used when leaving skribbl for any other mode
 async function fullWipeSkribbl() {
-  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
   clearHintTimers();
   clearSpotlight();
   state.skribblWord = "";
@@ -1425,7 +1425,7 @@ els.endSessionBtn.onclick = async () => {
   els.autoLiveToggle.checked = false;
   clearHintTimers();
   stopDrawCountdown();
-  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
   logEvent("session", "Session ended manually");
   await exportSessionZip();
   await Promise.all([
@@ -1544,9 +1544,14 @@ els.drawDurationSlider.addEventListener("input", () => {
 });
 
 let drawCountdownInterval = null;
+let drawEndTimeout        = null;
+let drawEndEpoch          = 0;
+
 function startDrawCountdown(durationSec, startEpoch) {
   if (drawCountdownInterval) clearInterval(drawCountdownInterval);
+  if (drawEndTimeout) { clearTimeout(drawEndTimeout); drawEndTimeout = null; }
   const endEpoch = startEpoch + durationSec * 1000;
+  drawEndEpoch = endEpoch;
   els.drawCountdownBox.style.display = "";
 
   function tick() {
@@ -1560,17 +1565,22 @@ function startDrawCountdown(durationSec, startEpoch) {
     if (remaining <= 0) {
       clearInterval(drawCountdownInterval);
       drawCountdownInterval = null;
-      // Auto-fire the times-up button — only if it's still enabled
-      if (!els.timesUpBtn.classList.contains("disabled")) {
-        els.timesUpBtn.click();
-      }
     }
   }
   tick();
   drawCountdownInterval = setInterval(tick, 1000);
+
+  // Fail-safe one-shot timer — survives setInterval throttling on backgrounded tabs
+  drawEndTimeout = setTimeout(() => {
+    drawEndTimeout = null;
+    if (!els.timesUpBtn.classList.contains("disabled")) els.timesUpBtn.click();
+  }, Math.max(0, endEpoch - Date.now()));
 }
+
 function stopDrawCountdown() {
   if (drawCountdownInterval) { clearInterval(drawCountdownInterval); drawCountdownInterval = null; }
+  if (drawEndTimeout) { clearTimeout(drawEndTimeout); drawEndTimeout = null; }
+  drawEndEpoch = 0;
   els.drawCountdownBox.style.display = "none";
   els.drawCountdown.textContent = "—";
   els.drawCountdownFill.style.width = "100%";
@@ -1922,9 +1932,19 @@ function renderSkribblLeaderboard() {
     </div>`).join("");
 }
 
+// Fail-safe one-shot timeout for round-end. The setInterval tick is for visual
+// updates only; this is the actual "trigger results phase" mechanism. Backgrounded
+// tabs throttle setInterval HARD (sometimes pausing entirely), but a fire-once
+// setTimeout is more reliable, and even if it fires late (say, when the tab
+// regains focus), the round still ends correctly.
+let skribblEndTimeout = null;
+let skribblEndEpoch  = 0;
+
 function startSkribblCountdown(durationSec, startEpoch) {
   if (skribblCountdownInterval) clearInterval(skribblCountdownInterval);
+  if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; }
   const endEpoch = startEpoch + durationSec * 1000;
+  skribblEndEpoch = endEpoch;
 
   function tick() {
     const remaining = Math.max(0, Math.ceil((endEpoch - Date.now()) / 1000));
@@ -1935,23 +1955,75 @@ function startSkribblCountdown(durationSec, startEpoch) {
     if (remaining <= 0) {
       clearInterval(skribblCountdownInterval);
       skribblCountdownInterval = null;
-      enterResultsPhase();
     }
   }
   tick();
   skribblCountdownInterval = setInterval(tick, 1000);
+
+  // Fail-safe: schedule the round-end as a single timeout. If the interval
+  // gets throttled while the tab is minimized, this still fires (eventually)
+  // when the tab regains focus, ending the round correctly.
+  skribblEndTimeout = setTimeout(() => {
+    skribblEndTimeout = null;
+    // Guard against double-firing if results was already entered some other way
+    if (state.skribblPhase !== "results") enterResultsPhase();
+  }, Math.max(0, endEpoch - Date.now()));
 }
+
+// When control regains focus after being backgrounded, check whether the round
+// timer already expired. If yes, fire enterResultsPhase immediately. This catches
+// the case where both the interval AND the timeout were suspended by the OS.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (skribblEndEpoch && Date.now() >= skribblEndEpoch && state.skribblPhase === "playing") {
+    if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; }
+    enterResultsPhase();
+  }
+  if (drawEndEpoch && Date.now() >= drawEndEpoch && drawCountdownInterval !== null) {
+    // Drawing round expired while tab was hidden — auto-fire times-up
+    if (drawEndTimeout) { clearTimeout(drawEndTimeout); drawEndTimeout = null; }
+    if (!els.timesUpBtn.classList.contains("disabled")) els.timesUpBtn.click();
+  }
+});
 
 // Enter results phase — round is over but we keep the leaderboard up
 // for celebration. Switches live cam to 1st place winner, turns off auto-live,
 // signals output.html to slide drawing panel away.
 async function enterResultsPhase() {
-  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
   clearHintTimers();
 
   // Persist final leaderboard ranks
   const lb = skribblLeaderboardEntries.map((e, i) => ({ ...e, rank: i }));
   const winnerKey = lb[0]?.userKey || null;
+
+  // Archive the final drawing frame for the export ZIP. The live canvas stream
+  // doesn't normally persist anywhere — once the round ends and Reset clears
+  // skribbl/liveCanvas, it's gone forever. So we grab it NOW (during results)
+  // and stuff it into sessionDrawings using the same shape as draw mode submissions.
+  // The export function already iterates sessionDrawings and writes them to
+  // drawings/{name}_{prompt}.{ext} — no changes needed there.
+  try {
+    const drawerSnap = await get(ref(db, "skribbl/drawer"));
+    const drawerKey  = drawerSnap.val();
+    if (drawerKey) {
+      const liveSnap = await get(ref(db, "skribbl/liveCanvas"));
+      const dataURL  = liveSnap.val();
+      if (dataURL && typeof dataURL === "string" && dataURL.startsWith("data:")) {
+        const drawerName = state.participants[drawerKey]?.name || drawerKey;
+        const word       = state.skribblWord || "doodle";
+        sessionDrawings[`${drawerKey}_skribbl_${Date.now()}`] = {
+          data:   dataURL,
+          name:   drawerName,
+          prompt: word
+        };
+        logEvent("skribbl", `Archived ${drawerName}'s final drawing for "${word}"`);
+      }
+    }
+  } catch (e) {
+    // Don't let export failures block round-end — just log and move on
+    console.warn("Failed to archive skribbl drawing:", e);
+  }
 
   // If auto-live is on, pause it so the spotlight stays on the winner
   if (state.autoLiveEnabled) {
@@ -1992,7 +2064,7 @@ async function enterResultsPhase() {
 // Reset round — full teardown back to "fresh skribbl mode" so teacher can start a new round.
 // Mode stays TRUE so the panel still shows on phones (in idle/waiting state).
 async function resetSkribblRound() {
-  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; }
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
   clearHintTimers();
   state.skribblWord = "";
   skribblLeaderboardEntries = [];
