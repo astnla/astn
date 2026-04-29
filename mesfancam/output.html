@@ -224,7 +224,9 @@ html, body {
       pointer-events: none;
       transition:
         transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-        opacity   0.4s ease;
+        opacity   0.4s ease,
+        width     0.5s cubic-bezier(0.22, 1, 0.36, 1),
+        margin-left 0.5s cubic-bezier(0.22, 1, 0.36, 1);
       width: 0;
       overflow: hidden;
     }
@@ -236,6 +238,9 @@ html, body {
       max-width: calc(100vw - min(46vh, calc(100vw - clamp(48px, 8vw, 160px))) - clamp(16px, 2vw, 36px) - clamp(28px, 4vw, 60px));
       overflow: visible;
     }
+    /* While hiding, collapse the left margin so the panel slides AWAY rather than
+       leaving a phantom gap next to the cam (matches drawPanel feel) */
+    #wordlePanel:not(.show) { margin-left: 0; }
     #wordlePanelCard {
       background: rgba(0, 0, 0, 0.55);
       backdrop-filter: blur(12px);
@@ -263,15 +268,24 @@ html, body {
       justify-content: space-between;
       gap: clamp(6px, 0.8vh, 10px);
       min-height: clamp(16px, 2vh, 22px); /* reserve space so layout doesn't shift on results */
+      position: relative; /* anchor for absolute-positioned result text */
     }
     #wordlePanelLabel { letter-spacing: 0.18em; transition: opacity 0.3s ease; }
-    /* During results phase the message takes the whole row — hide the static
-       "WORDLE" label so the result text isn't cramped against the corner */
+    /* During results phase the result message floats ABSOLUTELY over the eyebrow
+       row so it can be visually large without pushing the grid container shorter.
+       Layout dimensions stay fixed across phases — only the visual changes. */
     #wordlePanelEyebrow.results #wordlePanelLabel { display: none; }
     #wordlePanelEyebrow.results #wordlePanelGuesser {
-      flex: 1;
+      position: absolute;
+      left: 0; right: 0; top: 50%;
+      transform: translateY(-50%);
       text-align: center;
+      font-size: clamp(20px, 3.4vh, 38px);
+      letter-spacing: 0.04em;
       animation: fadeUp 0.45s ease both;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     #wordlePanelGuesser {
       font-weight: 700;
@@ -280,16 +294,22 @@ html, body {
       text-transform: none;
       font-size: clamp(10px, 1.2vh, 14px);
     }
-    /* Turn timer bar — same visual language as the drawing-timer overlay */
+    /* Turn timer bar — pinned to the bottom of the eyebrow row so its
+       show/hide doesn't reflow the grid container below. The eyebrow already
+       has position:relative as the result-text anchor, so we can absolute-
+       position the bar against it without adding extra wrapper markup. */
     #wordleTurnTimerBar {
-      width: 100%;
-      height: 4px;
+      position: absolute;
+      left: 0; right: 0; bottom: -6px; /* sits just below the eyebrow text */
+      height: 3px;
       border-radius: 99px;
       background: rgba(255, 255, 255, 0.1);
       overflow: hidden;
-      display: none;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
     }
-    #wordleTurnTimerBar.show { display: block; }
+    #wordleTurnTimerBar.show { opacity: 1; }
     #wordleTurnTimerFill {
       height: 100%;
       width: 100%;
@@ -1108,9 +1128,10 @@ html, body {
       <div id="wordlePanelEyebrow">
         <span id="wordlePanelLabel">WORDLE</span>
         <span id="wordlePanelGuesser"></span>
+        <!-- Turn timer bar — pinned to the bottom edge of the eyebrow so its
+             show/hide is opacity-only and doesn't reflow the grid below -->
+        <div id="wordleTurnTimerBar"><div id="wordleTurnTimerFill"></div></div>
       </div>
-      <!-- Turn timer bar — visible only during playing phase when timer is on -->
-      <div id="wordleTurnTimerBar"><div id="wordleTurnTimerFill"></div></div>
       <div id="wordleGrid"></div>
       <div id="wordleKeyboard"></div>
     </div>
@@ -1933,30 +1954,40 @@ function renderWordleKeyboard() {
 
 function showWordlePanel() {
   if (!wordlePanel) return;
+  // Cancel any pending post-hide content cleanup since we're showing again
+  if (wordlePanelHideTimeout) { clearTimeout(wordlePanelHideTimeout); wordlePanelHideTimeout = null; }
   wordlePanel.classList.add("show");
 }
+let wordlePanelHideTimeout = null;
 function hideWordlePanel() {
   if (!wordlePanel) return;
   wordlePanel.classList.remove("show");
-}
-
-onValue(wordleModeRef, snap => {
-  wordleOn = snap.val() === true;
-  if (!wordleOn) {
-    hideWordlePanel();
+  // Defer content cleanup until the slide-out finishes (same pattern as drawPanel).
+  // Without this delay, the grid + keyboard empty mid-transition and you see a
+  // blank panel slide away instead of a populated one.
+  if (wordlePanelHideTimeout) clearTimeout(wordlePanelHideTimeout);
+  wordlePanelHideTimeout = setTimeout(() => {
+    wordlePanelHideTimeout = null;
+    if (wordlePanel.classList.contains("show")) return; // re-shown mid-fade — don't wipe
     if (wordleGrid)     wordleGrid.innerHTML = "";
     if (wordleKeyboard) wordleKeyboard.innerHTML = "";
-    wordleWord = "";
-    wordleGuesses = [];
-    wordleKbState = {};
-    // Phase 4 cleanup
-    if (wordleTickInterval) { clearInterval(wordleTickInterval); wordleTickInterval = null; }
     if (wordleTurnTimerBar) wordleTurnTimerBar.classList.remove("show");
     if (wordlePanelEyebrow) wordlePanelEyebrow.classList.remove("results");
     if (wordlePanelGuesser) {
       wordlePanelGuesser.textContent = "";
       wordlePanelGuesser.classList.remove("win", "lose");
     }
+  }, 520); // slightly longer than 0.5s transition for a clean handoff
+}
+
+onValue(wordleModeRef, snap => {
+  wordleOn = snap.val() === true;
+  if (!wordleOn) {
+    hideWordlePanel(); // handles content wipe + state classes after slide-out
+    wordleWord = "";
+    wordleGuesses = [];
+    wordleKbState = {};
+    if (wordleTickInterval) { clearInterval(wordleTickInterval); wordleTickInterval = null; }
   }
 });
 
@@ -1972,9 +2003,7 @@ onValue(wordleWordRef, snap => {
     renderWordleKeyboard();
     showWordlePanel();
   } else if (!wordleWord) {
-    hideWordlePanel();
-    if (wordleGrid)     wordleGrid.innerHTML = "";
-    if (wordleKeyboard) wordleKeyboard.innerHTML = "";
+    hideWordlePanel(); // handles content wipe after slide-out
     wordleGuesses = [];
     wordleKbState = {};
   }
@@ -2016,11 +2045,11 @@ function paintWordleEyebrow() {
     if (w.userKey && w.name) {
       wordlePanelGuesser.classList.add("win");
       wordlePanelGuesser.classList.remove("lose");
-      wordlePanelGuesser.textContent = `🎉 ${w.name} got it! Word was "${w.word || ""}"`;
+      wordlePanelGuesser.textContent = `${w.name} GOT IT!`;
     } else {
       wordlePanelGuesser.classList.add("lose");
       wordlePanelGuesser.classList.remove("win");
-      wordlePanelGuesser.textContent = `Nobody got it. Word was "${w.word || ""}"`;
+      wordlePanelGuesser.textContent = `IT WAS "${w.word || ""}"😔`;
     }
     return;
   }
@@ -2028,7 +2057,7 @@ function paintWordleEyebrow() {
   wordlePanelEyebrow.classList.remove("results");
   wordlePanelGuesser.classList.remove("win", "lose");
   wordlePanelGuesser.textContent = wordleCurrentGuesserName && wordlePhaseLocal === "playing"
-    ? `${wordleCurrentGuesserName}'s turn`
+    ? `${wordleCurrentGuesserName} IS GUESSING`
     : "";
 }
 
