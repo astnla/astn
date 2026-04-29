@@ -280,9 +280,7 @@ html, body {
       left: 0; right: 0; top: 50%;
       transform: translateY(-50%);
       text-align: center;
-      font-size: clamp(20px, 3.4vh, 38px);
       letter-spacing: 0.04em;
-      animation: fadeUp 0.45s ease both;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -293,6 +291,7 @@ html, body {
       color: rgba(255, 255, 255, 0.85);
       text-transform: none;
       font-size: clamp(10px, 1.2vh, 14px);
+      transition: opacity 0.3s ease;
     }
     /* Turn timer bar — pinned to the bottom of the eyebrow row so its
        show/hide doesn't reflow the grid container below. The eyebrow already
@@ -406,7 +405,7 @@ html, body {
       background: rgba(255, 255, 255, 0.12);
       border-radius: 3px;
       text-transform: uppercase;
-      transition: background 0.3s ease;
+      transition: background 0.5s ease, color 0.5s ease;
     }
     .wordle-key.correct { background: #538d4e; }
     .wordle-key.present { background: #b59f3b; }
@@ -1934,21 +1933,40 @@ if (typeof ResizeObserver !== "undefined" && wordleGrid) {
 }
 window.addEventListener("resize", () => sizeWordleOutputCells());
 
+// Cache of letter → key element so we can update colors in place rather than
+// rebuilding the whole keyboard on every state change. Rebuilding destroys
+// the DOM nodes, which means CSS transitions never get a chance to fire —
+// the browser only animates property changes on EXISTING elements.
+const wordleKeyEls = {};
+
 function renderWordleKeyboard() {
   if (!wordleKeyboard) return;
-  wordleKeyboard.innerHTML = "";
-  for (const row of KB_ROWS) {
-    const rowEl = document.createElement("div");
-    rowEl.className = "wordle-kb-row";
-    for (const letter of row) {
-      const k = document.createElement("div");
-      k.className = "wordle-key";
-      k.textContent = letter;
-      const state = wordleKbState[letter];
-      if (state) k.classList.add(state);
-      rowEl.appendChild(k);
+  // Build the keyboard once if it's empty; otherwise just refresh state classes.
+  if (wordleKeyboard.children.length === 0) {
+    wordleKeyboard.innerHTML = "";
+    for (const k in wordleKeyEls) delete wordleKeyEls[k];
+    for (const row of KB_ROWS) {
+      const rowEl = document.createElement("div");
+      rowEl.className = "wordle-kb-row";
+      for (const letter of row) {
+        const k = document.createElement("div");
+        k.className = "wordle-key";
+        k.textContent = letter;
+        wordleKeyEls[letter] = k;
+        rowEl.appendChild(k);
+      }
+      wordleKeyboard.appendChild(rowEl);
     }
-    wordleKeyboard.appendChild(rowEl);
+  }
+  // Sync state classes on the existing key elements. Setting a class that's
+  // already there is a no-op; switching from one state to another triggers
+  // the CSS background transition for a smooth color fade.
+  for (const letter in wordleKeyEls) {
+    const k = wordleKeyEls[letter];
+    const state = wordleKbState[letter];
+    // Use a single declarative className update — keeps "correct"/"present"/
+    // "absent" mutually exclusive and lets the browser diff cleanly.
+    k.className = state ? `wordle-key ${state}` : "wordle-key";
   }
 }
 
@@ -1970,7 +1988,11 @@ function hideWordlePanel() {
     wordlePanelHideTimeout = null;
     if (wordlePanel.classList.contains("show")) return; // re-shown mid-fade — don't wipe
     if (wordleGrid)     wordleGrid.innerHTML = "";
-    if (wordleKeyboard) wordleKeyboard.innerHTML = "";
+    if (wordleKeyboard) {
+      wordleKeyboard.innerHTML = "";
+      // Clear the cached key references so next round rebuilds fresh
+      for (const k in wordleKeyEls) delete wordleKeyEls[k];
+    }
     if (wordleTurnTimerBar) wordleTurnTimerBar.classList.remove("show");
     if (wordlePanelEyebrow) wordlePanelEyebrow.classList.remove("results");
     if (wordlePanelGuesser) {
@@ -2028,7 +2050,7 @@ onValue(wordleKeyboardStateRef, snap => {
 /* ─── Eyebrow text controller ───
  * The single #wordlePanelGuesser slot is repurposed across phases:
  *   • playing  → "ALICE's turn"   (updates as turn passes)
- *   • results  → "🎉 ALICE got it! Word was MANATEE"   (or "Nobody got it…")
+ *   • results  → "🎉 ALICE GOT IT!"   (or "IT WAS...")
  * Replaces the old separate result banner; keeps the panel from growing
  * vertically when the round ends.
  */
@@ -2037,28 +2059,65 @@ let wordleTickInterval = null;
 let wordleCurrentGuesserName = "";
 let wordleWinnerLocal = null;
 
-function paintWordleEyebrow() {
-  if (!wordlePanelGuesser || !wordlePanelEyebrow) return;
-  if (wordlePhaseLocal === "results" && wordleWinnerLocal) {
-    const w = wordleWinnerLocal;
-    wordlePanelEyebrow.classList.add("results");
-    if (w.userKey && w.name) {
-      wordlePanelGuesser.classList.add("win");
-      wordlePanelGuesser.classList.remove("lose");
-      wordlePanelGuesser.textContent = `${w.name} GOT IT!`;
-    } else {
-      wordlePanelGuesser.classList.add("lose");
-      wordlePanelGuesser.classList.remove("win");
-      wordlePanelGuesser.textContent = `IT WAS "${w.word || ""}"😔`;
-    }
+// Crossfade helper — fades the guesser slot out, runs the text-mutating fn,
+// then fades it back in. Skips the fade for the very first paint (when there's
+// no text yet) and for "no change" updates so we don't strobe on identical state.
+function crossfadeWordleEyebrow(applyFn) {
+  if (!wordlePanelGuesser) { applyFn(); return; }
+  const wasEmpty = wordlePanelGuesser.textContent === "";
+  // Capture pre-mutation snapshot to detect whether the text actually changes
+  const prevText  = wordlePanelGuesser.textContent;
+  const prevClass = wordlePanelGuesser.className;
+  const prevEyebrowClass = wordlePanelEyebrow ? wordlePanelEyebrow.className : "";
+  if (wasEmpty) {
+    // First paint or coming back from empty — apply immediately, the fadeUp
+    // animation on the .results state handles its own entry already
+    applyFn();
     return;
   }
-  // Not results — turn-name mode (or empty)
-  wordlePanelEyebrow.classList.remove("results");
-  wordlePanelGuesser.classList.remove("win", "lose");
-  wordlePanelGuesser.textContent = wordleCurrentGuesserName && wordlePhaseLocal === "playing"
-    ? `${wordleCurrentGuesserName} IS GUESSING`
-    : "";
+  // Fade out, swap, fade back in
+  wordlePanelGuesser.style.opacity = "0";
+  setTimeout(() => {
+    applyFn();
+    // If nothing changed, skip the fade-in flicker
+    const sameText  = wordlePanelGuesser.textContent === prevText;
+    const sameClass = wordlePanelGuesser.className === prevClass;
+    const sameEyebrowClass = (wordlePanelEyebrow ? wordlePanelEyebrow.className : "") === prevEyebrowClass;
+    if (sameText && sameClass && sameEyebrowClass) {
+      wordlePanelGuesser.style.opacity = "";
+      return;
+    }
+    // Allow the new content to render at opacity:0, then fade in
+    requestAnimationFrame(() => {
+      wordlePanelGuesser.style.opacity = "";
+    });
+  }, 220);
+}
+
+function paintWordleEyebrow() {
+  if (!wordlePanelGuesser || !wordlePanelEyebrow) return;
+  crossfadeWordleEyebrow(() => {
+    if (wordlePhaseLocal === "results" && wordleWinnerLocal) {
+      const w = wordleWinnerLocal;
+      wordlePanelEyebrow.classList.add("results");
+      if (w.userKey && w.name) {
+        wordlePanelGuesser.classList.add("win");
+        wordlePanelGuesser.classList.remove("lose");
+        wordlePanelGuesser.textContent = `${w.name} GOT IT!`;
+      } else {
+        wordlePanelGuesser.classList.add("lose");
+        wordlePanelGuesser.classList.remove("win");
+        wordlePanelGuesser.textContent = `IT WAS "${w.word || ""}"😔`;
+      }
+      return;
+    }
+    // Not results — turn-name mode (or empty)
+    wordlePanelEyebrow.classList.remove("results");
+    wordlePanelGuesser.classList.remove("win", "lose");
+    wordlePanelGuesser.textContent = wordleCurrentGuesserName && wordlePhaseLocal === "playing"
+      ? `${wordleCurrentGuesserName} IS GUESSING`
+      : "";
+  });
 }
 
 onValue(wordlePhaseRef, snap => {
