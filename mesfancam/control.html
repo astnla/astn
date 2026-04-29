@@ -2730,7 +2730,15 @@ document.addEventListener("visibilitychange", () => {
 async function enterWordleResultsPhase(winnerKey, winnerName, won) {
   stopWordleTurnTimer();
   const word = state.wordleWord || "";
-  await Promise.all([
+
+  // If auto-live is on, pause it so the spotlight stays on the winner — same
+  // pattern as skribbl. Operator can re-enable it manually after the round.
+  if (won && state.autoLiveEnabled) {
+    stopAuto();
+    els.autoLiveToggle.checked = false;
+  }
+
+  const ops = [
     set(ref(db,"wordle/phase"),               "results"),
     set(ref(db,"wordle/winner"),              won ? { userKey: winnerKey, name: winnerName, word } : { word, won: false }),
     set(ref(db,"wordle/turnEndEpoch"),        null),
@@ -2738,7 +2746,13 @@ async function enterWordleResultsPhase(winnerKey, winnerName, won) {
     set(ref(db,"wordle/currentGuesserName"),  null),
     set(ref(db,"wordle/pendingGuess"),        null),
     // Keep word + guesses + keyboardState so the reveal shows the full board
-  ]);
+  ];
+  // Switch live cam to the winner so they're spotlit during the reveal
+  if (won && winnerKey) {
+    ops.push(update(ref(db,"live"), { activeUser: winnerKey }));
+  }
+  await Promise.all(ops);
+
   // Control UI — same toggle pattern as skribbl results
   els.endWordleBtn.style.display = "none";
   els.resetWordleBtn.style.display = "";

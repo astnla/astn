@@ -262,8 +262,17 @@ html, body {
       align-items: center;
       justify-content: space-between;
       gap: clamp(6px, 0.8vh, 10px);
+      min-height: clamp(16px, 2vh, 22px); /* reserve space so layout doesn't shift on results */
     }
-    #wordlePanelLabel { letter-spacing: 0.18em; }
+    #wordlePanelLabel { letter-spacing: 0.18em; transition: opacity 0.3s ease; }
+    /* During results phase the message takes the whole row — hide the static
+       "WORDLE" label so the result text isn't cramped against the corner */
+    #wordlePanelEyebrow.results #wordlePanelLabel { display: none; }
+    #wordlePanelEyebrow.results #wordlePanelGuesser {
+      flex: 1;
+      text-align: center;
+      animation: fadeUp 0.45s ease both;
+    }
     #wordlePanelGuesser {
       font-weight: 700;
       letter-spacing: 0.05em;
@@ -288,25 +297,17 @@ html, body {
       border-radius: 99px;
       transition: width 1s linear, background 0.4s ease;
     }
-    /* Winner banner — appears in results phase */
-    #wordleResultBanner {
-      display: none;
-      padding: clamp(10px, 1.4vh, 16px);
-      background: rgba(84, 141, 78, 0.18);
-      border: 1px solid rgba(84, 141, 78, 0.5);
-      border-radius: 10px;
-      font-family: "Barlow Condensed", sans-serif;
+    /* Eyebrow result text — uses the existing #wordlePanelGuesser slot during
+       results phase to announce winner / no-winner, replacing the banner. */
+    #wordlePanelGuesser.win {
+      color: #b9e6a3;
       font-weight: 900;
-      font-size: clamp(14px, 1.8vh, 20px);
-      color: white;
-      text-align: center;
-      line-height: 1.3;
-      animation: fadeUp 0.5s ease both;
+      letter-spacing: 0.04em;
     }
-    #wordleResultBanner.show { display: block; }
-    #wordleResultBanner.lost {
-      background: rgba(58, 58, 60, 0.6);
-      border-color: rgba(255, 100, 124, 0.4);
+    #wordlePanelGuesser.lose {
+      color: #ff9eaa;
+      font-weight: 900;
+      letter-spacing: 0.04em;
     }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     #wordleGrid {
@@ -1110,8 +1111,6 @@ html, body {
       </div>
       <!-- Turn timer bar — visible only during playing phase when timer is on -->
       <div id="wordleTurnTimerBar"><div id="wordleTurnTimerFill"></div></div>
-      <!-- Winner banner — shown only during results phase -->
-      <div id="wordleResultBanner"></div>
       <div id="wordleGrid"></div>
       <div id="wordleKeyboard"></div>
     </div>
@@ -1159,10 +1158,10 @@ const lbPanelEmpty       = document.getElementById("lbPanelEmpty");
 const wordlePanel         = document.getElementById("wordlePanel");
 const wordleGrid          = document.getElementById("wordleGrid");
 const wordleKeyboard      = document.getElementById("wordleKeyboard");
+const wordlePanelEyebrow  = document.getElementById("wordlePanelEyebrow");
 const wordlePanelGuesser  = document.getElementById("wordlePanelGuesser");
 const wordleTurnTimerBar  = document.getElementById("wordleTurnTimerBar");
 const wordleTurnTimerFill = document.getElementById("wordleTurnTimerFill");
-const wordleResultBanner  = document.getElementById("wordleResultBanner");
 
 const activeUserRef  = ref(db, "live/activeUser");
 const frameRef       = ref(db, "live/frame");
@@ -1953,12 +1952,11 @@ onValue(wordleModeRef, snap => {
     // Phase 4 cleanup
     if (wordleTickInterval) { clearInterval(wordleTickInterval); wordleTickInterval = null; }
     if (wordleTurnTimerBar) wordleTurnTimerBar.classList.remove("show");
-    if (wordleResultBanner) {
-      wordleResultBanner.classList.remove("show");
-      wordleResultBanner.classList.remove("lost");
-      wordleResultBanner.textContent = "";
+    if (wordlePanelEyebrow) wordlePanelEyebrow.classList.remove("results");
+    if (wordlePanelGuesser) {
+      wordlePanelGuesser.textContent = "";
+      wordlePanelGuesser.classList.remove("win", "lose");
     }
-    if (wordlePanelGuesser) wordlePanelGuesser.textContent = "";
   }
 });
 
@@ -1998,36 +1996,60 @@ onValue(wordleKeyboardStateRef, snap => {
   if (wordleOn) renderWordleKeyboard();
 });
 
-/* ─── PHASE 4: timer bar, winner banner, current-guesser eyebrow ─── */
+/* ─── Eyebrow text controller ───
+ * The single #wordlePanelGuesser slot is repurposed across phases:
+ *   • playing  → "ALICE's turn"   (updates as turn passes)
+ *   • results  → "🎉 ALICE got it! Word was MANATEE"   (or "Nobody got it…")
+ * Replaces the old separate result banner; keeps the panel from growing
+ * vertically when the round ends.
+ */
 let wordlePhaseLocal = null;
 let wordleTickInterval = null;
+let wordleCurrentGuesserName = "";
+let wordleWinnerLocal = null;
+
+function paintWordleEyebrow() {
+  if (!wordlePanelGuesser || !wordlePanelEyebrow) return;
+  if (wordlePhaseLocal === "results" && wordleWinnerLocal) {
+    const w = wordleWinnerLocal;
+    wordlePanelEyebrow.classList.add("results");
+    if (w.userKey && w.name) {
+      wordlePanelGuesser.classList.add("win");
+      wordlePanelGuesser.classList.remove("lose");
+      wordlePanelGuesser.textContent = `🎉 ${w.name} got it! Word was "${w.word || ""}"`;
+    } else {
+      wordlePanelGuesser.classList.add("lose");
+      wordlePanelGuesser.classList.remove("win");
+      wordlePanelGuesser.textContent = `Nobody got it. Word was "${w.word || ""}"`;
+    }
+    return;
+  }
+  // Not results — turn-name mode (or empty)
+  wordlePanelEyebrow.classList.remove("results");
+  wordlePanelGuesser.classList.remove("win", "lose");
+  wordlePanelGuesser.textContent = wordleCurrentGuesserName && wordlePhaseLocal === "playing"
+    ? `${wordleCurrentGuesserName}'s turn`
+    : "";
+}
 
 onValue(wordlePhaseRef, snap => {
   wordlePhaseLocal = snap.val();
-  // Hide timer bar + reset banner when not in playing state
+  // Hide timer bar when leaving playing state
   if (wordlePhaseLocal !== "playing") {
     if (wordleTurnTimerBar) wordleTurnTimerBar.classList.remove("show");
     if (wordleTickInterval) { clearInterval(wordleTickInterval); wordleTickInterval = null; }
   }
-  // Hide banner when not in results state (it's painted by the winner listener)
-  if (wordlePhaseLocal !== "results" && wordleResultBanner) {
-    wordleResultBanner.classList.remove("show");
-    wordleResultBanner.classList.remove("lost");
-    wordleResultBanner.textContent = "";
-  }
+  paintWordleEyebrow();
   // Existing behavior: hide whole panel if everything is cleared
   if (wordlePhaseLocal === null && !wordleWord) {
     hideWordlePanel();
   }
 });
 
-// Current guesser name in the panel eyebrow
+// Current guesser name — used by paintWordleEyebrow in playing phase
 onValue(wordleCurrentGuesserNameRef, snap => {
-  if (!wordlePanelGuesser) return;
-  const name = snap.val();
-  wordlePanelGuesser.textContent = name && wordlePhaseLocal === "playing"
-    ? `${name}'s turn`
-    : "";
+  wordleCurrentGuesserName = snap.val() || "";
+  paintWordleEyebrow();
 });
 
 // Turn timer — drains as the guesser's time runs out
@@ -2059,24 +2081,10 @@ onValue(wordleTurnEndEpochRef, snap => {
   wordleTickInterval = setInterval(tick, 250);
 });
 
-// Winner banner — appears in results phase
+// Winner record — feeds into the eyebrow text during results phase
 onValue(wordleWinnerRef, snap => {
-  if (!wordleResultBanner) return;
-  const w = snap.val();
-  if (!w) {
-    wordleResultBanner.classList.remove("show");
-    wordleResultBanner.classList.remove("lost");
-    wordleResultBanner.textContent = "";
-    return;
-  }
-  wordleResultBanner.classList.add("show");
-  if (w.userKey && w.name) {
-    wordleResultBanner.classList.remove("lost");
-    wordleResultBanner.innerHTML = `🎉 ${w.name} got it!<br><span style="font-size:0.85em;opacity:0.85;">Word: ${w.word || ""}</span>`;
-  } else {
-    wordleResultBanner.classList.add("lost");
-    wordleResultBanner.innerHTML = `Nobody got it.<br><span style="font-size:0.85em;opacity:0.85;">Word was: ${w.word || ""}</span>`;
-  }
+  wordleWinnerLocal = snap.val() || null;
+  paintWordleEyebrow();
 });
 
 /* ── GATES ── */
