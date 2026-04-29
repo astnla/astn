@@ -1854,7 +1854,7 @@ function renderWordleKb() {
       k.className = "wordle-i-key";
       k.type = "button";
       if (key === "ENTER" || key === "DEL") k.classList.add("wide");
-      k.textContent = key === "DEL" ? "⌫" : key;
+      k.textContent = key === "DEL" ? "DEL" : key;
       k.dataset.key = key;
       // Apply per-letter state (for single-letter keys only)
       if (key.length === 1) {
