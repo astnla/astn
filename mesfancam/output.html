@@ -313,23 +313,30 @@ html, body {
       display: flex;
       flex-direction: column;
       gap: clamp(4px, 0.6vh, 8px);
-      flex: 1;
+      flex: 1 1 0;
+      min-height: 0;
+      width: 100%;
       align-items: center;
       justify-content: center;
     }
     .wordle-row {
       display: grid;
       gap: clamp(4px, 0.6vh, 8px);
+      flex: 0 0 auto;
+      /* Row height equals the cell size — JS computes this on render based on
+         actual container dimensions so it adapts to any (rows × cols) config */
+      height: var(--wordle-out-cell, 48px);
     }
     .wordle-cell {
-      aspect-ratio: 1 / 1;
-      width: clamp(28px, 5.5vh, 60px);
+      width:  var(--wordle-out-cell, 48px);
+      height: var(--wordle-out-cell, 48px);
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
-      font-size: clamp(18px, 3.5vh, 38px);
+      /* Letter font scales with cell size */
+      font-size: calc(var(--wordle-out-cell, 48px) * 0.62);
       color: white;
       border: 2px solid rgba(255, 255, 255, 0.18);
       border-radius: 4px;
@@ -1875,7 +1882,37 @@ function renderWordleGrid() {
     }
     wordleGrid.appendChild(row);
   }
+  // Compute the largest square cell that fits both width AND height constraints
+  // of the actual #wordleGrid container. Same pattern as the index overlay so
+  // the panel stays put regardless of (rows × cols) and viewport size.
+  sizeWordleOutputCells();
 }
+
+function sizeWordleOutputCells() {
+  if (!wordleGrid) return;
+  const cols = wordleWord.length;
+  const rows = wordleAttempts;
+  if (!cols || !rows) return;
+  const containerW = wordleGrid.clientWidth;
+  const containerH = wordleGrid.clientHeight;
+  if (containerW <= 0 || containerH <= 0) return; // not yet laid out
+  // Match the CSS gap: clamp(4px, 0.6vh, 8px). Approximate at runtime as 6px,
+  // which is correct enough for the size math (off-by-2px doesn't visibly matter).
+  const gap = 6;
+  const maxByWidth  = (containerW - (cols - 1) * gap) / cols;
+  const maxByHeight = (containerH - (rows - 1) * gap) / rows;
+  // Cap at 60px (the original max) so a small grid like 5×3 still looks chunky
+  const cellSize = Math.max(20, Math.min(maxByWidth, maxByHeight, 60));
+  wordleGrid.style.setProperty("--wordle-out-cell", cellSize + "px");
+}
+
+// Recompute on container resize (handles viewport size changes, panel show/hide,
+// 1080p vs 4K browser)
+if (typeof ResizeObserver !== "undefined" && wordleGrid) {
+  const wordleGridRO = new ResizeObserver(() => sizeWordleOutputCells());
+  wordleGridRO.observe(wordleGrid);
+}
+window.addEventListener("resize", () => sizeWordleOutputCells());
 
 function renderWordleKeyboard() {
   if (!wordleKeyboard) return;
