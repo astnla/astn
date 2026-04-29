@@ -154,8 +154,8 @@
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      gap:clamp(6px,1.6vh,12px);
-      padding:clamp(12px,3vh,22px) 12px;
+      gap:8px;
+      padding:10px;
       background:rgba(10,10,10,0.55);
       backdrop-filter:blur(6px);
       -webkit-backdrop-filter:blur(6px);
@@ -165,16 +165,32 @@
     }
     #wordleGridOverlay.show { display:flex; }
 
-    /* Guesser's mini-grid */
+    /* Guesser's mini-grid — flex:1 so it consumes whatever space the timer + padding
+       leave behind. Cells size themselves via the row's height (set as a CSS var
+       on render) so 10 rows fits as cleanly as 6 rows. */
     #wordleGuessGrid {
-      display:flex;flex-direction:column;gap:5px;align-items:center;
+      display:flex;flex-direction:column;gap:4px;align-items:center;
+      flex:1 1 0;
+      min-height:0;
+      width:100%;
+      justify-content:center;
     }
-    .wordle-i-row { display:grid; gap:5px; }
+    .wordle-i-row {
+      display:grid;
+      gap:4px;
+      flex:0 0 auto;
+      /* Row height is computed at render time from the available container
+         height ÷ row count. Falls back to a sane default if not set. */
+      height:var(--wordle-cell-size, 38px);
+    }
     .wordle-i-cell {
-      aspect-ratio:1/1; width:clamp(28px, 9vw, 42px);
+      width:var(--wordle-cell-size, 38px);
+      height:var(--wordle-cell-size, 38px);
       display:flex;align-items:center;justify-content:center;
       font-family:"Barlow Condensed",sans-serif;font-weight:900;
-      font-size:clamp(18px, 5vw, 26px);color:white;
+      /* Letter font scales with cell size */
+      font-size:calc(var(--wordle-cell-size, 38px) * 0.62);
+      color:white;
       border:2px solid rgba(255,255,255,0.22);
       border-radius:4px; background:rgba(0,0,0,0.25);
       text-transform:uppercase;
@@ -1794,7 +1810,38 @@ function renderWordleGuessGrid() {
     }
     wordleGuessGrid.appendChild(row);
   }
+  // Cells are square + sized to fit both dimensions of the overlay container.
+  // Recompute after the row elements exist so the grid's offsetHeight is accurate.
+  sizeWordleGridCells();
 }
+
+// Compute the largest square cell size that fits BOTH:
+//   • columns × cellSize + (cols-1)*gap ≤ available width
+//   • rows × cellSize + (rows-1)*gap ≤ available height
+// Sets the result as a CSS variable on the grid container.
+function sizeWordleGridCells() {
+  if (!wordleGuessGrid) return;
+  const cols = wordleWordLength;
+  const rows = wordleAttemptsLocal;
+  if (!cols || !rows) return;
+  const containerW = wordleGuessGrid.clientWidth;
+  const containerH = wordleGuessGrid.clientHeight;
+  if (containerW <= 0 || containerH <= 0) return; // not yet laid out — try later
+  const gap = 4;
+  const maxByWidth  = (containerW - (cols - 1) * gap) / cols;
+  const maxByHeight = (containerH - (rows - 1) * gap) / rows;
+  // Cap at 42px so cells never look gigantic with a tiny grid (e.g. 5×3)
+  const cellSize = Math.max(18, Math.min(maxByWidth, maxByHeight, 42));
+  wordleGuessGrid.style.setProperty("--wordle-cell-size", cellSize + "px");
+}
+
+// Recompute sizing whenever the overlay/container changes size (orientation
+// flips, viewport resize, panel show/hide can all change clientHeight)
+if (typeof ResizeObserver !== "undefined" && wordleGuessGrid) {
+  const ro = new ResizeObserver(() => sizeWordleGridCells());
+  ro.observe(wordleGuessGrid);
+}
+window.addEventListener("resize", () => sizeWordleGridCells());
 
 function renderWordleKb() {
   if (!wordleKb) return;
