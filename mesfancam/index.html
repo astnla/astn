@@ -137,6 +137,144 @@
     }
     .skribbl-lb-row.mine{background:rgba(84,209,138,0.15);border-color:rgba(84,209,138,0.5);}
 
+    /* ── WORDLE ── */
+    #wordleBox, #wordleWaitBox {
+      display:flex;flex-direction:column;gap:14px;width:min(92vw,380px);
+      align-items:center;
+    }
+    #wordleLabel, #wordleWaitLabel {
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:18px;
+      color:white;text-align:center;line-height:1.3;
+    }
+    #wordleSubLabel, #wordleWaitText {
+      font-family:"DM Sans",sans-serif;font-size:13px;color:rgba(255,255,255,0.6);
+      text-align:center;line-height:1.4;
+    }
+    #wordleWaitGuesserName { color:white; font-weight:700; }
+
+    /* Guesser's mini-grid — same colors as output */
+    #wordleGuessGrid {
+      display:flex;flex-direction:column;gap:5px;align-items:center;
+    }
+    .wordle-i-row { display:grid; gap:5px; }
+    .wordle-i-cell {
+      aspect-ratio:1/1; width:clamp(28px, 9vw, 42px);
+      display:flex;align-items:center;justify-content:center;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;
+      font-size:clamp(18px, 5vw, 26px);color:white;
+      border:2px solid rgba(255,255,255,0.18);
+      border-radius:4px; background:transparent;
+      text-transform:uppercase;
+      transition:background 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
+    }
+    .wordle-i-cell.filled  { border-color: rgba(255,255,255,0.55); transform:scale(1.05);}
+    .wordle-i-cell.correct { background:#538d4e; border-color:#538d4e; }
+    .wordle-i-cell.present { background:#b59f3b; border-color:#b59f3b; }
+    .wordle-i-cell.absent  { background:#3a3a3c; border-color:#3a3a3c; }
+
+    /* On-screen keyboard */
+    #wordleKb { display:flex;flex-direction:column;gap:5px;width:100%; }
+    .wordle-i-kb-row { display:flex;gap:4px;justify-content:center; }
+    .wordle-i-key {
+      flex:1; min-width:0;
+      max-width:36px;
+      height:42px;
+      display:flex;align-items:center;justify-content:center;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:15px;
+      color:white;
+      background:rgba(255,255,255,0.12);
+      border:none;border-radius:4px;
+      text-transform:uppercase;
+      cursor:pointer;
+      transition:background 0.2s ease, transform 0.08s ease;
+      -webkit-tap-highlight-color:transparent;
+      user-select:none;
+      padding:0;
+    }
+    .wordle-i-key.wide { flex:1.6; max-width:60px; font-size:11px; }
+    .wordle-i-key:active { transform:scale(0.94); }
+    .wordle-i-key.correct { background:#538d4e; }
+    .wordle-i-key.present { background:#b59f3b; }
+    .wordle-i-key.absent  { background:#3a3a3c; opacity:0.7; }
+    .wordle-i-key:disabled { pointer-events:none; opacity:0.5; }
+
+    /* Confidence buttons (non-guesser spectator state) */
+    #wordleConfidencePrompt {
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:14px;
+      color:rgba(255,255,255,0.7);text-align:center;
+      letter-spacing:0.05em;text-transform:uppercase;
+      margin-top:8px;
+    }
+    #wordleConfidenceButtons {
+      display:flex;flex-direction:column;gap:8px;width:100%;
+    }
+    .wordle-conf-btn {
+      display:flex;align-items:center;gap:12px;
+      width:100%;padding:14px 16px;
+      background:rgba(255,255,255,0.06);
+      border:2px solid rgba(255,255,255,0.18);
+      border-radius:10px;
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;
+      font-size:18px;color:white;
+      cursor:pointer;
+      transition:background 0.18s ease, border-color 0.18s ease, transform 0.08s ease;
+      -webkit-tap-highlight-color:transparent;
+      text-align:left;
+    }
+    .wordle-conf-btn span { letter-spacing:0.04em; }
+    .wordle-conf-btn:active { transform:scale(0.98); }
+    .wordle-conf-btn:hover  { background:rgba(255,255,255,0.10); }
+    .wordle-conf-btn.selected {
+      background:rgba(84,209,138,0.18);
+      border-color:rgba(84,209,138,0.7);
+    }
+    #wordleConfidenceConfirm {
+      font-family:"DM Sans",sans-serif;font-size:11px;
+      color:rgba(255,255,255,0.45);
+      text-align:center;line-height:1.4;
+      display:none; /* shown only after first vote */
+    }
+    #wordleConfidenceConfirm.show { display:block; }
+
+    /* Phase 4: turn timer bar — visible only when timer mode is on */
+    #wordleTurnTimerBar {
+      width:100%;height:4px;border-radius:99px;
+      background:rgba(255,255,255,0.12);
+      overflow:hidden;
+      display:none;
+    }
+    #wordleTurnTimerBar.show { display:block; }
+    #wordleTurnTimerFill {
+      height:100%;border-radius:99px;
+      background:white;
+      width:100%;
+      transition:width 1s linear, background 0.4s ease;
+    }
+
+    /* Phase 4: results box — shown to all phones when round ends */
+    #wordleResultBox {
+      display:none;flex-direction:column;gap:10px;
+      width:min(82vw,340px);align-items:center;
+      padding:18px 20px;
+      background:rgba(84,141,78,0.18);
+      border:1px solid rgba(84,141,78,0.5);
+      border-radius:12px;
+    }
+    #wordleResultBox.show { display:flex; }
+    #wordleResultBox.lost {
+      background:rgba(58,58,60,0.6);
+      border-color:rgba(255,100,124,0.4);
+    }
+    #wordleResultIcon { font-size:32px;line-height:1; }
+    #wordleResultLine1 {
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;
+      font-size:18px;color:white;text-align:center;line-height:1.3;
+    }
+    #wordleResultLine2 {
+      font-family:"DM Sans",sans-serif;font-size:13px;
+      color:rgba(255,255,255,0.85);text-align:center;
+    }
+
     /* Letter grid */
     #skribblLetterGrid{
       display:flex;flex-wrap:wrap;justify-content:center;
@@ -415,6 +553,37 @@
   <div id="skribblLeaderboardBox" class="ui-panel">
     <div id="skribblLeaderboardTitle">🏆 LEADERBOARD</div>
     <div id="skribblLeaderboardList"></div>
+  </div>
+
+  <!-- ─── WORDLE: guesser sees grid + keyboard. Phase 3 will add a separate
+       waiting-state panel for non-guessers + confidence buttons. ─── -->
+  <div id="wordleBox" class="ui-panel">
+    <div id="wordleLabel">🔤 WORDLE — YOUR TURN</div>
+    <div id="wordleSubLabel">Tap letters to guess</div>
+    <!-- Turn timer (only visible when timer is on for the round) -->
+    <div id="wordleTurnTimerBar"><div id="wordleTurnTimerFill"></div></div>
+    <div id="wordleGuessGrid"></div>
+    <div id="wordleKb"></div>
+  </div>
+  <!-- Spectator state shown when wordle is active but you're NOT the guesser.
+       Three confidence buttons let the operator know who's likely to get it.
+       User can change their vote anytime — the most-recent click wins. -->
+  <div id="wordleWaitBox" class="ui-panel">
+    <div id="wordleWaitLabel">🔤 WORDLE</div>
+    <div id="wordleWaitText">Watching <span id="wordleWaitGuesserName">someone</span> guess…</div>
+    <div id="wordleConfidencePrompt">How confident are you?</div>
+    <div id="wordleConfidenceButtons">
+      <button class="wordle-conf-btn" data-confidence="low"    type="button">🔴<span>NO IDEA</span></button>
+      <button class="wordle-conf-btn" data-confidence="medium" type="button">🟡<span>KIND OF</span></button>
+      <button class="wordle-conf-btn" data-confidence="high"   type="button">🟢<span>I KNOW IT</span></button>
+    </div>
+    <div id="wordleConfidenceConfirm">Vote saved — tap again to change.</div>
+  </div>
+  <!-- Results panel shown to all phones during results phase -->
+  <div id="wordleResultBox" class="ui-panel">
+    <div id="wordleResultIcon">🎉</div>
+    <div id="wordleResultLine1"></div>
+    <div id="wordleResultLine2"></div>
   </div>
 
   <!-- So Close toast (lives outside flow so it's always fixed to viewport) -->
@@ -1514,6 +1683,369 @@ skribblGuess.addEventListener("click", async () => {
     });
   } catch (e) { /* ignore */ }
   skribblSubmitting = false;
+});
+
+/* ── WORDLE ──
+ * Two states for the phone:
+ *   - I'm the current guesser → show grid + keyboard, can type and submit
+ *   - I'm not the guesser → show "watching X guess..." panel
+ * Phase 3 will replace the spectator panel with confidence buttons.
+ *
+ * The phone never learns the answer — only wordLength, guesses, keyboardState,
+ * and currentGuesser. The Wordle algorithm runs entirely on control.
+ */
+const wordleBox             = document.getElementById("wordleBox");
+const wordleWaitBox         = document.getElementById("wordleWaitBox");
+const wordleResultBox       = document.getElementById("wordleResultBox");
+const wordleResultIcon      = document.getElementById("wordleResultIcon");
+const wordleResultLine1     = document.getElementById("wordleResultLine1");
+const wordleResultLine2     = document.getElementById("wordleResultLine2");
+const wordleGuessGrid       = document.getElementById("wordleGuessGrid");
+const wordleKb              = document.getElementById("wordleKb");
+const wordleWaitGuesserName = document.getElementById("wordleWaitGuesserName");
+const wordleIdxTimerBar     = document.getElementById("wordleTurnTimerBar");
+const wordleIdxTimerFill    = document.getElementById("wordleTurnTimerFill");
+
+const wordleModeRef          = ref(db, "wordle/mode");
+const wordlePhaseRef         = ref(db, "wordle/phase");
+const wordleWordLengthRef    = ref(db, "wordle/wordLength");
+const wordleAttemptsRef      = ref(db, "wordle/attempts");
+const wordleGuessesRef       = ref(db, "wordle/guesses");
+const wordleKbStateRef       = ref(db, "wordle/keyboardState");
+const wordleCurrentGuesserRef= ref(db, "wordle/currentGuesser");
+const wordlePendingGuessRef  = ref(db, "wordle/pendingGuess");
+const wordleTurnEndEpochRef_idx  = ref(db, "wordle/turnEndEpoch");
+const wordleWinnerRef_idx        = ref(db, "wordle/winner");
+
+let wordleActive       = false;
+let wordlePhase_idx    = null;          // local copy (named to avoid clash with skribblPhase)
+let wordleAmGuesser    = false;
+let wordleWordLength   = 0;
+let wordleAttemptsLocal= 6;
+let wordleGuessesLocal = [];            // [{ text, evaluation, guesserName, ... }]
+let wordleKbStateLocal = {};
+let wordleCurrentInput = "";            // letters this guesser has typed for the current row
+let wordleSubmitting   = false;
+
+const KB_LAYOUT = [
+  ["Q","W","E","R","T","Y","U","I","O","P"],
+  ["A","S","D","F","G","H","J","K","L"],
+  ["ENTER","Z","X","C","V","B","N","M","DEL"],
+];
+
+function renderWordleGuessGrid() {
+  if (!wordleGuessGrid) return;
+  wordleGuessGrid.innerHTML = "";
+  const cols = wordleWordLength;
+  if (!cols) return;
+
+  for (let r = 0; r < wordleAttemptsLocal; r++) {
+    const row = document.createElement("div");
+    row.className = "wordle-i-row";
+    row.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    const guess = wordleGuessesLocal[r];
+    const isActiveRow = !guess && r === wordleGuessesLocal.length;
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement("div");
+      cell.className = "wordle-i-cell";
+      if (guess) {
+        const letter = (guess.text || "")[c] || "";
+        const evalState = guess.evaluation?.[c];
+        if (letter) cell.textContent = letter.toUpperCase();
+        if (evalState) cell.classList.add(evalState);
+      } else if (isActiveRow && wordleAmGuesser) {
+        const letter = wordleCurrentInput[c];
+        if (letter) {
+          cell.textContent = letter.toUpperCase();
+          cell.classList.add("filled");
+        }
+      }
+      row.appendChild(cell);
+    }
+    wordleGuessGrid.appendChild(row);
+  }
+}
+
+function renderWordleKb() {
+  if (!wordleKb) return;
+  wordleKb.innerHTML = "";
+  for (const row of KB_LAYOUT) {
+    const rowEl = document.createElement("div");
+    rowEl.className = "wordle-i-kb-row";
+    for (const key of row) {
+      const k = document.createElement("button");
+      k.className = "wordle-i-key";
+      k.type = "button";
+      if (key === "ENTER" || key === "DEL") k.classList.add("wide");
+      k.textContent = key === "DEL" ? "⌫" : key;
+      k.dataset.key = key;
+      // Apply per-letter state (for single-letter keys only)
+      if (key.length === 1) {
+        const state = wordleKbStateLocal[key];
+        if (state) k.classList.add(state);
+      }
+      k.addEventListener("click", () => handleWordleKey(key));
+      rowEl.appendChild(k);
+    }
+    wordleKb.appendChild(rowEl);
+  }
+}
+
+function handleWordleKey(key) {
+  if (!wordleAmGuesser || wordlePhase_idx !== "playing") return;
+  if (key === "DEL") {
+    if (wordleCurrentInput.length === 0) return;
+    wordleCurrentInput = wordleCurrentInput.slice(0, -1);
+    renderWordleGuessGrid();
+    return;
+  }
+  if (key === "ENTER") {
+    submitWordleGuess();
+    return;
+  }
+  if (wordleCurrentInput.length >= wordleWordLength) return;
+  wordleCurrentInput += key.toUpperCase();
+  renderWordleGuessGrid();
+}
+
+async function submitWordleGuess() {
+  if (wordleSubmitting) return;
+  if (wordleCurrentInput.length !== wordleWordLength) return;
+  if (!wordleAmGuesser) return;
+  wordleSubmitting = true;
+  const text = wordleCurrentInput;
+  // Optimistic clear so user can see the next row open up
+  wordleCurrentInput = "";
+  try {
+    await set(wordlePendingGuessRef, {
+      text,
+      guesserKey:  userKey,
+      guesserName: name || userKey,
+      ts:          Date.now(),
+    });
+  } catch (e) { /* ignore — control will eventually evaluate */ }
+  wordleSubmitting = false;
+}
+
+function updateWordleVisibility() {
+  if (!wordleActive) {
+    hidePanel(wordleBox);
+    hidePanel(wordleWaitBox);
+    hidePanel(wordleResultBox);
+    return;
+  }
+  if (wordlePhase_idx === "results") {
+    // Show results panel to everyone, hide the playing/spectator panels
+    hidePanel(wordleBox);
+    hidePanel(wordleWaitBox);
+    showPanel(wordleResultBox);
+    return;
+  }
+  if (wordlePhase_idx !== "playing") {
+    hidePanel(wordleBox);
+    hidePanel(wordleWaitBox);
+    hidePanel(wordleResultBox);
+    return;
+  }
+  // Playing phase
+  hidePanel(wordleResultBox);
+  if (wordleAmGuesser) {
+    hidePanel(wordleWaitBox);
+    showPanel(wordleBox);
+  } else {
+    hidePanel(wordleBox);
+    showPanel(wordleWaitBox);
+  }
+}
+
+onValue(wordleModeRef, snap => {
+  wordleActive = snap.val() === true;
+  if (!wordleActive) {
+    wordleAmGuesser    = false;
+    wordleCurrentInput = "";
+    wordleGuessesLocal = [];
+    wordleKbStateLocal = {};
+    wordleWordLength   = 0;
+    wordleMyConfidence = null;
+    wordleGuessGrid && (wordleGuessGrid.innerHTML = "");
+    wordleKb && (wordleKb.innerHTML = "");
+    paintConfidenceButtons();
+    // Phase 4 cleanup
+    stopWordleIdxTimer();
+    if (wordleIdxTimerBar) wordleIdxTimerBar.classList.remove("show");
+    if (wordleResultBox) {
+      wordleResultBox.classList.remove("show");
+      wordleResultBox.classList.remove("lost");
+    }
+  }
+  updateWordleVisibility();
+});
+
+onValue(wordlePhaseRef, snap => {
+  wordlePhase_idx = snap.val();
+  // New round starting → clear the in-progress input
+  if (wordlePhase_idx === "playing") wordleCurrentInput = "";
+  // Stop timer if leaving playing phase
+  if (wordlePhase_idx !== "playing") {
+    stopWordleIdxTimer();
+    if (wordleIdxTimerBar) wordleIdxTimerBar.classList.remove("show");
+  }
+  updateWordleVisibility();
+  renderWordleGuessGrid();
+});
+
+onValue(wordleWordLengthRef, snap => {
+  wordleWordLength = parseInt(snap.val(), 10) || 0;
+  if (wordleActive) renderWordleGuessGrid();
+});
+
+onValue(wordleAttemptsRef, snap => {
+  wordleAttemptsLocal = parseInt(snap.val(), 10) || 6;
+  if (wordleActive) renderWordleGuessGrid();
+});
+
+onValue(wordleGuessesRef, snap => {
+  const v = snap.val();
+  wordleGuessesLocal = v
+    ? (Array.isArray(v) ? v.filter(Boolean) : Object.values(v))
+    : [];
+  // Successful submission round-trip → input is now part of the grid as the
+  // newest guess row, so make sure local input is empty for the next row
+  wordleCurrentInput = "";
+  if (wordleActive) renderWordleGuessGrid();
+});
+
+onValue(wordleKbStateRef, snap => {
+  wordleKbStateLocal = snap.val() || {};
+  if (wordleActive) renderWordleKb();
+});
+
+/* ── CONFIDENCE BUTTONS (non-guesser state) ──
+ * User picks one of three confidence levels; their vote is written to
+ * /wordle/confidence/{userKey}: { level, name, ts }. Vote can be changed
+ * any time during the round. Restored on refresh from Firebase truth.
+ */
+const wordleConfidenceButtons = document.querySelectorAll(".wordle-conf-btn");
+const wordleConfidenceConfirm = document.getElementById("wordleConfidenceConfirm");
+const wordleConfidenceRef     = ref(db, `wordle/confidence/${userKey}`);
+const wordleCurrentGuesserNameRef = ref(db, "wordle/currentGuesserName");
+
+let wordleMyConfidence = null;
+
+function paintConfidenceButtons() {
+  wordleConfidenceButtons.forEach(b => {
+    b.classList.toggle("selected", b.dataset.confidence === wordleMyConfidence);
+  });
+  if (wordleConfidenceConfirm) {
+    wordleConfidenceConfirm.classList.toggle("show", !!wordleMyConfidence);
+  }
+}
+
+wordleConfidenceButtons.forEach(btn => {
+  btn.addEventListener("click", async () => {
+    if (!wordleActive || wordlePhase_idx !== "playing") return;
+    const level = btn.dataset.confidence;
+    if (level === wordleMyConfidence) return; // no-op if same
+    wordleMyConfidence = level;
+    paintConfidenceButtons();
+    try {
+      await set(wordleConfidenceRef, {
+        level,
+        name: name || userKey,
+        ts:   Date.now(),
+      });
+    } catch (e) { /* ignore network blips */ }
+  });
+});
+
+// Restore vote on page load / re-attach
+onValue(wordleConfidenceRef, snap => {
+  const v = snap.val();
+  wordleMyConfidence = v?.level || null;
+  paintConfidenceButtons();
+});
+
+onValue(wordleCurrentGuesserRef, snap => {
+  const guesserKey = snap.val();
+  wordleAmGuesser = (guesserKey && guesserKey === userKey);
+  // Switching to/from being the guesser: clear any half-typed input
+  wordleCurrentInput = "";
+  updateWordleVisibility();
+  renderWordleGuessGrid();
+  renderWordleKb();
+});
+
+// Separate listener for the guesser's display name (control writes both this
+// and currentGuesser when picking; we keep them in two paths so this can update
+// the spectator label without forcing the full guesser-render flow).
+onValue(wordleCurrentGuesserNameRef, snap => {
+  const guesserName = snap.val();
+  if (wordleWaitGuesserName) {
+    wordleWaitGuesserName.textContent = wordleAmGuesser
+      ? "you"
+      : (guesserName || "someone");
+  }
+});
+
+/* ─── PHASE 4: turn timer bar (visible to everyone — guesser sees their countdown,
+ * spectators see how much time remains for current guesser) ─── */
+let wordleIdxTickInterval = null;
+function stopWordleIdxTimer() {
+  if (wordleIdxTickInterval) {
+    clearInterval(wordleIdxTickInterval);
+    wordleIdxTickInterval = null;
+  }
+}
+onValue(wordleTurnEndEpochRef_idx, snap => {
+  if (!wordleIdxTimerBar || !wordleIdxTimerFill) return;
+  const epoch = snap.val();
+  stopWordleIdxTimer();
+  if (!epoch || wordlePhase_idx !== "playing" || !wordleActive) {
+    wordleIdxTimerBar.classList.remove("show");
+    wordleIdxTimerFill.style.width = "100%";
+    return;
+  }
+  const startMs = Date.now();
+  const totalMs = Math.max(1, epoch - startMs);
+  wordleIdxTimerBar.classList.add("show");
+  function tick() {
+    const remaining = Math.max(0, epoch - Date.now());
+    const pct = (remaining / totalMs) * 100;
+    wordleIdxTimerFill.style.width = pct + "%";
+    wordleIdxTimerFill.style.background = remaining <= 5000 ? "#ff647c" : "white";
+    if (remaining <= 0) {
+      stopWordleIdxTimer();
+      setTimeout(() => wordleIdxTimerBar.classList.remove("show"), 600);
+    }
+  }
+  tick();
+  wordleIdxTickInterval = setInterval(tick, 250);
+});
+
+/* ─── PHASE 4: results panel content — paint the winner / no-winner reveal ─── */
+onValue(wordleWinnerRef_idx, snap => {
+  const w = snap.val();
+  if (!wordleResultBox || !wordleResultLine1 || !wordleResultLine2 || !wordleResultIcon) return;
+  if (!w) {
+    wordleResultBox.classList.remove("show");
+    wordleResultBox.classList.remove("lost");
+    wordleResultIcon.textContent = "🎉";
+    wordleResultLine1.textContent = "";
+    wordleResultLine2.textContent = "";
+    return;
+  }
+  if (w.userKey && w.name) {
+    wordleResultBox.classList.remove("lost");
+    wordleResultIcon.textContent = "🎉";
+    const isMe = w.userKey === userKey;
+    wordleResultLine1.textContent = isMe ? "You got it!" : `${w.name} got it!`;
+    wordleResultLine2.textContent = `Word: ${w.word || ""}`;
+  } else {
+    wordleResultBox.classList.add("lost");
+    wordleResultIcon.textContent = "🤐";
+    wordleResultLine1.textContent = "Nobody got it.";
+    wordleResultLine2.textContent = `Word was: ${w.word || ""}`;
+  }
 });
 
 /* ── DRAW TOOLBAR ── */

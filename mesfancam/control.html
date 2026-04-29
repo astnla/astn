@@ -405,6 +405,9 @@
         <button id="showDrawBtn" class="seg">SKETCHERS</button>
         <button id="showSkribblBtn" class="seg">WHAT'S MY DOODLE?</button>
       </div>
+      <div class="seg-row" style="grid-template-columns:1fr;margin-top:0;">
+        <button id="showWordleBtn" class="seg">WORDLE</button>
+      </div>
 
       <p id="toolIntro" class="tool-intro">Nothing active yet, pick an activity!</p>
 
@@ -535,6 +538,72 @@
         </div>
       </div>
 
+      <!-- ─── WORDLE SHELL (Phase 1: skeleton — word + attempts + timer config) ─── -->
+      <div id="wordleShell" class="feature-shell">
+        <div class="feature-block">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">secret word</div>
+          <div class="send-row">
+            <input id="wordleWordInput" class="input" placeholder="e.g. MANATEE…" maxlength="12" autocomplete="off" autocorrect="off" spellcheck="false">
+            <button id="startWordleBtn" class="btn-accent disabled" style="font-size:13px;">START</button>
+          </div>
+          <div id="wordleWordHint" style="font-size:10px;color:var(--muted);margin-top:-2px;">5 letters minimum — letters only</div>
+
+          <!-- Attempts slider -->
+          <div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">attempts</div>
+              <div id="wordleAttemptsLabel" style="font-size:13px;font-weight:900;color:var(--accent);">6</div>
+            </div>
+            <input type="range" id="wordleAttemptsSlider" min="3" max="10" step="1" value="6"
+              style="width:100%;accent-color:var(--accent);cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
+              <span>3</span><span>6</span><span>10</span>
+            </div>
+          </div>
+
+          <!-- Turn timer slider (with OFF option for manual mode) -->
+          <div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">turn timer</div>
+              <div id="wordleTimerLabel" style="font-size:13px;font-weight:900;color:var(--accent);">30s</div>
+            </div>
+            <input type="range" id="wordleTimerSlider" min="0" max="60" step="5" value="30"
+              style="width:100%;accent-color:var(--accent);cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
+              <span>OFF</span><span>30s</span><span>60s</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.4;">
+              When OFF, you manually pick the next guesser. Otherwise, picks rotate by confidence with a per-turn time limit.
+            </div>
+          </div>
+
+          <!-- Status area: shown only when a round is active -->
+          <div id="wordleStatusArea" style="display:none;margin-top:2px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">current guesser</div>
+            <div id="wordleCurrentGuesserBox" style="background:rgba(84,209,138,0.12);border:1px solid rgba(84,209,138,0.3);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:900;">
+              <span id="wordleCurrentGuesserName" style="flex:1;">— nobody yet —</span>
+              <button id="wordlePickFirstBtn" class="btn-accent" style="font-size:11px;padding:6px 10px;">PICK FIRST GUESSER</button>
+            </div>
+
+            <!-- Queue panel: voters sorted 🟢→🟡→🔴, click a name to pick them -->
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:10px;">guess queue (click to pick)</div>
+            <div id="wordleQueueList" style="display:flex;flex-direction:column;gap:5px;margin-top:6px;min-height:32px;">
+              <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No votes yet — students rate their confidence on their phones.</div>
+            </div>
+
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:10px;">guesses</div>
+            <div id="wordleGuessesLog" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;min-height:24px;font-size:12px;">
+              <div style="color:var(--muted);text-align:center;padding:6px;">Waiting for first guess…</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button id="endWordleBtn" class="btn-danger disabled" style="font-size:13px;flex:1;">END ROUND</button>
+            <button id="resetWordleBtn" class="btn-accent" style="font-size:13px;flex:1;display:none;">🔄 RESET ROUND</button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- RIGHT: PARTICIPANTS -->
@@ -633,6 +702,7 @@ turnOffFanCamBtn.addEventListener("click", async () => {
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null, timeEnd:null, timesUp:null }),
     set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null, phase:null }),
+    set(ref(db,"wordle"), { mode:false, phase:null, word:null, wordLength:null, attempts:6, turnDurationSec:30, guesses:null, keyboardState:null, currentGuesser:null, currentGuesserName:null, pendingGuess:null, confidence:null, turnEndEpoch:null, winner:null }),
     set(ref(db,"meta/resetFlag"), Date.now()),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
@@ -675,6 +745,25 @@ const els = {
   drawShell:      document.getElementById("drawShell"),
   showSkribblBtn:     document.getElementById("showSkribblBtn"),
   skribblShell:       document.getElementById("skribblShell"),
+
+  // ─── WORDLE ───
+  showWordleBtn:        document.getElementById("showWordleBtn"),
+  wordleShell:          document.getElementById("wordleShell"),
+  wordleWordInput:      document.getElementById("wordleWordInput"),
+  wordleWordHint:       document.getElementById("wordleWordHint"),
+  startWordleBtn:       document.getElementById("startWordleBtn"),
+  wordleAttemptsSlider: document.getElementById("wordleAttemptsSlider"),
+  wordleAttemptsLabel:  document.getElementById("wordleAttemptsLabel"),
+  wordleTimerSlider:    document.getElementById("wordleTimerSlider"),
+  wordleTimerLabel:     document.getElementById("wordleTimerLabel"),
+  wordleStatusArea:     document.getElementById("wordleStatusArea"),
+  wordleCurrentGuesserBox:  document.getElementById("wordleCurrentGuesserBox"),
+  wordleCurrentGuesserName: document.getElementById("wordleCurrentGuesserName"),
+  wordlePickFirstBtn:       document.getElementById("wordlePickFirstBtn"),
+  wordleQueueList:          document.getElementById("wordleQueueList"),
+  wordleGuessesLog:         document.getElementById("wordleGuessesLog"),
+  endWordleBtn:         document.getElementById("endWordleBtn"),
+  resetWordleBtn:       document.getElementById("resetWordleBtn"),
   skribblDrawerSelect:document.getElementById("skribblDrawerSelect"),
   skribblWordInput:   document.getElementById("skribblWordInput"),
   startSkribblBtn:    document.getElementById("startSkribblBtn"),
@@ -725,6 +814,7 @@ const state = {
   triviaMode: false, pollsMode: false, drawMode: false,
   drawSubmissions: {}, drawReveals: {},
   skribblMode: false, skribblWord: "", skribblPhase: null,
+  wordleMode: false, wordleWord: "", wordlePhase: null,
   triviaQuestionActive: false, triviaCorrect: "",
   cardRefs: {},
   autoLiveEnabled: false, autoLiveInterval: null,
@@ -867,10 +957,12 @@ function setTool(t) {
   els.showPollsBtn.classList.toggle("active",  t === "polls");
   els.showDrawBtn.classList.toggle("active",   t === "draw");
   els.showSkribblBtn.classList.toggle("active", t === "skribbl");
+  els.showWordleBtn.classList.toggle("active", t === "wordle");
   els.triviaShell.classList.toggle("open",  t === "trivia");
   els.pollsShell.classList.toggle("open",   t === "polls");
   els.drawShell.classList.toggle("open",    t === "draw");
   els.skribblShell.classList.toggle("open", t === "skribbl");
+  els.wordleShell.classList.toggle("open",  t === "wordle");
   els.toolIntro.style.display = t === "none" ? "block" : "none";
 }
 
@@ -895,6 +987,8 @@ async function activateNone() {
       guesses: null, winner: null, liveCanvas: null, word: null,
       hint: null, close: null, timeEnd: null, leaderboard: null, phase: null
     }),
+    // Wordle: just turn off mode — fullWipeWordle is reserved for switching OUT of wordle
+    set(ref(db,"wordle/mode"), false),
   ]);
   // Reset control UI
   if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
@@ -935,11 +1029,42 @@ async function fullWipeSkribbl() {
   updateSkribblStart();
 }
 
+// Helper — wipes ALL wordle state, used when leaving wordle for any other mode
+async function fullWipeWordle() {
+  // Phase 4: stop any in-flight timer first so it can't fire after cleanup
+  if (typeof stopWordleTurnTimer === "function") stopWordleTurnTimer();
+  state.wordleWord = "";
+  try {
+    await Promise.all([
+      set(ref(db,"wordle/mode"),               false),
+      set(ref(db,"wordle/phase"),              null),
+      set(ref(db,"wordle/word"),               null),
+      set(ref(db,"wordle/wordLength"),         null),
+      set(ref(db,"wordle/guesses"),            null),
+      set(ref(db,"wordle/keyboardState"),      null),
+      set(ref(db,"wordle/currentGuesser"),     null),
+      set(ref(db,"wordle/currentGuesserName"), null),
+      set(ref(db,"wordle/pendingGuess"),       null),
+      set(ref(db,"wordle/confidence"),         null),
+      set(ref(db,"wordle/turnEndEpoch"),       null),
+      set(ref(db,"wordle/winner"),             null),
+    ]);
+  } catch (e) {
+    console.warn("fullWipeWordle Firebase error (non-fatal):", e);
+  }
+  if (els.wordleStatusArea) els.wordleStatusArea.style.display = "none";
+  if (els.endWordleBtn) { els.endWordleBtn.style.display = ""; els.endWordleBtn.classList.add("disabled"); }
+  if (els.resetWordleBtn) els.resetWordleBtn.style.display = "none";
+  if (els.wordleWordInput) els.wordleWordInput.value = "";
+  updateWordleStart();
+}
+
 async function activateTrivia() {
   await Promise.all([
     update(ref(db,"polls"),  { mode: false, question: { text:"", show:false } }),
     update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
     fullWipeSkribbl(),
+    set(ref(db,"wordle/mode"), false),
     update(ref(db,"trivia"), { mode: true }),
   ]);
   setTool("trivia");
@@ -950,6 +1075,7 @@ async function activatePolls() {
     update(ref(db,"trivia"), { mode: false, question: { text:"", show:false } }),
     update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
     fullWipeSkribbl(),
+    set(ref(db,"wordle/mode"), false),
     update(ref(db,"polls"),  { mode: true }),
   ]);
   setTool("polls");
@@ -961,6 +1087,7 @@ async function activateDraw() {
     update(ref(db,"trivia"), { mode: false, question: { text:"", show:false } }),
     update(ref(db,"polls"),  { mode: false, question: { text:"", show:false } }),
     fullWipeSkribbl(),
+    set(ref(db,"wordle/mode"), false),
     update(ref(db,"drawing"), { mode: true }),
   ]);
   setTool("draw");
@@ -976,6 +1103,7 @@ async function activateSkribbl() {
     update(ref(db,"trivia"),  { mode: false, question: { text:"", show:false } }),
     update(ref(db,"polls"),   { mode: false, question: { text:"", show:false } }),
     update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    set(ref(db,"wordle/mode"), false),
     // Reset skribbl runtime data when entering — wipe any stale data from a prior round
     set(ref(db,"skribbl/leaderboard"), null),
     set(ref(db,"skribbl/winner"),      null),
@@ -995,6 +1123,36 @@ async function activateSkribbl() {
 }
 els.showSkribblBtn.onclick = activateSkribbl;
 
+async function activateWordle() {
+  // Stop any leftover wordle timer (e.g., from a previous session)
+  if (typeof stopWordleTurnTimer === "function") stopWordleTurnTimer();
+  await Promise.all([
+    update(ref(db,"trivia"),  { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"polls"),   { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    fullWipeSkribbl(),
+    // Reset wordle runtime data when entering — wipe any stale data from a prior round
+    set(ref(db,"wordle/word"),                null),
+    set(ref(db,"wordle/wordLength"),          null),
+    set(ref(db,"wordle/phase"),               null),
+    set(ref(db,"wordle/guesses"),             null),
+    set(ref(db,"wordle/keyboardState"),       null),
+    set(ref(db,"wordle/currentGuesser"),      null),
+    set(ref(db,"wordle/currentGuesserName"),  null),
+    set(ref(db,"wordle/pendingGuess"),        null),
+    set(ref(db,"wordle/confidence"),          null),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
+    set(ref(db,"wordle/winner"),              null),
+    // Persist current slider values as the configured defaults for this session
+    set(ref(db,"wordle/attempts"),        parseInt(els.wordleAttemptsSlider.value, 10)),
+    set(ref(db,"wordle/turnDurationSec"), parseInt(els.wordleTimerSlider.value,    10)),
+    set(ref(db,"wordle/mode"),            true),
+  ]);
+  setTool("wordle");
+  updateStats();
+}
+els.showWordleBtn.onclick = activateWordle;
+
 /* ── STATS ── */
 function updateStats() {
   const users = Object.values(state.participants);
@@ -1006,6 +1164,7 @@ function updateStats() {
   else if (state.triviaMode) mode = "TRIVIA";
   else if (state.drawMode) mode = "SKETCHERS";
   else if (state.skribblMode) mode = "WHAT'S MY DOODLE?";
+  else if (state.wordleMode) mode = "WORDLE";
 
   els.statMembers.textContent = users.length;
   els.statReady.textContent   = ready;
@@ -1438,6 +1597,7 @@ els.endSessionBtn.onclick = async () => {
     set(ref(db,"meta/resetFlag"), Date.now()),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null, timeEnd:null, timesUp:null }),
     set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null, phase:null }),
+    set(ref(db,"wordle"), { mode:false, phase:null, word:null, wordLength:null, attempts:6, turnDurationSec:30, guesses:null, keyboardState:null, currentGuesser:null, currentGuesserName:null, pendingGuess:null, confidence:null, turnEndEpoch:null, winner:null }),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
   state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
@@ -2143,6 +2303,520 @@ els.startSkribblBtn.onclick = async () => {
 els.endSkribblBtn.onclick    = () => enterResultsPhase();
 els.resetSkribblBtn.onclick  = () => resetSkribblRound();
 
+/* ─── WORDLE CONTROLS (Phase 1: skeleton) ─── */
+// Sliders update labels and persist to Firebase so other pages see the config
+function applyWordleAttempts() {
+  const v = parseInt(els.wordleAttemptsSlider.value, 10);
+  els.wordleAttemptsLabel.textContent = String(v);
+  if (state.wordleMode) set(ref(db, "wordle/attempts"), v).catch(() => {});
+}
+function applyWordleTimer() {
+  const v = parseInt(els.wordleTimerSlider.value, 10);
+  els.wordleTimerLabel.textContent = v === 0 ? "OFF" : `${v}s`;
+  if (state.wordleMode) set(ref(db, "wordle/turnDurationSec"), v).catch(() => {});
+}
+els.wordleAttemptsSlider.addEventListener("input", applyWordleAttempts);
+els.wordleTimerSlider.addEventListener("input",    applyWordleTimer);
+
+// Word input: letters only, uppercase, send only when ≥5 chars
+els.wordleWordInput.addEventListener("input", () => {
+  let v = els.wordleWordInput.value.replace(/[^a-zA-Z]/g, "").toUpperCase();
+  els.wordleWordInput.value = v;
+  updateWordleStart();
+});
+
+function updateWordleStart() {
+  const w = (els.wordleWordInput.value || "").trim();
+  const ok = w.length >= 5;
+  els.startWordleBtn.classList.toggle("disabled", !ok);
+  if (els.wordleWordHint) {
+    els.wordleWordHint.textContent = ok
+      ? `${w.length} letters — ready`
+      : "5 letters minimum — letters only";
+  }
+}
+
+// START — Phase 1: writes word + config to Firebase, flips phase to "playing".
+// Output page renders the empty grid based on word length + attempts.
+els.startWordleBtn.onclick = async () => {
+  const word = (els.wordleWordInput.value || "").trim().toUpperCase();
+  if (word.length < 5) return;
+  const attempts        = parseInt(els.wordleAttemptsSlider.value, 10);
+  const turnDurationSec = parseInt(els.wordleTimerSlider.value,    10);
+
+  state.wordleWord = word;
+
+  // Stop any leftover timer from a prior round before starting fresh state
+  stopWordleTurnTimer();
+
+  await Promise.all([
+    set(ref(db,"wordle/word"),                word),
+    // wordLength is broadcast publicly so phones can size their grid + keyboard
+    // WITHOUT learning the answer (only control reads /wordle/word)
+    set(ref(db,"wordle/wordLength"),          word.length),
+    set(ref(db,"wordle/attempts"),            attempts),
+    set(ref(db,"wordle/turnDurationSec"),     turnDurationSec),
+    set(ref(db,"wordle/phase"),               "playing"),
+    // Clear any stale runtime data from prior rounds
+    set(ref(db,"wordle/guesses"),             null),
+    set(ref(db,"wordle/keyboardState"),       null),
+    set(ref(db,"wordle/pendingGuess"),        null),
+    set(ref(db,"wordle/confidence"),          null),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
+    set(ref(db,"wordle/winner"),              null),
+    // Phase 3: don't auto-pick. Operator picks via PICK FIRST GUESSER button
+    // (highest-confidence) or by clicking a name in the queue panel.
+    set(ref(db,"wordle/currentGuesser"),      null),
+    set(ref(db,"wordle/currentGuesserName"),  null),
+  ]);
+
+  flashSent(els.startWordleBtn);
+  els.endWordleBtn.classList.remove("disabled");
+  els.endWordleBtn.style.display = "";
+  els.resetWordleBtn.style.display = "none";
+  if (els.wordleStatusArea) els.wordleStatusArea.style.display = "";
+  if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
+  logEvent("wordle", `Round started — word "${word}" (${attempts} attempts, ${turnDurationSec === 0 ? "manual mode" : turnDurationSec + "s timer"})`);
+};
+
+// END / RESET — Phase 1: simple stubs that wipe back to a clean wordle state.
+// Phase 4 will replace these with proper enterResultsPhase / resetWordleRound logic
+// matching the skribbl pattern (results phase, reveal, etc.)
+els.endWordleBtn.onclick = async () => {
+  if (els.endWordleBtn.classList.contains("disabled")) return;
+  // Manual end — treat as no-winner, reveal the word
+  await enterWordleResultsPhase(null, null, false);
+};
+els.resetWordleBtn.onclick = async () => {
+  stopWordleTurnTimer();
+  state.wordleWord = "";
+  await Promise.all([
+    set(ref(db,"wordle/word"),                null),
+    set(ref(db,"wordle/wordLength"),          null),
+    set(ref(db,"wordle/phase"),               null),
+    set(ref(db,"wordle/guesses"),             null),
+    set(ref(db,"wordle/keyboardState"),       null),
+    set(ref(db,"wordle/currentGuesser"),      null),
+    set(ref(db,"wordle/currentGuesserName"),  null),
+    set(ref(db,"wordle/pendingGuess"),        null),
+    set(ref(db,"wordle/confidence"),          null),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
+    set(ref(db,"wordle/winner"),              null),
+    // Mode stays TRUE so the panel still shows on phones (in idle/waiting state)
+  ]);
+  els.wordleWordInput.value = "";
+  if (els.wordleStatusArea) els.wordleStatusArea.style.display = "none";
+  els.endWordleBtn.style.display = "";
+  els.endWordleBtn.classList.add("disabled");
+  els.resetWordleBtn.style.display = "none";
+  updateWordleStart();
+};
+
+/* ─── WORDLE ALGORITHM (lives on control because the answer must stay secret) ───
+ * Two-pass evaluation that handles duplicate letters correctly:
+ *   Pass 1: mark every "exact-position match" as CORRECT, consume that letter
+ *           in the answer.
+ *   Pass 2: for every non-correct guess letter, mark PRESENT only if the
+ *           letter still has unconsumed copies in the answer; otherwise ABSENT.
+ * Example: guess "ALLEY" vs answer "BLEED" → A:absent, L:present(1st L consumed),
+ *          L:absent(no more Ls), E:correct, Y:absent. Then Pass 2 also greys
+ *          duplicates that have already been satisfied by greens elsewhere.
+ */
+function evaluateWordleGuess(guess, answer) {
+  const G = guess.toUpperCase();
+  const A = answer.toUpperCase();
+  const result = new Array(G.length).fill("absent");
+  const consumed = new Array(A.length).fill(false);
+  // Pass 1: greens
+  for (let i = 0; i < G.length; i++) {
+    if (G[i] === A[i]) {
+      result[i] = "correct";
+      consumed[i] = true;
+    }
+  }
+  // Pass 2: yellows + greys
+  for (let i = 0; i < G.length; i++) {
+    if (result[i] === "correct") continue;
+    for (let j = 0; j < A.length; j++) {
+      if (!consumed[j] && G[i] === A[j]) {
+        result[i] = "present";
+        consumed[j] = true;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+// Merge a per-letter evaluation into the keyboardState. Priority order:
+// correct > present > absent (a letter that's been GREEN somewhere stays GREEN
+// even if it's later guessed in a wrong slot — like real Wordle).
+function mergeKeyboardState(prevState, guess, evaluation) {
+  const next = { ...prevState };
+  const priority = { correct: 3, present: 2, absent: 1 };
+  for (let i = 0; i < guess.length; i++) {
+    const letter = guess[i].toUpperCase();
+    const newState = evaluation[i];
+    const oldState = next[letter];
+    if (!oldState || (priority[newState] || 0) > (priority[oldState] || 0)) {
+      next[letter] = newState;
+    }
+  }
+  return next;
+}
+
+// Listen for guesses sent by the index page. Each pending guess gets evaluated
+// here and committed to /wordle/guesses + /wordle/keyboardState.
+let lastProcessedPendingTs = 0;
+onValue(ref(db, "wordle/pendingGuess"), async snap => {
+  const pending = snap.val();
+  if (!pending) return;
+  // Idempotency: a single pending guess could re-fire on listener reconnect; only
+  // process once per timestamp.
+  if (!pending.ts || pending.ts === lastProcessedPendingTs) return;
+  lastProcessedPendingTs = pending.ts;
+
+  // Need the current word + guesses-so-far to evaluate
+  const word = state.wordleWord;
+  if (!word) { await set(ref(db,"wordle/pendingGuess"), null).catch(() => {}); return; }
+
+  // Read existing guesses to know which slot to write into
+  const existingSnap = await get(ref(db,"wordle/guesses"));
+  const existingVal  = existingSnap.val();
+  const existing     = existingVal
+    ? (Array.isArray(existingVal) ? existingVal.filter(Boolean) : Object.values(existingVal))
+    : [];
+
+  const text = (pending.text || "").toUpperCase();
+  if (text.length !== word.length) {
+    // Wrong length — ignore + clear pending
+    await set(ref(db,"wordle/pendingGuess"), null).catch(() => {});
+    return;
+  }
+
+  const evaluation = evaluateWordleGuess(text, word);
+  const guessRecord = {
+    text,
+    evaluation,
+    guesserKey:  pending.guesserKey || null,
+    guesserName: pending.guesserName || null,
+    ts:          pending.ts,
+  };
+  existing.push(guessRecord);
+
+  // Merge keyboard state
+  const kbSnap = await get(ref(db,"wordle/keyboardState"));
+  const kbPrev = kbSnap.val() || {};
+  const kbNext = mergeKeyboardState(kbPrev, text, evaluation);
+
+  await Promise.all([
+    set(ref(db,"wordle/guesses"),       existing),
+    set(ref(db,"wordle/keyboardState"), kbNext),
+    set(ref(db,"wordle/pendingGuess"),  null),
+  ]);
+
+  const isWin = evaluation.every(e => e === "correct");
+  logEvent("wordle", `${pending.guesserName || pending.guesserKey || "?"} guessed "${text}"${isWin ? " — CORRECT!" : ""}`);
+
+  // ─── Phase 4: win / lose detection ───
+  const totalAttempts = parseInt((await get(ref(db,"wordle/attempts"))).val(), 10) || 6;
+  if (isWin) {
+    await enterWordleResultsPhase(
+      pending.guesserKey,
+      pending.guesserName || pending.guesserKey,
+      true
+    );
+    return;
+  }
+  if (existing.length >= totalAttempts) {
+    // All attempts used, no winner — reveal the word
+    await enterWordleResultsPhase(null, null, false);
+    return;
+  }
+  // Round continues — clear current guesser so operator/auto picks the next one.
+  // In timer-on mode, advance automatically to the next-highest confidence
+  // (excluding the just-failed guesser) so play stays moving without manual input.
+  // In manual mode, just clear the current guesser; operator picks next from queue.
+  const turnDurationSec = parseInt(els.wordleTimerSlider.value, 10) || 0;
+  const previousGuesser = pending.guesserKey;
+  if (turnDurationSec > 0) {
+    // Auto-advance: pick next highest-confidence excluding previous
+    const sorted = sortedConfidenceEntries().filter(([uk]) => uk !== previousGuesser);
+    if (sorted.length > 0) {
+      const topLevel = sorted[0][1].level;
+      const topTier  = sorted.filter(([, v]) => v.level === topLevel);
+      const [uk, v]  = topTier[Math.floor(Math.random() * topTier.length)];
+      await pickWordleGuesser(uk, v.name || uk);
+    } else {
+      // No other voters — clear and let operator pick
+      stopWordleTurnTimer();
+      await Promise.all([
+        set(ref(db,"wordle/currentGuesser"),     null),
+        set(ref(db,"wordle/currentGuesserName"), null),
+        set(ref(db,"wordle/turnEndEpoch"),       null),
+      ]);
+      if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
+    }
+  } else {
+    // Manual mode: stop timer (just in case), clear guesser, wait for operator
+    stopWordleTurnTimer();
+    await Promise.all([
+      set(ref(db,"wordle/currentGuesser"),     null),
+      set(ref(db,"wordle/currentGuesserName"), null),
+      set(ref(db,"wordle/turnEndEpoch"),       null),
+    ]);
+    if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
+  }
+});
+
+/* ─── PHASE 3: confidence queue panel + manual / auto pick ───
+ * Confidence ranks: high > medium > low. Within a tier, earlier voters first.
+ * Click a row to make that participant the current guesser. Pick First Guesser
+ * button auto-selects the highest-confidence person (random tiebreak).
+ */
+const CONF_RANK = { high: 3, medium: 2, low: 1 };
+const CONF_EMOJI = { high: "🟢", medium: "🟡", low: "🔴" };
+const CONF_LABEL = { high: "I KNOW IT", medium: "KIND OF", low: "NO IDEA" };
+
+state.wordleConfidence    = {};   // { userKey: { level, name, ts } }
+state.wordleCurrentGuesser     = null;
+state.wordleCurrentGuesserName = null;
+
+function sortedConfidenceEntries() {
+  return Object.entries(state.wordleConfidence)
+    .filter(([, v]) => v?.level && CONF_RANK[v.level])
+    .sort((a, b) => {
+      const dr = (CONF_RANK[b[1].level] || 0) - (CONF_RANK[a[1].level] || 0);
+      if (dr !== 0) return dr;
+      return (a[1].ts || 0) - (b[1].ts || 0); // earlier votes first within tier
+    });
+}
+
+function renderWordleQueue() {
+  if (!els.wordleQueueList) return;
+  const sorted = sortedConfidenceEntries();
+  if (sorted.length === 0) {
+    els.wordleQueueList.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No votes yet — students rate their confidence on their phones.</div>`;
+    if (els.wordlePickFirstBtn) els.wordlePickFirstBtn.classList.add("disabled");
+    return;
+  }
+  if (els.wordlePickFirstBtn) els.wordlePickFirstBtn.classList.remove("disabled");
+
+  els.wordleQueueList.innerHTML = "";
+  for (const [uk, v] of sorted) {
+    const isCurrent = uk === state.wordleCurrentGuesser;
+    const row = document.createElement("button");
+    row.type = "button";
+    row.style.cssText = `
+      display:flex;align-items:center;gap:10px;
+      width:100%;padding:9px 11px;border-radius:8px;
+      background:${isCurrent ? "rgba(84,209,138,0.18)" : "rgba(255,255,255,0.04)"};
+      border:1px solid ${isCurrent ? "rgba(84,209,138,0.5)" : "var(--line)"};
+      cursor:pointer;font-size:13px;font-weight:700;color:white;
+      text-align:left;font-family:inherit;
+      transition:background 0.15s ease, border-color 0.15s ease;
+    `;
+    row.onmouseenter = () => { if (!isCurrent) row.style.background = "rgba(255,255,255,0.08)"; };
+    row.onmouseleave = () => { if (!isCurrent) row.style.background = "rgba(255,255,255,0.04)"; };
+    row.innerHTML = `
+      <span style="font-size:16px;">${CONF_EMOJI[v.level] || ""}</span>
+      <span style="flex:1;">${v.name || uk}</span>
+      <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">${CONF_LABEL[v.level] || ""}</span>
+    `;
+    row.onclick = () => pickWordleGuesser(uk, v.name || uk);
+    els.wordleQueueList.appendChild(row);
+  }
+}
+
+async function pickWordleGuesser(userKey, name) {
+  if (!userKey) return;
+  // Read the configured timer duration (0 = manual mode, no timer)
+  const turnDurationSec = parseInt(els.wordleTimerSlider.value, 10) || 0;
+  const writes = [
+    set(ref(db,"wordle/currentGuesser"),     userKey),
+    set(ref(db,"wordle/currentGuesserName"), name || userKey),
+  ];
+  if (turnDurationSec > 0) {
+    const turnEndEpoch = Date.now() + turnDurationSec * 1000;
+    writes.push(set(ref(db,"wordle/turnEndEpoch"), turnEndEpoch));
+    startWordleTurnTimer(turnDurationSec, Date.now());
+  } else {
+    // Manual mode — explicitly clear any leftover turnEndEpoch
+    writes.push(set(ref(db,"wordle/turnEndEpoch"), null));
+    stopWordleTurnTimer();
+  }
+  await Promise.all(writes);
+  if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = name || userKey;
+  logEvent("wordle", `${name || userKey} is now the guesser`);
+}
+
+/* ─── PHASE 4: turn timer with the same throttle-resistant pattern as skribbl.
+ * setInterval is just for visual updates; setTimeout is the actual auto-pass
+ * trigger. visibilitychange recovery catches OS-level tab suspends.
+ */
+let wordleTickInterval = null;
+let wordleEndTimeout   = null;
+let wordleEndEpoch     = 0;
+
+function startWordleTurnTimer(durationSec, startEpoch) {
+  if (wordleTickInterval) clearInterval(wordleTickInterval);
+  if (wordleEndTimeout)   { clearTimeout(wordleEndTimeout); wordleEndTimeout = null; }
+  const endEpoch = startEpoch + durationSec * 1000;
+  wordleEndEpoch = endEpoch;
+
+  // Phase 4: no on-control countdown UI element yet (the panel doesn't have a
+  // dedicated countdown box in the same way skribbl does). The timer is purely
+  // a backend mechanism — output and phones render the visible bar from
+  // /wordle/turnEndEpoch directly. Control can show remaining time via the
+  // current-guesser indicator if needed in a polish pass.
+  wordleTickInterval = setInterval(() => {
+    const remaining = Math.max(0, Math.ceil((endEpoch - Date.now()) / 1000));
+    if (remaining <= 0) {
+      clearInterval(wordleTickInterval);
+      wordleTickInterval = null;
+    }
+  }, 1000);
+
+  // Fail-safe one-shot timer
+  wordleEndTimeout = setTimeout(() => {
+    wordleEndTimeout = null;
+    handleWordleTurnTimeout();
+  }, Math.max(0, endEpoch - Date.now()));
+}
+
+function stopWordleTurnTimer() {
+  if (wordleTickInterval) { clearInterval(wordleTickInterval); wordleTickInterval = null; }
+  if (wordleEndTimeout)   { clearTimeout(wordleEndTimeout);   wordleEndTimeout = null; }
+  wordleEndEpoch = 0;
+}
+
+// Fired when the turn timer expires — pass the turn (no row consumed) and
+// auto-pick the next guesser, EXCLUDING the one who just timed out.
+async function handleWordleTurnTimeout() {
+  if (state.wordlePhase !== "playing") return; // round already ended somehow
+  const previousGuesser = state.wordleCurrentGuesser;
+  logEvent("wordle", `${state.wordleCurrentGuesserName || previousGuesser || "?"} ran out of time — turn passes`);
+
+  // Find next guesser by confidence, excluding the previous one
+  const sorted = sortedConfidenceEntries().filter(([uk]) => uk !== previousGuesser);
+  if (sorted.length === 0) {
+    // Nobody else has voted — clear current guesser, operator can pick manually
+    await Promise.all([
+      set(ref(db,"wordle/currentGuesser"),     null),
+      set(ref(db,"wordle/currentGuesserName"), null),
+      set(ref(db,"wordle/turnEndEpoch"),       null),
+    ]);
+    if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
+    stopWordleTurnTimer();
+    return;
+  }
+  // Tier-aware pick (random tiebreak within top tier — same logic as PICK FIRST)
+  const topLevel = sorted[0][1].level;
+  const topTier  = sorted.filter(([, v]) => v.level === topLevel);
+  const [uk, v]  = topTier[Math.floor(Math.random() * topTier.length)];
+  await pickWordleGuesser(uk, v.name || uk);
+}
+
+// On control regaining focus, check whether the turn timer expired while hidden
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (wordleEndEpoch && Date.now() >= wordleEndEpoch && state.wordlePhase === "playing") {
+    if (wordleEndTimeout) { clearTimeout(wordleEndTimeout); wordleEndTimeout = null; }
+    handleWordleTurnTimeout();
+  }
+});
+
+/* ─── PHASE 4: results phase ─── */
+async function enterWordleResultsPhase(winnerKey, winnerName, won) {
+  stopWordleTurnTimer();
+  const word = state.wordleWord || "";
+  await Promise.all([
+    set(ref(db,"wordle/phase"),               "results"),
+    set(ref(db,"wordle/winner"),              won ? { userKey: winnerKey, name: winnerName, word } : { word, won: false }),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
+    set(ref(db,"wordle/currentGuesser"),      null),
+    set(ref(db,"wordle/currentGuesserName"),  null),
+    set(ref(db,"wordle/pendingGuess"),        null),
+    // Keep word + guesses + keyboardState so the reveal shows the full board
+  ]);
+  // Control UI — same toggle pattern as skribbl results
+  els.endWordleBtn.style.display = "none";
+  els.resetWordleBtn.style.display = "";
+  els.resetWordleBtn.classList.remove("disabled");
+  if (els.wordleCurrentGuesserName) {
+    els.wordleCurrentGuesserName.textContent = won
+      ? `🎉 ${winnerName} got it! Word was "${word}"`
+      : `Nobody got it. Word was "${word}"`;
+  }
+  logEvent("wordle", won
+    ? `Round won by ${winnerName} — word was "${word}"`
+    : `Round ended — nobody guessed "${word}"`);
+}
+
+// PICK FIRST GUESSER button: auto-pick highest confidence (random tiebreak)
+if (els.wordlePickFirstBtn) {
+  els.wordlePickFirstBtn.classList.add("disabled");
+  els.wordlePickFirstBtn.onclick = () => {
+    if (els.wordlePickFirstBtn.classList.contains("disabled")) return;
+    const sorted = sortedConfidenceEntries();
+    if (sorted.length === 0) return;
+    // Find all entries tied at the top tier
+    const topLevel = sorted[0][1].level;
+    const topTier  = sorted.filter(([, v]) => v.level === topLevel);
+    // Random tiebreak among the top tier
+    const [uk, v]  = topTier[Math.floor(Math.random() * topTier.length)];
+    pickWordleGuesser(uk, v.name || uk);
+  };
+}
+
+// Listen for all confidence votes — re-render queue on any change
+onValue(ref(db,"wordle/confidence"), snap => {
+  state.wordleConfidence = snap.val() || {};
+  renderWordleQueue();
+});
+
+// Reactive currentGuesser display + queue re-render to highlight active row
+onValue(ref(db,"wordle/currentGuesser"), snap => {
+  state.wordleCurrentGuesser = snap.val() || null;
+  renderWordleQueue();
+});
+onValue(ref(db,"wordle/currentGuesserName"), snap => {
+  state.wordleCurrentGuesserName = snap.val() || null;
+  if (els.wordleCurrentGuesserName) {
+    els.wordleCurrentGuesserName.textContent =
+      state.wordleCurrentGuesserName || "— nobody yet —";
+  }
+});
+
+// Render guesses log as they come in
+onValue(ref(db,"wordle/guesses"), snap => {
+  if (!els.wordleGuessesLog) return;
+  const v = snap.val();
+  const guesses = v
+    ? (Array.isArray(v) ? v.filter(Boolean) : Object.values(v))
+    : [];
+  if (guesses.length === 0) {
+    els.wordleGuessesLog.innerHTML = `<div style="color:var(--muted);text-align:center;padding:6px;">Waiting for first guess…</div>`;
+    return;
+  }
+  els.wordleGuessesLog.innerHTML = "";
+  for (const g of guesses) {
+    const isCorrect = g.evaluation && g.evaluation.every(e => e === "correct");
+    const row = document.createElement("div");
+    row.style.cssText = `
+      display:flex;align-items:center;gap:8px;padding:5px 9px;
+      background:${isCorrect ? "rgba(84,209,138,0.15)" : "rgba(255,255,255,0.04)"};
+      border-radius:6px;font-family:monospace;font-size:11px;color:white;
+    `;
+    row.innerHTML = `
+      <span style="opacity:0.7;font-family:inherit;font-weight:600;">${g.guesserName || "?"}:</span>
+      <span style="letter-spacing:0.15em;font-weight:700;">${(g.text || "").toUpperCase()}</span>
+      <span style="margin-left:auto;">${isCorrect ? "✓" : "✗"}</span>
+    `;
+    els.wordleGuessesLog.appendChild(row);
+  }
+});
+
 // Listen to guesses — rank correct ones, "so close" wrong ones
 onValue(ref(db,"skribbl/word"), snap => { state.skribblWord = snap.val() || ""; });
 onValue(ref(db,"skribbl/phase"), snap => { state.skribblPhase = snap.val(); });
@@ -2198,8 +2872,61 @@ onValue(ref(db,"skribbl/mode"), snap => {
   state.skribblMode = snap.val() === true;
   if (state.skribblMode) logEvent("mode", "What's My Doodle? mode activated");
   if (state.skribblMode) setTool("skribbl");
-  else if (!state.triviaMode && !state.pollsMode && !state.drawMode) setTool("none");
+  else if (!state.triviaMode && !state.pollsMode && !state.drawMode && !state.wordleMode) setTool("none");
   updateStats();
+});
+
+onValue(ref(db,"wordle/mode"), snap => {
+  state.wordleMode = snap.val() === true;
+  if (state.wordleMode) logEvent("mode", "Wordle mode activated");
+  if (state.wordleMode) setTool("wordle");
+  else if (!state.triviaMode && !state.pollsMode && !state.drawMode && !state.skribblMode) setTool("none");
+  updateStats();
+});
+onValue(ref(db,"wordle/word"),  snap => { state.wordleWord  = snap.val() || ""; });
+onValue(ref(db,"wordle/phase"), snap => {
+  state.wordlePhase = snap.val();
+  // Refresh recovery: sync the UI to whatever phase we're in
+  if (state.wordlePhase === "playing") {
+    if (els.wordleStatusArea) els.wordleStatusArea.style.display = "";
+    if (els.endWordleBtn) {
+      els.endWordleBtn.style.display = "";
+      els.endWordleBtn.classList.remove("disabled");
+    }
+    if (els.resetWordleBtn) els.resetWordleBtn.style.display = "none";
+  } else if (state.wordlePhase === "results") {
+    if (els.wordleStatusArea) els.wordleStatusArea.style.display = "";
+    if (els.endWordleBtn) els.endWordleBtn.style.display = "none";
+    if (els.resetWordleBtn) {
+      els.resetWordleBtn.style.display = "";
+      els.resetWordleBtn.classList.remove("disabled");
+    }
+  } else {
+    // null phase — pre-round state
+    if (els.wordleStatusArea) els.wordleStatusArea.style.display = "none";
+  }
+});
+
+// Phase 4: timer recovery on page refresh. If turnEndEpoch exists in Firebase
+// but our local timer isn't running, resume it. Same firstSnap guard as
+// elsewhere so we only react to actual changes / page-load reads.
+let wordleTurnEndFirstSnap = true;
+onValue(ref(db,"wordle/turnEndEpoch"), snap => {
+  const epoch = snap.val();
+  if (wordleTurnEndFirstSnap) {
+    wordleTurnEndFirstSnap = false;
+    // On initial load, if there's a future epoch, resume the timer
+    if (epoch && epoch > Date.now() && state.wordlePhase === "playing") {
+      const durationSec = Math.ceil((epoch - Date.now()) / 1000);
+      startWordleTurnTimer(durationSec, Date.now());
+    }
+    return;
+  }
+  // Subsequent updates: if epoch is cleared, stop the timer; if it's set to
+  // a future time, start a fresh timer (e.g., when picking a new guesser).
+  if (!epoch) {
+    stopWordleTurnTimer();
+  }
 });
 
 onValue(ref(db,"drawing/mode"), snap => {
