@@ -138,21 +138,34 @@
     .skribbl-lb-row.mine{background:rgba(84,209,138,0.15);border-color:rgba(84,209,138,0.5);}
 
     /* ── WORDLE ── */
+    /* Both panels just contain controls — no chrome, no labels */
     #wordleBox, #wordleWaitBox {
-      display:flex;flex-direction:column;gap:14px;width:min(92vw,380px);
+      display:flex;flex-direction:column;gap:14px;
+      width:min(92vw,380px);
       align-items:center;
     }
-    #wordleLabel, #wordleWaitLabel {
-      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:18px;
-      color:white;text-align:center;line-height:1.3;
-    }
-    #wordleSubLabel, #wordleWaitText {
-      font-family:"DM Sans",sans-serif;font-size:13px;color:rgba(255,255,255,0.6);
-      text-align:center;line-height:1.4;
-    }
-    #wordleWaitGuesserName { color:white; font-weight:700; }
 
-    /* Guesser's mini-grid — same colors as output */
+    /* ─── Wordle grid OVERLAY (sits on top of the cam, like drawOverlay) ───
+       Centers the grid against a soft dark backdrop so cells stay readable
+       against any cam content behind them. */
+    #wordleGridOverlay {
+      position:absolute;inset:0;z-index:18;
+      display:none;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:clamp(6px,1.6vh,12px);
+      padding:clamp(12px,3vh,22px) 12px;
+      background:rgba(10,10,10,0.55);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+      border-radius:12px;
+      animation:fadeUp 0.35s ease both;
+      pointer-events:none; /* non-interactive — typing happens on the keyboard panel */
+    }
+    #wordleGridOverlay.show { display:flex; }
+
+    /* Guesser's mini-grid */
     #wordleGuessGrid {
       display:flex;flex-direction:column;gap:5px;align-items:center;
     }
@@ -162,84 +175,20 @@
       display:flex;align-items:center;justify-content:center;
       font-family:"Barlow Condensed",sans-serif;font-weight:900;
       font-size:clamp(18px, 5vw, 26px);color:white;
-      border:2px solid rgba(255,255,255,0.18);
-      border-radius:4px; background:transparent;
+      border:2px solid rgba(255,255,255,0.22);
+      border-radius:4px; background:rgba(0,0,0,0.25);
       text-transform:uppercase;
       transition:background 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
     }
-    .wordle-i-cell.filled  { border-color: rgba(255,255,255,0.55); transform:scale(1.05);}
+    .wordle-i-cell.filled  { border-color: rgba(255,255,255,0.7); transform:scale(1.03); }
     .wordle-i-cell.correct { background:#538d4e; border-color:#538d4e; }
     .wordle-i-cell.present { background:#b59f3b; border-color:#b59f3b; }
     .wordle-i-cell.absent  { background:#3a3a3c; border-color:#3a3a3c; }
 
-    /* On-screen keyboard */
-    #wordleKb { display:flex;flex-direction:column;gap:5px;width:100%; }
-    .wordle-i-kb-row { display:flex;gap:4px;justify-content:center; }
-    .wordle-i-key {
-      flex:1; min-width:0;
-      max-width:36px;
-      height:42px;
-      display:flex;align-items:center;justify-content:center;
-      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:15px;
-      color:white;
-      background:rgba(255,255,255,0.12);
-      border:none;border-radius:4px;
-      text-transform:uppercase;
-      cursor:pointer;
-      transition:background 0.2s ease, transform 0.08s ease;
-      -webkit-tap-highlight-color:transparent;
-      user-select:none;
-      padding:0;
-    }
-    .wordle-i-key.wide { flex:1.6; max-width:60px; font-size:11px; }
-    .wordle-i-key:active { transform:scale(0.94); }
-    .wordle-i-key.correct { background:#538d4e; }
-    .wordle-i-key.present { background:#b59f3b; }
-    .wordle-i-key.absent  { background:#3a3a3c; opacity:0.7; }
-    .wordle-i-key:disabled { pointer-events:none; opacity:0.5; }
-
-    /* Confidence buttons (non-guesser spectator state) */
-    #wordleConfidencePrompt {
-      font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:14px;
-      color:rgba(255,255,255,0.7);text-align:center;
-      letter-spacing:0.05em;text-transform:uppercase;
-      margin-top:8px;
-    }
-    #wordleConfidenceButtons {
-      display:flex;flex-direction:column;gap:8px;width:100%;
-    }
-    .wordle-conf-btn {
-      display:flex;align-items:center;gap:12px;
-      width:100%;padding:14px 16px;
-      background:rgba(255,255,255,0.06);
-      border:2px solid rgba(255,255,255,0.18);
-      border-radius:10px;
-      font-family:"Barlow Condensed",sans-serif;font-weight:700;
-      font-size:18px;color:white;
-      cursor:pointer;
-      transition:background 0.18s ease, border-color 0.18s ease, transform 0.08s ease;
-      -webkit-tap-highlight-color:transparent;
-      text-align:left;
-    }
-    .wordle-conf-btn span { letter-spacing:0.04em; }
-    .wordle-conf-btn:active { transform:scale(0.98); }
-    .wordle-conf-btn:hover  { background:rgba(255,255,255,0.10); }
-    .wordle-conf-btn.selected {
-      background:rgba(84,209,138,0.18);
-      border-color:rgba(84,209,138,0.7);
-    }
-    #wordleConfidenceConfirm {
-      font-family:"DM Sans",sans-serif;font-size:11px;
-      color:rgba(255,255,255,0.45);
-      text-align:center;line-height:1.4;
-      display:none; /* shown only after first vote */
-    }
-    #wordleConfidenceConfirm.show { display:block; }
-
-    /* Phase 4: turn timer bar — visible only when timer mode is on */
+    /* Turn timer (lives inside the overlay so it sits above the grid) */
     #wordleTurnTimerBar {
-      width:100%;height:4px;border-radius:99px;
-      background:rgba(255,255,255,0.12);
+      width:80%;height:4px;border-radius:99px;
+      background:rgba(255,255,255,0.18);
       overflow:hidden;
       display:none;
     }
@@ -251,7 +200,86 @@
       transition:width 1s linear, background 0.4s ease;
     }
 
-    /* Phase 4: results box — shown to all phones when round ends */
+    /* On-screen keyboard (panel below the cam — this is what wordleBox holds) */
+    #wordleKb { display:flex;flex-direction:column;gap:6px;width:100%; }
+    .wordle-i-kb-row { display:flex;gap:5px;justify-content:center;width:100%; }
+    .wordle-i-key {
+      flex:1 1 0;
+      min-width:0;
+      max-width:38px;
+      height:46px;
+      display:flex;align-items:center;justify-content:center;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:17px;
+      color:white;
+      background:rgba(255,255,255,0.14);
+      border:none;border-radius:5px;
+      text-transform:uppercase;
+      cursor:pointer;
+      transition:background 0.2s ease, transform 0.08s ease, opacity 0.2s ease;
+      -webkit-tap-highlight-color:transparent;
+      user-select:none;
+      padding:0;
+      /* iOS: prevent double-tap zoom on rapid typing */
+      touch-action:manipulation;
+    }
+    .wordle-i-key.wide {
+      flex:1.5 1 0;
+      max-width:62px;
+      font-size:12px;
+    }
+    .wordle-i-key:active { transform:scale(0.94); }
+    .wordle-i-key.correct { background:#538d4e; }
+    .wordle-i-key.present { background:#b59f3b; }
+    /* Greyed-out (absent) letters — much more visibly dimmed against the dark BG */
+    .wordle-i-key.absent  {
+      background:rgba(255,255,255,0.04);
+      color:rgba(255,255,255,0.28);
+    }
+    .wordle-i-key:disabled { pointer-events:none; opacity:0.5; }
+
+    /* ─── Confidence buttons (non-guesser, single horizontal row) ─── */
+    #wordleConfidencePrompt {
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:14px;
+      color:rgba(255,255,255,0.7);text-align:center;
+      letter-spacing:0.05em;text-transform:uppercase;
+    }
+    #wordleConfidenceButtons {
+      display:flex;flex-direction:row;gap:8px;width:100%;
+    }
+    .wordle-conf-btn {
+      flex:1 1 0;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+      padding:12px 8px;
+      background:rgba(255,255,255,0.06);
+      border:2px solid rgba(255,255,255,0.18);
+      border-radius:10px;
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;
+      font-size:11px;color:white;
+      letter-spacing:0.04em;
+      cursor:pointer;
+      transition:background 0.18s ease, border-color 0.18s ease, transform 0.08s ease;
+      -webkit-tap-highlight-color:transparent;
+      touch-action:manipulation;
+      min-width:0;
+    }
+    .wordle-conf-btn span {
+      font-size:11px;letter-spacing:0.05em;text-align:center;
+      line-height:1.2;
+    }
+    .wordle-conf-btn:active { transform:scale(0.96); }
+    .wordle-conf-btn.selected {
+      background:rgba(84,209,138,0.18);
+      border-color:rgba(84,209,138,0.7);
+    }
+    #wordleConfidenceConfirm {
+      font-family:"DM Sans",sans-serif;font-size:11px;
+      color:rgba(255,255,255,0.45);
+      text-align:center;line-height:1.4;
+      display:none;
+    }
+    #wordleConfidenceConfirm.show { display:block; }
+
+    /* Results box — shown to all phones when round ends */
     #wordleResultBox {
       display:none;flex-direction:column;gap:10px;
       width:min(82vw,340px);align-items:center;
@@ -522,6 +550,15 @@
         <button class="draw-btn" id="drawSubmit">SUBMIT</button>
       </div>
     </div>
+
+    <!-- Wordle grid overlay — appears when YOU are the current guesser. The grid
+         floats centered on top of the cam with a soft dark backdrop so it stays
+         readable. The keyboard lives below the cam in its own panel. -->
+    <div id="wordleGridOverlay">
+      <!-- Turn timer — sits at the very top of the overlay -->
+      <div id="wordleTurnTimerBar"><div id="wordleTurnTimerFill"></div></div>
+      <div id="wordleGuessGrid"></div>
+    </div>
     <div id="drawSubmitted">
       <div>DRAWING SENT</div>
     </div>
@@ -555,22 +592,14 @@
     <div id="skribblLeaderboardList"></div>
   </div>
 
-  <!-- ─── WORDLE: guesser sees grid + keyboard. Phase 3 will add a separate
-       waiting-state panel for non-guessers + confidence buttons. ─── -->
+  <!-- ─── WORDLE — guesser keyboard panel. The grid lives as an overlay on the
+       cam (see #wordleGridOverlay above). This panel is just the keyboard. ─── -->
   <div id="wordleBox" class="ui-panel">
-    <div id="wordleLabel">🔤 WORDLE — YOUR TURN</div>
-    <div id="wordleSubLabel">Tap letters to guess</div>
-    <!-- Turn timer (only visible when timer is on for the round) -->
-    <div id="wordleTurnTimerBar"><div id="wordleTurnTimerFill"></div></div>
-    <div id="wordleGuessGrid"></div>
     <div id="wordleKb"></div>
   </div>
   <!-- Spectator state shown when wordle is active but you're NOT the guesser.
-       Three confidence buttons let the operator know who's likely to get it.
-       User can change their vote anytime — the most-recent click wins. -->
+       Three confidence buttons in a single row. Tap to vote, tap again to change. -->
   <div id="wordleWaitBox" class="ui-panel">
-    <div id="wordleWaitLabel">🔤 WORDLE</div>
-    <div id="wordleWaitText">Watching <span id="wordleWaitGuesserName">someone</span> guess…</div>
     <div id="wordleConfidencePrompt">How confident are you?</div>
     <div id="wordleConfidenceButtons">
       <button class="wordle-conf-btn" data-confidence="low"    type="button">🔴<span>NO IDEA</span></button>
@@ -1695,6 +1724,7 @@ skribblGuess.addEventListener("click", async () => {
  * and currentGuesser. The Wordle algorithm runs entirely on control.
  */
 const wordleBox             = document.getElementById("wordleBox");
+const wordleGridOverlay     = document.getElementById("wordleGridOverlay");
 const wordleWaitBox         = document.getElementById("wordleWaitBox");
 const wordleResultBox       = document.getElementById("wordleResultBox");
 const wordleResultIcon      = document.getElementById("wordleResultIcon");
@@ -1828,6 +1858,12 @@ async function submitWordleGuess() {
 }
 
 function updateWordleVisibility() {
+  // Grid overlay is shown ONLY when you're the active guesser in playing phase
+  const showGridOverlay = wordleActive && wordlePhase_idx === "playing" && wordleAmGuesser;
+  if (wordleGridOverlay) {
+    wordleGridOverlay.classList.toggle("show", showGridOverlay);
+  }
+
   if (!wordleActive) {
     hidePanel(wordleBox);
     hidePanel(wordleWaitBox);
@@ -1851,10 +1887,10 @@ function updateWordleVisibility() {
   hidePanel(wordleResultBox);
   if (wordleAmGuesser) {
     hidePanel(wordleWaitBox);
-    showPanel(wordleBox);
+    showPanel(wordleBox); // keyboard panel below cam
   } else {
     hidePanel(wordleBox);
-    showPanel(wordleWaitBox);
+    showPanel(wordleWaitBox); // confidence buttons below cam
   }
 }
 
