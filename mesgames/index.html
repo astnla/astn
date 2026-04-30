@@ -323,12 +323,21 @@
     #skribblLetterGrid{
       display:flex;flex-wrap:wrap;justify-content:center;
       gap:6px;padding:4px 0;
+      width:100%;
     }
     .letter-word {
       display:flex;gap:4px;align-items:flex-end;
+      max-width:100%;
     }
     .letter-cell {
-      width:30px;height:36px;
+      /* Cells default to 30px but shrink if a word doesn't fit. flex-basis:30px
+         is the preferred width; min-width:0 lets them shrink below that when
+         the parent's max-width forces it. Long words (e.g. "microphone")
+         scale cells down instead of overflowing the container. */
+      flex:1 1 30px;
+      min-width:0;
+      max-width:30px;
+      height:36px;
       background:rgba(255,255,255,0.10);
       border:none;border-bottom:2.5px solid rgba(255,255,255,0.55);
       /* border-radius:4px 4px 0 0;*/
@@ -338,6 +347,7 @@
       outline:none;caret-color:transparent;
       transition:border-color 0.15s,background 0.15s;
       -webkit-user-select:auto;user-select:auto;
+      padding:0;
     }
     .letter-cell:focus {
       background:rgba(255,255,255,0.18);
