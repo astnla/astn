@@ -111,7 +111,6 @@ html, body {
       font-weight: 800;
       font-size: clamp(18px, 2.4vh, 32px);
       color: white;
-      letter-spacing: 0.04em;
       text-transform: uppercase;
       line-height: 1;
     }
@@ -155,6 +154,24 @@ html, body {
        answers don't widen it. Only height changes as text wraps to more or
        fewer lines. ◄── tune this clamp to taste */
     body.activity-game-trivia #gamesActivityContainer {
+      width: clamp(360px, 42vw, 600px);
+      min-width: clamp(360px, 42vw, 600px);
+      max-width: clamp(360px, 42vw, 600px);
+    }
+    /* Polls: same fixed-width treatment so long questions wrap to additional
+       lines (taller container) instead of stretching wider and pushing the
+       option bars across the screen. */
+    body.activity-game-polls #gamesActivityContainer {
+      width: clamp(360px, 42vw, 600px);
+      min-width: clamp(360px, 42vw, 600px);
+      max-width: clamp(360px, 42vw, 600px);
+    }
+    /* Drawing PROMPT mode only: same fixed-width treatment so long prompts
+       wrap onto more lines instead of stretching the container wide. The
+       :has() check scopes this to prompt mode only — reveal mode (showing the
+       student's drawing image) keeps its natural sizing so the 3:4 image card
+       isn't constrained. */
+    body.activity-game-drawing #gamesActivityContainer:has(#gmDrawing.mode-prompt) {
       width: clamp(360px, 42vw, 600px);
       min-width: clamp(360px, 42vw, 600px);
       max-width: clamp(360px, 42vw, 600px);
@@ -205,8 +222,7 @@ html, body {
     .gm-eyebrow {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
-      font-size: clamp(11px, 1.3vh, 15px);
-      letter-spacing: 0.18em;
+      font-size: clamp(11px, 1.3vh, 16px);
       text-transform: uppercase;
       color: rgba(255, 255, 255, 0.55);
       transition: opacity 0.22s ease;
@@ -217,7 +233,7 @@ html, body {
       color: white;
       font-size: clamp(22px, 3.6vh, 42px);
       line-height: 1.25;
-      letter-spacing: 0.02em;
+      text-transform: uppercase;
       transition: opacity 0.22s ease;
       /* Long single tokens (URLs, no-space text) should wrap rather than
          overflow horizontally. Width is capped per-game-mode via card-scoped
@@ -498,8 +514,7 @@ html, body {
       position: relative;
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
-      font-size: clamp(11px, 1.3vh, 15px);
-      letter-spacing: 0.18em;
+      font-size: clamp(11px, 1.3vh, 18px);
       text-transform: uppercase;
       color: rgba(255, 255, 255, 0.6);
       text-align: center;
@@ -510,10 +525,9 @@ html, body {
       min-height: clamp(16px, 2vh, 22px);
       width: 100%;
     }
-    #gmDrawingEyebrowLabel { letter-spacing: 0.18em; transition: opacity 0.3s ease; }
+    #gmDrawingEyebrowLabel { transition: opacity 0.3s ease; }
     #gmDrawingEyebrowText {
       font-weight: 700;
-      letter-spacing: 0.05em;
       color: rgba(255, 255, 255, 0.85);
       text-transform: none;
       font-size: clamp(10px, 1.2vh, 14px);
@@ -526,7 +540,6 @@ html, body {
       left: 0; right: 0; top: 50%;
       transform: translateY(-50%);
       text-align: center;
-      letter-spacing: 0.04em;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -543,7 +556,6 @@ html, body {
     }
     #gmDrawing.mode-prompt #gmDrawingEyebrowText { display: none; }
     #gmDrawing.mode-prompt #gmDrawingEyebrowLabel {
-      letter-spacing: 0.18em;
       color: rgba(255, 255, 255, 0.55);
     }
     /* Timer bar — same pattern as wordle/skribbl, pinned to eyebrow bottom */
@@ -573,7 +585,7 @@ html, body {
       font-weight: 700;
       font-size: clamp(22px, 3.6vh, 42px);
       line-height: 1.25;
-      letter-spacing: 0.02em;
+      text-transform: uppercase;
       color: white;
       text-align: center;
       width: 100%;
@@ -1422,6 +1434,7 @@ html, body {
     .bar-label {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 700;
+      text-transform: uppercase;
       font-size: clamp(13px, 1.8vh, 22px);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       flex: 1;
@@ -1922,22 +1935,45 @@ function gmHide(el, key) {
   gmActiveCards.delete(key);
   refreshActivityOpen();
 }
+// Track the family class we're currently displaying. We DON'T remove the
+// activity-game-* class the moment cards hide — instead we defer it until the
+// container's close animation finishes. Otherwise the per-family width clamp
+// (e.g. polls/trivia clamp at 42vw) is dropped mid-collapse, the container
+// reverts to width:auto which computes wider content width, and you see the
+// container briefly grow wider before shrinking. The defer keeps the clamp
+// applied throughout the close, so the bar shrinks straight down.
+let gmFamilyClearTimer = null;
 function refreshActivityOpen() {
   const open = gameModeOn && gmActiveCards.size > 0;
   document.body.classList.toggle("activity-open", open);
-  // Tag the body with the active game family so CSS can scope per-game
-  // styling (e.g. trivia uses a narrower container so long answers wrap
-  // instead of stretching wide). Keys like "trivia-question" / "polls-bars"
-  // share a prefix per game; we strip after the dash.
+
   const families = new Set();
   for (const key of gmActiveCards) {
     families.add(key.split("-")[0]);
   }
-  for (const cls of Array.from(document.body.classList)) {
-    if (cls.startsWith("activity-game-")) document.body.classList.remove(cls);
-  }
-  for (const fam of families) {
-    document.body.classList.add(`activity-game-${fam}`);
+
+  if (families.size > 0) {
+    // Something is showing — clear any pending defer, apply the new family classes immediately
+    if (gmFamilyClearTimer) { clearTimeout(gmFamilyClearTimer); gmFamilyClearTimer = null; }
+    for (const cls of Array.from(document.body.classList)) {
+      if (cls.startsWith("activity-game-")) document.body.classList.remove(cls);
+    }
+    for (const fam of families) {
+      document.body.classList.add(`activity-game-${fam}`);
+    }
+  } else {
+    // Nothing is showing — defer family-class removal until the container's
+    // close animation completes (~600ms covers the 0.55s scaleY transition).
+    if (gmFamilyClearTimer) clearTimeout(gmFamilyClearTimer);
+    gmFamilyClearTimer = setTimeout(() => {
+      gmFamilyClearTimer = null;
+      // Only clear if still nothing is showing (a new activity may have opened)
+      if (gmActiveCards.size === 0) {
+        for (const cls of Array.from(document.body.classList)) {
+          if (cls.startsWith("activity-game-")) document.body.classList.remove(cls);
+        }
+      }
+    }, 600);
   }
 }
 
