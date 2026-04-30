@@ -1416,8 +1416,8 @@ onValue(ref(db, "drawing/timesUp"), snap => {
  */
 let drawTimerRafRunning = false;
 let drawRoundDurationMs = 60000;
-function startDrawTimer(timeEnd) {
-  drawRoundDurationMs = Math.max(1, timeEnd - Date.now());
+function startDrawTimer(timeEnd, durationMs) {
+  drawRoundDurationMs = durationMs > 0 ? durationMs : Math.max(1, timeEnd - Date.now());
   drawTimerBar.classList.add("show");
   drawTimerRafRunning = true;
 
@@ -1440,10 +1440,12 @@ function stopDrawTimer() {
   drawTimerBar.classList.remove("show");
   drawTimerFill.style.width = "100%";
 }
+let drawDurationMs = 0;
+onValue(ref(db, "drawing/durationMs"), snap => { drawDurationMs = snap.val() || 0; });
 onValue(ref(db, "drawing/timeEnd"), snap => {
   const timeEnd = snap.val();
   if (!drawActive || !timeEnd) { stopDrawTimer(); return; }
-  startDrawTimer(timeEnd);
+  startDrawTimer(timeEnd, drawDurationMs);
 });
 
 /* ── SKRIBBL ── */
@@ -1463,8 +1465,11 @@ const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
 const skribblHintRef   = ref(db, "skribbl/hint");
 const skribblCloseRef  = ref(db, `skribbl/close/${userKey}`);
 const skribblTimeEndRef    = ref(db, "skribbl/timeEnd");
+const skribblDurationMsRef = ref(db, "skribbl/durationMs");
 const skribblLeaderboardRef= ref(db, "skribbl/leaderboard");
 const skribblPhaseRef      = ref(db, "skribbl/phase");
+
+let skribblDurationMs = 0;
 
 let skribblActive   = false;
 let skribblAmDrawer = false;
@@ -1595,13 +1600,12 @@ function showCloseToast() {
 }
 
 /* ── COUNTDOWN TIMER ── */
-function startSkribblTimer(timeEnd) {
-  skribblTimerInterval = true; // mark as running (RAF doesn't return an id we store)
-  const total = timeEnd - Date.now();
-  skribblRoundDuration = total > 0 ? total : 60000;
+function startSkribblTimer(timeEnd, durationMs) {
+  skribblTimerInterval = true;
+  skribblRoundDuration = durationMs > 0 ? durationMs : Math.max(1, timeEnd - Date.now());
 
   function tick() {
-    if (!skribblTimerInterval) return; // stopped externally
+    if (!skribblTimerInterval) return;
     const remaining = Math.max(0, timeEnd - Date.now());
     const pct = (remaining / skribblRoundDuration) * 100;
     skribblTimerFill.style.width = pct + "%";
@@ -1768,11 +1772,14 @@ onValue(skribblPromptRef, snap => {
   }
 });
 
+// Cache durationMs so the timeEnd listener always has it
+onValue(skribblDurationMsRef, snap => { skribblDurationMs = snap.val() || 0; });
+
 // Timer — sync from Firebase timeEnd
 onValue(skribblTimeEndRef, snap => {
   const timeEnd = snap.val();
   if (!skribblActive || !timeEnd) return;
-  startSkribblTimer(timeEnd);
+  startSkribblTimer(timeEnd, skribblDurationMs);
 });
 
 // Hint updates
@@ -1889,6 +1896,9 @@ const wordleKbStateRef       = ref(db, "wordle/keyboardState");
 const wordleCurrentGuesserRef= ref(db, "wordle/currentGuesser");
 const wordlePendingGuessRef  = ref(db, "wordle/pendingGuess");
 const wordleTurnEndEpochRef_idx  = ref(db, "wordle/turnEndEpoch");
+const wordleTurnDurationMsRef_idx = ref(db, "wordle/turnDurationMs");
+let wordleTurnDurationMs = 0;
+onValue(wordleTurnDurationMsRef_idx, snap => { wordleTurnDurationMs = snap.val() || 0; });
 const wordleWinnerRef_idx        = ref(db, "wordle/winner");
 
 let wordleActive       = false;
@@ -2213,7 +2223,7 @@ onValue(wordleTurnEndEpochRef_idx, snap => {
     return;
   }
   const startMs = Date.now();
-  const totalMs = Math.max(1, epoch - startMs);
+  const totalMs = wordleTurnDurationMs > 0 ? wordleTurnDurationMs : Math.max(1, epoch - startMs);
   wordleIdxTimerBar.classList.add("show");
   wordleIdxRafRunning = true;
 

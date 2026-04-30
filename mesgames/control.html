@@ -1873,10 +1873,12 @@ els.sendDrawBtn.onclick = async () => {
   ];
   if (durationSec > 0) {
     // Phones use this to render their own countdown bar
-    writes.push(set(ref(db,"drawing/timeEnd"), startEpoch + durationSec * 1000));
+    writes.push(set(ref(db,"drawing/timeEnd"),    startEpoch + durationSec * 1000));
+    writes.push(set(ref(db,"drawing/durationMs"), durationSec * 1000));
   } else {
-    // Make sure stale timeEnd from a previous round doesn't linger
-    writes.push(set(ref(db,"drawing/timeEnd"), null));
+    // Make sure stale values from a previous round don't linger
+    writes.push(set(ref(db,"drawing/timeEnd"),    null));
+    writes.push(set(ref(db,"drawing/durationMs"), null));
   }
   await Promise.all(writes);
   flashSent(els.sendDrawBtn);
@@ -2402,11 +2404,12 @@ els.startSkribblBtn.onclick = async () => {
   const timeEnd    = startEpoch + duration * 1000;
 
   await Promise.all([
-    set(ref(db,"skribbl/mode"),    true),
-    set(ref(db,"skribbl/drawer"),  drawerKey),
-    set(ref(db,"skribbl/word"),    word),
-    set(ref(db,"skribbl/prompt"),  { text: word, show: true }),
-    set(ref(db,"skribbl/timeEnd"), timeEnd),
+    set(ref(db,"skribbl/mode"),       true),
+    set(ref(db,"skribbl/drawer"),     drawerKey),
+    set(ref(db,"skribbl/word"),       word),
+    set(ref(db,"skribbl/prompt"),     { text: word, show: true }),
+    set(ref(db,"skribbl/timeEnd"),    timeEnd),
+    set(ref(db,"skribbl/durationMs"), duration * 1000),
   ]);
 
   startHintTimers(word);
@@ -2756,11 +2759,13 @@ async function pickWordleGuesser(userKey, name) {
   ];
   if (turnDurationSec > 0) {
     const turnEndEpoch = Date.now() + turnDurationSec * 1000;
-    writes.push(set(ref(db,"wordle/turnEndEpoch"), turnEndEpoch));
+    writes.push(set(ref(db,"wordle/turnEndEpoch"),    turnEndEpoch));
+    writes.push(set(ref(db,"wordle/turnDurationMs"),  turnDurationSec * 1000));
     startWordleTurnTimer(turnDurationSec, Date.now());
   } else {
     // Manual mode — explicitly clear any leftover turnEndEpoch
-    writes.push(set(ref(db,"wordle/turnEndEpoch"), null));
+    writes.push(set(ref(db,"wordle/turnEndEpoch"),   null));
+    writes.push(set(ref(db,"wordle/turnDurationMs"), null));
     stopWordleTurnTimer();
   }
   await Promise.all(writes);

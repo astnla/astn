@@ -2018,6 +2018,9 @@ const wordleGuessesRef       = ref(db, "wordle/guesses");
 const wordleKeyboardStateRef = ref(db, "wordle/keyboardState");
 const wordleCurrentGuesserNameRef = ref(db, "wordle/currentGuesserName");
 const wordleTurnEndEpochRef  = ref(db, "wordle/turnEndEpoch");
+const wordleTurnDurationMsRef = ref(db, "wordle/turnDurationMs");
+let wordleTurnDurationMs = 0;
+onValue(wordleTurnDurationMsRef, snap => { wordleTurnDurationMs = snap.val() || 0; });
 const wordleWinnerRef        = ref(db, "wordle/winner");
 let activeUser     = null;
 let lastFrame      = 0;
@@ -2455,8 +2458,8 @@ const drawTimerOverlay     = document.getElementById("drawTimerOverlay");
 const drawTimerOverlayFill = document.getElementById("drawTimerOverlayFill");
 let outputDrawTimerRafRunning = false;
 let outputDrawTimerDurationMs = 60000;
-function startOutputDrawTimer(timeEnd) {
-  outputDrawTimerDurationMs = Math.max(1, timeEnd - Date.now());
+function startOutputDrawTimer(timeEnd, durationMs) {
+  outputDrawTimerDurationMs = durationMs > 0 ? durationMs : Math.max(1, timeEnd - Date.now());
   drawTimerOverlay.classList.add("show");
   if (gmDrawingTimerBar) gmDrawingTimerBar.classList.add("show");
   let lastTickedSec = null;
@@ -2499,10 +2502,12 @@ function stopOutputDrawTimer() {
     gmDrawingTimerFill.style.background = "white";
   }
 }
+let outputDrawDurationMs = 0;
+onValue(ref(db, "drawing/durationMs"), snap => { outputDrawDurationMs = snap.val() || 0; });
 onValue(ref(db, "drawing/timeEnd"), snap => {
   const timeEnd = snap.val();
   if (!drawingModeOn || !timeEnd) { stopOutputDrawTimer(); return; }
-  startOutputDrawTimer(timeEnd);
+  startOutputDrawTimer(timeEnd, outputDrawDurationMs);
 });
 
 /* Drawing round ended — fires whether by timer expiry or manual Times Up button.
@@ -2715,11 +2720,14 @@ const skribblLbCard      = document.getElementById("skribblLbCard");
 const skribblLbRows      = document.getElementById("skribblLbRows");
 const skribblLeaderboardRef = ref(db, "skribbl/leaderboard");
 const skribblTimeEndRef     = ref(db, "skribbl/timeEnd");
+const skribblDurationMsRef  = ref(db, "skribbl/durationMs");
 const skribblPhaseRef       = ref(db, "skribbl/phase");
-const skribblDrawerRef      = ref(db, "skribbl/drawer"); // userKey of drawer
+const skribblDrawerRef      = ref(db, "skribbl/drawer");
 const participantsRefForDrawer = ref(db, "participants");
 
 let skribblDrawerKey  = null;
+let skribblDurationMs = 0;
+onValue(skribblDurationMsRef, snap => { skribblDurationMs = snap.val() || 0; });
 let participantsCache = {};
 // Fetch drawer name for the gm-mode eyebrow ("ALICE IS DRAWING").
 onValue(participantsRefForDrawer, snap => {
@@ -2788,8 +2796,8 @@ function hideLbPanel() {
 }
 
 /* ── TIMER IN DRAW PANEL EYEBROW ── */
-function startOutputTimer(timeEnd) {
-  skribblRoundDuration = Math.max(1, timeEnd - Date.now());
+function startOutputTimer(timeEnd, durationMs) {
+  skribblRoundDuration = durationMs > 0 ? durationMs : Math.max(1, timeEnd - Date.now());
   drawPanelTimer.classList.add("show");
   if (gmSkribblTimerBar) gmSkribblTimerBar.classList.add("show");
   let lastTickedSec = null;
@@ -3014,7 +3022,7 @@ onValue(skribblPhaseRef, snap => {
 onValue(skribblTimeEndRef, snap => {
   const timeEnd = snap.val();
   if (!skribblOn || !timeEnd) { stopOutputTimer(); return; }
-  startOutputTimer(timeEnd);
+  startOutputTimer(timeEnd, skribblDurationMs);
 });
 
 // Live canvas stream from drawer
@@ -3546,7 +3554,7 @@ onValue(wordleTurnEndEpochRef, snap => {
     return;
   }
   const startMs = Date.now();
-  const totalMs = Math.max(1, epoch - startMs);
+  const totalMs = wordleTurnDurationMs > 0 ? wordleTurnDurationMs : Math.max(1, epoch - startMs);
   wordleTurnTimerBar.classList.add("show");
   if (gmWordleTurnTimerBar) gmWordleTurnTimerBar.classList.add("show");
   wordleTimerRafRunning = true;
