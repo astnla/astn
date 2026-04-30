@@ -1,0 +1,2425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>MANATEE CAM</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root { --red:#0a0a0a; --navy:#ffffff; --white:#ffffff; --dim:rgba(0,0,0,0.18); }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html,body{min-height:100vh;background:var(--red);font-family:"DM Sans",sans-serif;color:var(--white);overflow-x:hidden;
+      -webkit-user-select:none;user-select:none;
+      -webkit-touch-callout:none;
+      -webkit-tap-highlight-color:transparent;
+    }
+    body{padding-bottom:80px;}
+    .page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:env(safe-area-inset-top,16px) 24px 0;}
+    .wordmark{display:flex;flex-direction:column;align-items:center;margin-bottom:20px;animation:fadeDown 0.4s ease both;}
+    .wordmark img{width:48px;height:48px;object-fit:contain;border-radius:8px;margin-bottom:6px;}
+    .wordmark-text{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:22px;color:var(--white);}
+    .viewfinder{position:relative;width:min(82vw,320px);aspect-ratio:3/4;background:var(--dim);border-radius:12px;overflow:hidden;animation:fadeUp 0.4s 0.1s ease both;}
+    #preview{width:100%;height:100%;object-fit:cover;display:block;opacity:0;pointer-events:none;}
+    #preview::-webkit-media-controls,
+    #preview::-webkit-media-controls-enclosure,
+    #preview::-webkit-media-controls-panel{display:none !important;}
+
+    #liveBadge{display:none;position:absolute;top:10px;left:10px;background:rgba(255,255,255,0.92);color:var(--red);padding:5px 11px;border-radius:6px;font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:15px;letter-spacing:1px;align-items:center;gap:6px;z-index:10;}
+    #liveBadge.show{display:flex;}
+    .live-dot{width:8px;height:8px;background:var(--red);border-radius:50%;animation:livePulse 1s ease-in-out infinite;}
+    @keyframes livePulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(0.4);opacity:0.4;}}
+    #flipBtn{display:none;position:absolute;bottom:10px;right:10px;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,0.18);backdrop-filter:blur(4px);cursor:pointer;align-items:center;justify-content:center;z-index:10;transition:transform 0.15s;}
+    #flipBtn.show{display:flex;}
+    #flipBtn:active{transform:scale(0.9);}
+    #flipBtn svg{width:18px;height:18px;stroke:white;fill:none;}
+    .cam-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;}
+    .cam-icon{width:44px;height:44px;border:2.5px solid rgba(255,255,255,0.7);border-radius:50%;display:flex;align-items:center;justify-content:center;}
+    .cam-icon svg{width:20px;height:20px;stroke:white;fill:none;}
+    .cam-label{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:16px;color:rgba(255,255,255,0.85);text-align:center;animation:pulse 1.8s ease-in-out infinite;}
+    @keyframes pulse{0%,100%{opacity:0.55;}50%{opacity:1;}}
+
+    /* ── SHARED INTERACTIVE BUTTON STYLE ── */
+    /* Used by trivia submit, skribbl guess, and poll options — consistent outline style */
+    .action-btn {
+      width:100%;padding:13px 16px;border-radius:8px;
+      border:2px solid rgba(255,255,255,0.35);
+      background:rgba(255,255,255,0.08);
+      color:white;
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:17px;
+      cursor:pointer;text-align:center;
+      transition:background 0.15s,border-color 0.15s,transform 0.1s;
+    }
+    .action-btn:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.6);}
+    .action-btn:active{transform:scale(0.98);background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.8);}
+
+    /* ── ANIMATED PANEL SYSTEM ──
+       All activity panels (trivia, poll, skribbl, submitted states, toolbar)
+       use the same spring-slide system instead of display:none snapping.
+       .panel-hidden  = fully hidden, collapsed height, pointer-events off
+       .panel-visible = fully visible, natural height
+       .panel-exiting = mid-exit, collapses while fading — removed by JS after transition
+    */
+    .ui-panel {
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(14px);
+      max-height: 0;
+      margin-top: 0;
+      pointer-events: none;
+      transition:
+        opacity   0.35s cubic-bezier(0.22,1,0.36,1),
+        transform 0.38s cubic-bezier(0.22,1,0.36,1),
+        max-height 0.38s cubic-bezier(0.22,1,0.36,1),
+        margin-top 0.38s cubic-bezier(0.22,1,0.36,1);
+    }
+    .ui-panel.visible {
+      opacity: 1;
+      transform: translateY(0);
+      max-height: 600px;   /* generous ceiling — content drives actual height */
+      margin-top: 18px;
+      pointer-events: auto;
+    }
+    /* Exit: slide down + fade, collapse height */
+    .ui-panel.exiting {
+      opacity: 0;
+      transform: translateY(10px);
+      max-height: 0;
+      margin-top: 0;
+      pointer-events: none;
+      transition:
+        opacity    0.28s ease-in,
+        transform  0.28s ease-in,
+        max-height 0.32s ease-in,
+        margin-top 0.32s ease-in;
+    }
+
+    /* ── TRIVIA ── */
+    #triviaBox{display:flex;flex-direction:column;gap:10px;width:min(82vw,320px);}
+    #triviaInput{padding:12px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.15);color:white;font-family:"DM Sans",sans-serif;font-size:15px;font-weight:500;outline:none;transition:background 0.2s;}
+    #triviaInput::placeholder{color:rgba(255,255,255,0.45);}
+    #triviaInput:focus{background:rgba(255,255,255,0.22);}
+    #triviaSubmitted{text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;color:rgba(255,255,255,0.9);}
+
+    /* ── POLLS ── */
+    #pollBox{display:flex;flex-direction:column;gap:12px;width:min(82vw,320px);}
+    #pollQuestionText{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:18px;color:white;text-align:center;line-height:1.3;}
+    #pollOptionsList{display:flex;flex-direction:column;gap:8px;}
+    .poll-btn{width:100%;padding:13px 16px;border-radius:8px;border:2px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.08);color:white;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:16px;cursor:pointer;text-align:left;transition:background 0.15s,border-color 0.15s,transform 0.1s;}
+    .poll-btn:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.6);}
+    .poll-btn:active{transform:scale(0.98);}
+    .poll-btn.selected{background:rgba(255,255,255,0.22);border-color:rgba(255,255,255,0.9);border-width:2px;}
+    #pollSubmitted{text-align:center;font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:20px;color:rgba(255,255,255,0.9);}
+
+    .legal{margin-top:14px;font-size:10px;line-height:1.5;color:rgba(255, 255, 255, 0.55);text-align:center;max-width:300px;}
+    @keyframes fadeDown{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:none;}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+    /* ── SKRIBBL ── */
+    #skribblBox{display:flex;flex-direction:column;gap:12px;width:min(82vw,320px);}
+    #skribblLabel{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:18px;color:white;text-align:center;line-height:1.3;}
+
+    /* Countdown timer bar */
+    #skribblTimerBar{width:100%;height:5px;border-radius:99px;background:rgba(255,255,255,0.12);overflow:hidden;}
+    #skribblTimerFill{height:100%;border-radius:99px;background:white;transition:width 1s linear;}
+
+    /* Live leaderboard on index */
+    #skribblLeaderboardBox{display:flex;flex-direction:column;gap:8px;width:min(82vw,320px);}
+    #skribblLeaderboardTitle{font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:20px;color:white;text-align:center;}
+    #skribblLeaderboardList{display:flex;flex-direction:column;gap:6px;}
+    .skribbl-lb-row{
+      display:flex;align-items:center;gap:10px;
+      padding:9px 12px;border-radius:10px;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.15);
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:17px;color:white;
+      animation:fadeUp 0.3s ease both;
+    }
+    .skribbl-lb-row.mine{background:rgba(84,209,138,0.15);border-color:rgba(84,209,138,0.5);}
+
+    /* ── WORDLE ── */
+    /* Both panels just contain controls — no chrome, no labels */
+    #wordleBox, #wordleWaitBox {
+      display:flex;flex-direction:column;gap:14px;
+      width:min(92vw,380px);
+      align-items:center;
+    }
+
+    /* ─── Wordle grid OVERLAY (sits on top of the cam, like drawOverlay) ───
+       Centers the grid against a soft dark backdrop so cells stay readable
+       against any cam content behind them. */
+    #wordleGridOverlay {
+      position:absolute;inset:0;z-index:18;
+      display:none;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:10px;
+      background:rgba(10,10,10,0.55);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+      border-radius:12px;
+      animation:fadeUp 0.35s ease both;
+      pointer-events:none; /* non-interactive — typing happens on the keyboard panel */
+    }
+    #wordleGridOverlay.show { display:flex; }
+
+    /* Guesser's mini-grid — flex:1 so it consumes whatever space the timer + padding
+       leave behind. Cells size themselves via the row's height (set as a CSS var
+       on render) so 10 rows fits as cleanly as 6 rows. */
+    #wordleGuessGrid {
+      display:flex;flex-direction:column;gap:4px;align-items:center;
+      flex:1 1 0;
+      min-height:0;
+      width:100%;
+      justify-content:center;
+    }
+    .wordle-i-row {
+      display:grid;
+      gap:4px;
+      flex:0 0 auto;
+      /* Row height is computed at render time from the available container
+         height ÷ row count. Falls back to a sane default if not set. */
+      height:var(--wordle-cell-size, 38px);
+    }
+    .wordle-i-cell {
+      width:var(--wordle-cell-size, 38px);
+      height:var(--wordle-cell-size, 38px);
+      display:flex;align-items:center;justify-content:center;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;
+      /* Letter font scales with cell size */
+      font-size:calc(var(--wordle-cell-size, 38px) * 0.62);
+      color:white;
+      border:2px solid rgba(255,255,255,0.22);
+      border-radius:4px; background:rgba(0,0,0,0.25);
+      text-transform:uppercase;
+      transition:background 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
+    }
+    .wordle-i-cell.filled  { border-color: rgba(255,255,255,0.7); transform:scale(1.03); }
+    .wordle-i-cell.correct { background:#538d4e; border-color:#538d4e; }
+    .wordle-i-cell.present { background:#b59f3b; border-color:#b59f3b; }
+    .wordle-i-cell.absent  { background:#3a3a3c; border-color:#3a3a3c; }
+
+    /* Turn timer (lives inside the overlay so it sits above the grid) */
+    #wordleTurnTimerBar {
+      width:80%;height:4px;border-radius:99px;
+      background:rgba(255,255,255,0.18);
+      overflow:hidden;
+      display:none;
+    }
+    #wordleTurnTimerBar.show { display:block; }
+    #wordleTurnTimerFill {
+      height:100%;border-radius:99px;
+      background:white;
+      width:100%;
+      transition:width 1s linear, background 0.4s ease;
+    }
+
+    /* On-screen keyboard (panel below the cam — this is what wordleBox holds) */
+    #wordleKb { display:flex;flex-direction:column;gap:6px;width:100%; }
+    .wordle-i-kb-row { display:flex;gap:5px;justify-content:center;width:100%; }
+    .wordle-i-key {
+      flex:1 1 0;
+      min-width:0;
+      max-width:38px;
+      height:46px;
+      display:flex;align-items:center;justify-content:center;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:17px;
+      color:white;
+      background:rgba(255,255,255,0.14);
+      border:none;border-radius:5px;
+      text-transform:uppercase;
+      cursor:pointer;
+      transition:background 0.2s ease, transform 0.08s ease, opacity 0.2s ease;
+      -webkit-tap-highlight-color:transparent;
+      user-select:none;
+      padding:0;
+      /* iOS: prevent double-tap zoom on rapid typing */
+      touch-action:manipulation;
+    }
+    .wordle-i-key.wide {
+      flex:1.5 1 0;
+      max-width:62px;
+      font-size:12px;
+    }
+    .wordle-i-key:active { transform:scale(0.94); }
+    .wordle-i-key.correct { background:#538d4e; }
+    .wordle-i-key.present { background:#b59f3b; }
+    /* Greyed-out (absent) letters — much more visibly dimmed against the dark BG */
+    .wordle-i-key.absent  {
+      background:rgba(255,255,255,0.04);
+      color:rgba(255,255,255,0.28);
+    }
+    .wordle-i-key:disabled { pointer-events:none; opacity:0.5; }
+
+    /* ─── Confidence buttons (non-guesser, single horizontal row) ─── */
+    #wordleConfidencePrompt {
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:14px;
+      color:rgba(255,255,255,0.7);text-align:center;
+      letter-spacing:0.05em;text-transform:uppercase;
+    }
+    #wordleConfidenceButtons {
+      display:flex;flex-direction:row;gap:8px;width:100%;
+    }
+    .wordle-conf-btn {
+      flex:1 1 0;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+      padding:12px 8px;
+      background:rgba(255,255,255,0.06);
+      border:2px solid rgba(255,255,255,0.18);
+      border-radius:10px;
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;
+      font-size:11px;color:white;
+      letter-spacing:0.04em;
+      cursor:pointer;
+      transition:background 0.18s ease, border-color 0.18s ease, transform 0.08s ease;
+      -webkit-tap-highlight-color:transparent;
+      touch-action:manipulation;
+      min-width:0;
+    }
+    .wordle-conf-btn span {
+      font-size:11px;letter-spacing:0.05em;text-align:center;
+      line-height:1.2;
+    }
+    .wordle-conf-btn:active { transform:scale(0.96); }
+    .wordle-conf-btn.selected {
+      background:rgba(84,209,138,0.18);
+      border-color:rgba(84,209,138,0.7);
+    }
+    #wordleConfidenceConfirm {
+      font-family:"DM Sans",sans-serif;font-size:11px;
+      color:rgba(255,255,255,0.45);
+      text-align:center;line-height:1.4;
+      display:none;
+    }
+    #wordleConfidenceConfirm.show { display:block; }
+
+    /* Results box — shown to all phones when round ends */
+    #wordleResultBox {
+      display:none;flex-direction:column;gap:10px;
+      width:min(82vw,340px);align-items:center;
+      padding:18px 20px;
+      background:rgba(84,141,78,0.18);
+      border:1px solid rgba(84,141,78,0.5);
+      border-radius:12px;
+    }
+    #wordleResultBox.show { display:flex; }
+    #wordleResultBox.lost {
+      background:rgba(58,58,60,0.6);
+      border-color:rgba(255,100,124,0.4);
+    }
+    #wordleResultIcon { font-size:32px;line-height:1; }
+    #wordleResultLine1 {
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;
+      font-size:18px;color:white;text-align:center;line-height:1.3;
+    }
+    #wordleResultLine2 {
+      font-family:"DM Sans",sans-serif;font-size:13px;
+      color:rgba(255,255,255,0.85);text-align:center;
+    }
+
+    /* Letter grid */
+    #skribblLetterGrid{
+      display:flex;flex-wrap:wrap;justify-content:center;
+      gap:6px;padding:4px 0;
+    }
+    .letter-word {
+      display:flex;gap:4px;align-items:flex-end;
+    }
+    .letter-cell {
+      width:30px;height:36px;
+      background:rgba(255,255,255,0.10);
+      border:none;border-bottom:2.5px solid rgba(255,255,255,0.55);
+      /* border-radius:4px 4px 0 0;*/
+      color:white;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:20px;
+      text-align:center;text-transform:uppercase;
+      outline:none;caret-color:transparent;
+      transition:border-color 0.15s,background 0.15s;
+      -webkit-user-select:auto;user-select:auto;
+    }
+    .letter-cell:focus {
+      background:rgba(255,255,255,0.18);
+      border-bottom-color:white;
+    }
+    /* Revealed: placeholder style — visible but not "filled in" */
+    .letter-cell.revealed {
+      border-bottom-color:rgba(255,255,255,0.25);
+    }
+    /* The hint letter shows as a faded placeholder */
+    .letter-cell.revealed::placeholder {
+      color:rgba(255,255,255,0.45);
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:20px;
+    }
+    /* word spacer between words */
+    .letter-spacer { width:10px; }
+
+    /* "SO CLOSE!" toast */
+    #skribblCloseToast {
+      position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);
+      background:rgba(255,210,90,0.95);color:#2c2300;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;font-size:18px;
+      padding:10px 22px;border-radius:999px;
+      opacity:0;pointer-events:none;
+      transition:opacity 0.3s ease,transform 0.3s cubic-bezier(0.22,1,0.36,1);
+      white-space:nowrap;z-index:9999;
+    }
+    #skribblCloseToast.show {
+      opacity:1;transform:translateX(-50%) translateY(0);
+    }
+
+    /* ── DRAWING OVERLAY ── */
+    #drawOverlay{
+      position:absolute;inset:0;z-index:20;
+      background:white;border-radius:12px;
+      display:flex;flex-direction:column;
+      transform:translateY(100%);opacity:0;
+      transition:transform 0.4s cubic-bezier(0.22,1,0.36,1),opacity 0.35s ease;
+      pointer-events:none;
+      touch-action:none;
+      -webkit-user-select:none;user-select:none;
+    }
+    #drawOverlay.show{transform:translateY(0);opacity:1;pointer-events:auto;}
+    #drawPromptLabel{
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;
+      font-size:15px;color:#00031F;
+      text-align:center;padding:10px 14px 6px;flex-shrink:0;
+    }
+    #drawCanvas{
+      flex:1;width:100%;display:block;
+      cursor:crosshair;touch-action:none;
+      -webkit-user-select:none;user-select:none;
+    }
+    #drawActions{
+      display:flex;gap:8px;padding:8px 10px;flex-shrink:0;
+    }
+    .draw-btn{
+      flex:1;padding:11px;border-radius:8px;border:none;
+      font-family:"Barlow Condensed",sans-serif;font-weight:700;
+      font-size:15px;cursor:pointer;transition:opacity 0.15s;
+    }
+    .draw-btn:active{opacity:0.7;}
+    .draw-btn:disabled{opacity:0.35;cursor:default;pointer-events:none;}
+    /* Draw overlay is white bg — use bordered styles for contrast */
+    #drawUndo{background:rgba(0,0,0,0.04);color:#00031F;border:2px solid #00031F;flex:0.7;}
+    #drawUndo:active{background:rgba(0,0,0,0.08);}
+    #drawRestart{background:rgba(255, 0, 0, 0.1);color:#cc0000;border:2px solid #cc0000;}
+    #drawRestart:active{background:rgba(204,0,0,0.08);}
+    #drawSubmit{background:rgba(0, 0, 0, 0.08);color:rgb(0, 0, 0);border:2px solid #00031F;}
+    #drawSubmit:active{background:#111;}
+    /* Optional countdown bar above the canvas — only shown when control sets a duration */
+    #drawTimerBar{
+      width:100%;height:5px;border-radius:99px;
+      background:rgba(0,0,0,0.10);overflow:hidden;
+      flex-shrink:0;margin:6px 10px 4px;width:calc(100% - 20px);
+      display:none;
+    }
+    #drawTimerBar.show{display:block;}
+    #drawTimerFill{height:100%;border-radius:99px;background:#00031F;transition:width 1s linear;}
+    #drawSubmitted{
+      position:absolute;inset:0;z-index:21;
+      background:white;border-radius:12px;
+      display:flex;
+      align-items:center;justify-content:center;
+      font-family:"Barlow Condensed",sans-serif;font-weight:900;
+      font-size:22px;color:#00031F;
+      flex-direction:column;gap:8px;
+      opacity:0;pointer-events:none;
+      transition:opacity 0.35s cubic-bezier(0.22,1,0.36,1);
+    }
+    #drawSubmitted.show{opacity:1;pointer-events:auto;}
+
+    /* ── DRAW TOOLBAR ── */
+    #drawToolbar {
+      flex-direction: column;
+      gap: 10px;
+      width: min(82vw, 320px);
+    }
+
+    /* Row wrapper */
+    .tool-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0px 0px 10px 0px;
+    }
+
+    /* Brush size buttons */
+    .brush-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.20);
+      background: rgba(255,255,255,0.06);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      min-height: 40px;
+    }
+    .brush-btn:active { transform: scale(0.95); }
+    .brush-btn.active {
+      background: rgba(255,255,255,0.18);
+      border-color: rgba(255,255,255,0.75);
+    }
+    .brush-dot {
+      border-radius: 50%;
+      background: white;
+      display: block;
+      flex-shrink: 0;
+    }
+
+    /* Fill / eraser buttons */
+    .tool-icon-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 10px 0;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.20);
+      background: rgba(255,255,255,0.06);
+      cursor: pointer;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      color: rgba(255,255,255,0.8);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .tool-icon-btn:active { transform: scale(0.95); }
+    .tool-icon-btn.active {
+      background: rgba(255,255,255,0.18);
+      border-color: rgba(255,255,255,0.75);
+      color: white;
+    }
+
+    /* Color palette */
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2.5px solid transparent;
+      transition: transform 0.12s, border-color 0.12s;
+      flex-shrink: 0;
+    }
+    .color-swatch:active { transform: scale(0.88); }
+    .color-swatch.active {
+      border-color: white;
+      transform: scale(1.18);
+      box-shadow: 0 0 0 1.5px rgba(0,0,0,0.4);
+    }
+    /* white swatch needs a visible border even when inactive */
+    .color-swatch[data-color="#ffffff"] { border-color: rgba(255,255,255,0.35); }
+    .color-swatch[data-color="#ffffff"].active { border-color: white; }
+
+    .palette-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 2px solid rgba(255,255,255,0.12);
+      justify-content: center;
+    }
+
+    /* ─── GAME MODE ───
+     * When meta/gameMode is true:
+     *   - The camera UI inside the viewfinder hides (preview, badge, flip,
+     *     tap-to-enable overlay).
+     *   - The viewfinder itself hides UNLESS an activity needs it as a stage —
+     *     drawing canvas, wordle grid, or drawing-submitted confirmation. We
+     *     detect "needs the stage" via :has() — if the viewfinder contains a
+     *     visible overlay child, it stays on screen.
+     *   - A standalone "WAITING FOR ACTIVITY" hint sits on the page (NOT inside
+     *     the viewfinder) and shows when nothing else is active. Trivia/polls/
+     *     skribbl have their own panels below — those don't need the viewfinder.
+     *   - Wordmark text is updated to MANATEE GAMES (handled in JS to avoid a
+     *     flash on initial load before the listener fires). */
+    body.game-mode #preview,
+    body.game-mode #liveBadge,
+    body.game-mode #flipBtn,
+    body.game-mode #camOverlay {
+      display: none !important;
+    }
+    /* Hide the viewfinder by default in game mode. It only re-appears when
+       it contains a visible overlay (drawing canvas, wordle grid, submitted
+       confirmation). The :has() selector handles this declaratively. */
+    body.game-mode .viewfinder { display: none; }
+    body.game-mode .viewfinder:has(#drawOverlay.show),
+    body.game-mode .viewfinder:has(#wordleGridOverlay.show),
+    body.game-mode .viewfinder:has(#drawSubmitted.show) {
+      display: block;
+      background: rgba(0,0,0,0.32);
+    }
+
+    /* "WAITING FOR ACTIVITY" hint — page-level (sibling of viewfinder), not
+       inside it. Visible only when game mode is on AND no panel/overlay has
+       claimed the screen. We hide it when ANY .ui-panel is visible OR any
+       viewfinder overlay is showing. */
+    #gameModeIdleHint {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 32px 16px;
+      text-align: center;
+      animation: fadeUp 0.5s 0.1s ease both;
+    }
+    body.game-mode #gameModeIdleHint { display: flex; }
+    /* Hide the hint when any activity panel or overlay is up. The :has()
+       selector lets us check the whole .page subtree without per-panel JS. */
+    body.game-mode .page:has(.ui-panel.visible) #gameModeIdleHint,
+    body.game-mode .page:has(#drawOverlay.show) #gameModeIdleHint,
+    body.game-mode .page:has(#wordleGridOverlay.show) #gameModeIdleHint,
+    body.game-mode .page:has(#drawSubmitted.show) #gameModeIdleHint {
+      display: none;
+    }
+    #gameModeIdleHint .gm-idle-icon {
+      width: 38px;
+      height: 38px;
+      opacity: 0.5;
+    }
+    #gameModeIdleHint .gm-idle-text {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      color: rgba(255,255,255,0.45);
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="wordmark">
+    <img src="assets/mestv.png" alt="MES TV">
+    <div class="wordmark-text">MANATEE CAM</div>
+  </div>
+
+  <div class="viewfinder" id="viewfinder">
+    <video id="preview" autoplay playsinline muted disablepictureinpicture x-webkit-airplay="deny" style="pointer-events:none;opacity:0;"></video>
+    <div id="liveBadge"><span class="live-dot"></span>LIVE</div>
+    <button id="flipBtn" aria-label="Flip camera">
+      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/>
+        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+      </svg>
+    </button>
+    <div class="cam-overlay" id="camOverlay">
+      <div class="cam-icon">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+        </svg>
+      </div>
+      <span class="cam-label" id="camLabel">TAP TO ENABLE CAMERA</span>
+    </div>
+
+    <!-- Drawing overlay — slides up over camera when drawing mode is active -->
+    <div id="drawOverlay">
+      <div id="drawPromptLabel">DRAW: <span id="drawPromptText"></span></div>
+      <!-- Optional countdown bar — shown only when control sets a duration -->
+      <div id="drawTimerBar"><div id="drawTimerFill" style="width:100%;"></div></div>
+      <canvas id="drawCanvas"></canvas>
+      <div id="drawActions">
+        <button class="draw-btn" id="drawUndo" disabled>↶ UNDO</button>
+        <button class="draw-btn" id="drawRestart">RESTART</button>
+        <button class="draw-btn" id="drawSubmit">SUBMIT</button>
+      </div>
+    </div>
+
+    <!-- Wordle grid overlay — appears when YOU are the current guesser. The grid
+         floats centered on top of the cam with a soft dark backdrop so it stays
+         readable. The keyboard lives below the cam in its own panel. -->
+    <div id="wordleGridOverlay">
+      <!-- Turn timer — sits at the very top of the overlay -->
+      <div id="wordleTurnTimerBar"><div id="wordleTurnTimerFill"></div></div>
+      <div id="wordleGuessGrid"></div>
+    </div>
+    <div id="drawSubmitted">
+      <div>DRAWING SENT</div>
+    </div>
+  </div>
+
+  <!-- "WAITING FOR ACTIVITY" hint — page-level placeholder shown only in game
+       mode when no activity panel/overlay is active. Sits between the viewfinder
+       (which is hidden in game mode unless a drawing/wordle overlay is up) and
+       the activity panels below. -->
+  <div id="gameModeIdleHint">
+    <svg class="gm-idle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(255,255,255,0.45);">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    </svg>
+    <div class="gm-idle-text">WAITING FOR ACTIVITY</div>
+  </div>
+
+  <!-- Trivia -->
+  <div id="triviaBox" class="ui-panel">
+    <div id="triviaQuestionText" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;color:white;text-align:center;line-height:1.3;"></div>
+    <input id="triviaInput" type="text" placeholder="What's your answer?" autocomplete="off">
+    <button id="triviaSubmit" class="action-btn">SUBMIT ANSWER</button>
+  </div>
+  <div id="triviaSubmitted" class="ui-panel">ANSWER SUBMITTED</div>
+
+  <!-- Polls -->
+  <div id="pollBox" class="ui-panel">
+    <div id="pollQuestionText"></div>
+    <div id="pollOptionsList"></div>
+  </div>
+  <div id="pollSubmitted" class="ui-panel">VOTE SUBMITTED</div>
+
+  <!-- Skribbl guess box -->
+  <div id="skribblBox" class="ui-panel">
+    <div id="skribblLabel">🎨 WHAT'S THEIR DOODLE?</div>
+    <div id="skribblTimerBar"><div id="skribblTimerFill" style="width:100%;"></div></div>
+    <div id="skribblLetterGrid"></div>
+    <button id="skribblGuess" class="action-btn">GUESS</button>
+  </div>
+  <!-- Skribbl leaderboard — shown to everyone once round is active (replaces winner panel) -->
+  <div id="skribblLeaderboardBox" class="ui-panel">
+    <div id="skribblLeaderboardTitle">🏆 LEADERBOARD</div>
+    <div id="skribblLeaderboardList"></div>
+  </div>
+
+  <!-- ─── WORDLE — guesser keyboard panel. The grid lives as an overlay on the
+       cam (see #wordleGridOverlay above). This panel is just the keyboard. ─── -->
+  <div id="wordleBox" class="ui-panel">
+    <div id="wordleKb"></div>
+  </div>
+  <!-- Spectator state shown when wordle is active but you're NOT the guesser.
+       Three confidence buttons in a single row. Tap to vote, tap again to change. -->
+  <div id="wordleWaitBox" class="ui-panel">
+    <div id="wordleConfidencePrompt">How confident are you?</div>
+    <div id="wordleConfidenceButtons">
+      <button class="wordle-conf-btn" data-confidence="low"    type="button">🔴<span>NO IDEA</span></button>
+      <button class="wordle-conf-btn" data-confidence="medium" type="button">🟡<span>KIND OF</span></button>
+      <button class="wordle-conf-btn" data-confidence="high"   type="button">🟢<span>I KNOW IT</span></button>
+    </div>
+    <div id="wordleConfidenceConfirm">Vote saved — tap again to change.</div>
+  </div>
+  <!-- Results panel shown to all phones during results phase -->
+  <div id="wordleResultBox" class="ui-panel">
+    <div id="wordleResultIcon">🎉</div>
+    <div id="wordleResultLine1"></div>
+    <div id="wordleResultLine2"></div>
+  </div>
+
+  <!-- So Close toast (lives outside flow so it's always fixed to viewport) -->
+  <div id="skribblCloseToast">SO CLOSE! 🔥</div>
+
+  <!-- Draw Toolbar — shown below the viewfinder when drawing is active -->
+  <div id="drawToolbar" class="ui-panel">
+    <!-- Row 1: Brush sizes + fill + eraser -->
+    <div class="tool-row">
+      <button class="brush-btn" data-size="1.5" aria-label="Small brush">
+        <span class="brush-dot" style="width:8px;height:8px;background:#fff;"></span>
+      </button>
+      <button class="brush-btn active" data-size="3" aria-label="Medium brush">
+        <span class="brush-dot" style="width:12px;height:12px;background:#fff;"></span>
+      </button>
+      <button class="brush-btn" data-size="7" aria-label="Large brush">
+        <span class="brush-dot" style="width:16px;height:16px;background:#fff;"></span>
+      </button>
+      <button class="tool-icon-btn" id="fillBtn" aria-label="Fill tool">
+        FILL
+      </button>
+      <button class="tool-icon-btn" id="eraserBtn" aria-label="Eraser">
+        ERASE
+      </button>
+    </div>
+    <!-- Row 2: Color palette -->
+    <div class="palette-wrap" id="colorPalette"></div>
+  </div>
+
+  <p class="legal">By participating you consent to being filmed and broadcast live. For school use only.</p>
+</div>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import { ref, set, update, onValue, off, get } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+/* ── SESSION CHECK ── */
+const name    = sessionStorage.getItem("fanCamName");
+const userKey = sessionStorage.getItem("fanCamUserKey");
+if (!name || !userKey) { window.location.href = "join.html"; }
+
+/* ── ANIMATED PANEL HELPERS ── */
+// showPanel: slide up + fade in
+function showPanel(el) {
+  el.classList.remove("exiting");
+  el.offsetHeight; // force reflow so transition fires from hidden state
+  el.classList.add("visible");
+}
+// hidePanel: slide down + fade out, then clean up
+function hidePanel(el) {
+  if (!el.classList.contains("visible")) return;
+  el.classList.remove("visible");
+  el.classList.add("exiting");
+  const done = () => { el.classList.remove("exiting"); };
+  el.addEventListener("transitionend", done, { once: true });
+  // Safety fallback in case transitionend doesn't fire
+  setTimeout(done, 400);
+}
+
+/* ── ELEMENTS ── */
+const preview         = document.getElementById("preview");
+const camOverlay      = document.getElementById("camOverlay");
+const camLabel        = document.getElementById("camLabel");
+const liveBadge       = document.getElementById("liveBadge");
+const flipBtn         = document.getElementById("flipBtn");
+const triviaBox       = document.getElementById("triviaBox");
+const triviaInput     = document.getElementById("triviaInput");
+const triviaSubmit    = document.getElementById("triviaSubmit");
+const triviaSubmitted = document.getElementById("triviaSubmitted");
+const pollBox         = document.getElementById("pollBox");
+const pollQuestionText= document.getElementById("pollQuestionText");
+const pollOptionsList = document.getElementById("pollOptionsList");
+const pollSubmitted   = document.getElementById("pollSubmitted");
+
+/* ── CAMERA STATE ── */
+let currentStream    = null;
+let currentCamera    = "back";
+let streamingEnabled = false;
+let isLive           = false;
+
+/* ── STREAMING STATE ── */
+let sending       = false;
+let lastFrameData = null;
+let lastSendTime  = 0;
+const MIN_INTERVAL_MS = 120;
+const DIFF_THRESHOLD  = 0.015;
+
+/* ── REFS ── */
+const activeUserRef = ref(db, "live/activeUser");
+const myRef         = ref(db, `participants/${userKey}`);
+const triviaModeRef = ref(db, "trivia/mode");
+const triviaQRef    = ref(db, "trivia/question");
+const pollsModeRef  = ref(db, "polls/mode");
+const pollsQRef     = ref(db, "polls/question");
+const pollsOptsRef  = ref(db, "polls/options");
+const gameModeRef   = ref(db, "meta/gameMode");
+
+/* ── GAME MODE ──
+ * When meta/gameMode is true, this phone goes camera-less:
+ *   - Existing stream is stopped + cameraActive cleared
+ *   - body.game-mode class hides the cam UI inside the viewfinder
+ *   - enableCamera() refuses to run while game mode is on
+ *   - Wordmark text swaps to MANATEE GAMES
+ * The viewfinder DIV stays visible because drawing / wordle / skribbl overlays
+ * sit inside it — those still work in game mode.
+ *
+ * Mid-session toggling: if game mode flips OFF mid-session, the user has to
+ * manually tap to re-enable the camera (no auto-reacquire). Document this in
+ * the operator UX. */
+let gameModeOn = false;
+onValue(gameModeRef, snap => {
+  const next = snap.val() === true;
+  const prev = gameModeOn;
+  gameModeOn = next;
+  document.body.classList.toggle("game-mode", gameModeOn);
+  // Update wordmark text
+  const wm = document.querySelector(".wordmark-text");
+  if (wm) wm.textContent = gameModeOn ? "MANATEE GAMES" : "MANATEE CAM";
+
+  if (gameModeOn) {
+    // Stop any in-flight stream + signal not-streaming to control
+    if (currentStream) {
+      currentStream.getTracks().forEach(t => t.stop());
+      currentStream = null;
+    }
+    streamingEnabled = false;
+    preview.srcObject = null;
+    preview.style.opacity = "0";
+    update(ref(db, `participants/${userKey}`), { cameraActive: false }).catch(() => {});
+  } else if (prev) {
+    // game mode flipped OFF mid-session — show the cam-tap overlay again so
+    // user can manually re-enable. We don't auto-reacquire (mobile permission
+    // policies often require user gesture).
+    if (camOverlay) {
+      camOverlay.style.display = "";
+      camLabel.textContent = "TAP TO ENABLE CAMERA";
+    }
+  }
+});
+
+/* ── PIXEL DIFF ── */
+const diffCanvas = document.createElement("canvas");
+diffCanvas.width = 16; diffCanvas.height = 12;
+const diffCtx = diffCanvas.getContext("2d");
+
+function hasSignificantChange(sourceCanvas) {
+  diffCtx.drawImage(sourceCanvas, 0, 0, 16, 12);
+  const pixels = diffCtx.getImageData(0, 0, 16, 12).data;
+  if (!lastFrameData) { lastFrameData = new Uint8ClampedArray(pixels); return true; }
+  let diff = 0;
+  for (let i = 0; i < pixels.length; i += 4) {
+    const dr = Math.abs(pixels[i]   - lastFrameData[i]);
+    const dg = Math.abs(pixels[i+1] - lastFrameData[i+1]);
+    const db2= Math.abs(pixels[i+2] - lastFrameData[i+2]);
+    if ((dr + dg + db2) > 30) diff++;
+  }
+  lastFrameData = new Uint8ClampedArray(pixels);
+  return (diff / 64) > DIFF_THRESHOLD;
+}
+
+/* ── CAMERA ── */
+async function enableCamera() {
+  // Game mode disables cameras entirely — refuse to acquire one even if the
+  // tap-to-enable overlay is somehow tapped (it should be hidden but defensive).
+  if (gameModeOn) return;
+  if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
+  camLabel.textContent = "ENABLING…";
+  try {
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    let constraints;
+    if (isIOS) {
+      constraints = { video: { facingMode: currentCamera === "front" ? "user" : "environment", width:{ideal:480}, height:{ideal:360} } };
+    } else {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter(d => d.kind === "videoinput");
+      const hasLabels = cams.some(c => c.label);
+      if (!hasLabels) {
+        constraints = { video: { facingMode: currentCamera === "front" ? "user" : "environment", width:{ideal:480}, height:{ideal:360} } };
+      } else {
+        let target;
+        if (currentCamera === "front") {
+          target = cams.find(c => /front/i.test(c.label) && !/ultra/i.test(c.label))
+                || cams.find(c => /front/i.test(c.label))
+                || cams[0];
+        } else {
+          target = cams.find(c => /back|rear|environment/i.test(c.label))
+                || cams[cams.length - 1];
+        }
+        if (!target?.deviceId) target = currentCamera === "front" ? cams[0] : cams[cams.length - 1];
+        constraints = { video: { deviceId: { exact: target.deviceId }, width:{ideal:480}, height:{ideal:360} } };
+      }
+    }
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    currentStream = stream;
+    preview.srcObject = stream;
+    preview.style.transform = currentCamera === "front" ? "scaleX(-1)" : "scaleX(1)";
+    // Wait for first real frame before revealing — prevents play button flash on iOS
+    preview.onloadeddata = () => {
+      preview.style.opacity = "1";
+      camOverlay.style.display = "none";
+      flipBtn.classList.add("show");
+    };
+    update(ref(db, `participants/${userKey}`), { cameraActive: true });
+    streamingEnabled = true;
+    startFrameLoop();
+  } catch(err) {
+    camLabel.textContent = "CAMERA ERROR — TAP TO RETRY";
+    streamingEnabled = false;
+  }
+}
+
+/* ── FRAME LOOP ── */
+const frameCanvas = document.createElement("canvas");
+const frameCtx = frameCanvas.getContext("2d");
+
+function startFrameLoop() {
+  function loop() {
+    requestAnimationFrame(loop);
+    if (!isLive || !streamingEnabled || sending) return;
+    if (!preview || preview.readyState < 2) return;
+    const now = performance.now();
+    if (now - lastSendTime < MIN_INTERVAL_MS) return;
+    const targetW = Math.min(preview.videoWidth, 560);
+    frameCanvas.width = targetW;
+    frameCanvas.height = Math.round(preview.videoHeight * (targetW / preview.videoWidth));
+    frameCtx.save();
+    if (currentCamera === "front") {
+      frameCtx.scale(-1, 1);
+      frameCtx.drawImage(preview, -frameCanvas.width, 0, frameCanvas.width, frameCanvas.height);
+    } else {
+      frameCtx.drawImage(preview, 0, 0, frameCanvas.width, frameCanvas.height);
+    }
+    frameCtx.restore();
+    if (!hasSignificantChange(frameCanvas)) return;
+    const jpeg = frameCanvas.toDataURL("image/jpeg", 0.50);
+    // Guard: toDataURL returns "data:," if canvas is empty/invalid
+    if (!jpeg || !jpeg.startsWith("data:image")) { return; }
+    lastSendTime = now;
+    sending = true;
+    set(ref(db, "live/frame"), jpeg)
+      .catch(e => console.warn("Frame write failed:", e))
+      .finally(() => { sending = false; });
+  }
+  loop();
+}
+
+/* ── ACTIVE USER ── */
+let heartbeatInterval = null;
+
+onValue(activeUserRef, snap => {
+  isLive = snap.val() === userKey;
+  liveBadge.classList.toggle("show", isLive);
+  if (!isLive) {
+    lastFrameData = null;
+    // Stop heartbeat when no longer live
+    if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+    return;
+  }
+  // Start heartbeat — fires every 3s regardless of pixel diff skipping
+  // This lets output.html distinguish "still scene" from "lost connection"
+  if (!heartbeatInterval) {
+    const hbRef = ref(db, "live/heartbeat");
+    set(hbRef, Date.now()); // immediate first beat
+    heartbeatInterval = setInterval(() => {
+      if (isLive) set(hbRef, Date.now()).catch(() => {});
+      else { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+    }, 3000);
+  }
+});
+
+/* ── CAMERA TAP / FLIP ── */
+camOverlay.addEventListener("click", () => {
+  if (camOverlay.style.display !== "none") enableCamera();
+});
+flipBtn.addEventListener("click", async () => {
+  streamingEnabled = false;
+  // Hide and detach the video BEFORE switching — this prevents iOS from briefly
+  // showing the new stream at its natural (unconstrained) resolution before
+  // object-fit:cover kicks in, which caused the zoomed-in flicker.
+  preview.style.opacity = "0";
+  preview.srcObject = null;
+  currentCamera = currentCamera === "front" ? "back" : "front";
+  lastFrameData = null;
+  await enableCamera();
+  setTimeout(() => { streamingEnabled = true; }, 800);
+});
+
+/* ── KICK / SESSION END ── */
+onValue(myRef, snap => { if (!snap.exists()) endSession(); });
+function endSession() {
+  if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+  document.body.innerHTML = `
+    <div style="height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:#0a0a0a;color:white;font-family:'Barlow Condensed',sans-serif;
+    font-size:28px;font-weight:900;text-align:center;padding:24px;gap:12px;">
+      <div>THANKS FOR JOINING!</div>
+      <div style="font-size:14px;font-weight:400;font-family:'DM Sans',sans-serif;opacity:0.7;letter-spacing:0;">You can close this tab.</div>
+    </div>`;
+  setTimeout(() => { sessionStorage.clear(); window.location.href = "join.html"; }, 10000);
+}
+
+/* ── TRIVIA ── */
+let triviaQListener = null;
+let triviaAnswerListener = null;
+let triviaHasSubmitted = false;
+let triviaCurrentQuestion = ""; // tracks which question the user has answered (so a new question allows new answer)
+
+// Persistent listener — sets triviaHasSubmitted on refresh / catches reset
+onValue(ref(db, `trivia/answers/${userKey}`), snap => {
+  if (snap.exists() && snap.val()?.answer) {
+    triviaHasSubmitted = true;
+    // Reflect submitted state in UI if trivia mode is active
+    if (triviaModeActive && triviaQuestionShowing) {
+      hidePanel(triviaBox);
+      showPanel(triviaSubmitted);
+    }
+  } else {
+    // Cleared (teacher reset) — allow re-submission
+    triviaHasSubmitted = false;
+  }
+});
+
+let triviaModeActive = false;
+let triviaQuestionShowing = false;
+
+onValue(triviaModeRef, snap => {
+  const on = snap.val() === true;
+  triviaModeActive = on;
+  if (!on) {
+    if (triviaQListener) { off(triviaQRef); triviaQListener = null; }
+    hidePanel(triviaBox);
+    hidePanel(triviaSubmitted);
+    triviaInput.value = "";
+    triviaQuestionShowing = false;
+    return;
+  }
+  if (!triviaQListener) {
+    triviaQListener = onValue(triviaQRef, snap => {
+      const d = snap.val() || {};
+      if (d.show && d.text) {
+        // New question? Reset submission lock so they can answer the new one.
+        // (Only resets if the question text actually changed — not on refresh of same question.)
+        if (d.text !== triviaCurrentQuestion) {
+          triviaCurrentQuestion = d.text;
+          // Don't clear triviaHasSubmitted here directly — the answers/${userKey} listener
+          // will fire when teacher resets answers, which is the correct trigger.
+        }
+        triviaQuestionShowing = true;
+        document.getElementById("triviaQuestionText").textContent = d.text;
+        if (triviaHasSubmitted) {
+          hidePanel(triviaBox);
+          showPanel(triviaSubmitted);
+        } else {
+          showPanel(triviaBox);
+          hidePanel(triviaSubmitted);
+          triviaInput.value = "";
+        }
+      } else {
+        triviaQuestionShowing = false;
+        triviaCurrentQuestion = "";
+        document.getElementById("triviaQuestionText").textContent = "";
+        hidePanel(triviaBox);
+        hidePanel(triviaSubmitted);
+        triviaInput.value = "";
+      }
+    });
+  }
+});
+triviaSubmit.addEventListener("click", () => {
+  if (triviaHasSubmitted) return; // hard guard
+  const answer = triviaInput.value.trim();
+  if (!answer) return;
+  triviaHasSubmitted = true;
+  update(ref(db, `trivia/answers/${userKey}`), { answer, timestamp: Date.now() });
+  hidePanel(triviaBox);
+  showPanel(triviaSubmitted);
+});
+
+/* ── POLLS ── */
+// Two-listener approach:
+// 1. Persistent options listener keeps currentOptions always fresh.
+// 2. Question listener calls buildPollButtons() which reads currentOptions.
+// Control page writes options BEFORE flipping show:true, so by the time
+// the question listener fires, currentOptions is already populated.
+// On reset: pollsListening stays true but currentOptions is wiped to {}
+// by the options listener when Firebase clears options — so a new poll
+// send re-populates currentOptions before show:true flips again.
+
+let currentOptions = {};
+let hasVoted       = false;
+let pollsListening = false;
+let pollsModeActive = false;
+let pollsQuestionShowing = false;
+
+// Persistent listener — restores hasVoted on refresh + responds to teacher reset
+onValue(ref(db, `polls/votes/${userKey}`), snap => {
+  if (snap.exists() && snap.val()?.optionKey) {
+    hasVoted = true;
+    if (pollsModeActive && pollsQuestionShowing) {
+      hidePanel(pollBox);
+      showPanel(pollSubmitted);
+    }
+  } else {
+    hasVoted = false;
+  }
+});
+
+function buildPollButtons() {
+  pollOptionsList.innerHTML = "";
+  const sorted = Object.entries(currentOptions)
+    .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0));
+  for (const [key, opt] of sorted) {
+    const btn = document.createElement("button");
+    btn.className = "poll-btn";
+    btn.textContent = opt.label;
+    btn.onclick = () => {
+      if (hasVoted) return; // hard guard
+      hasVoted = true;
+      document.querySelectorAll(".poll-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      update(ref(db, `polls/votes/${userKey}`), {
+        optionKey: key,
+        label: opt.label,
+        timestamp: Date.now()
+      });
+      setTimeout(() => {
+        hidePanel(pollBox);
+        showPanel(pollSubmitted);
+      }, 400);
+    };
+    pollOptionsList.appendChild(btn);
+  }
+}
+
+onValue(pollsModeRef, snap => {
+  const on = snap.val() === true;
+  pollsModeActive = on;
+
+  if (!on) {
+    if (pollsListening) {
+      off(pollsOptsRef);
+      off(pollsQRef);
+      pollsListening = false;
+    }
+    hidePanel(pollBox);
+    hidePanel(pollSubmitted);
+    pollOptionsList.innerHTML = "";
+    currentOptions = {};
+    pollsQuestionShowing = false;
+    return;
+  }
+
+  if (pollsListening) return;
+  pollsListening = true;
+
+  onValue(pollsOptsRef, snap => {
+    currentOptions = snap.val() || {};
+  });
+
+  onValue(pollsQRef, snap => {
+    const d = snap.val() || {};
+    if (d.show && d.text) {
+      pollsQuestionShowing = true;
+      pollQuestionText.textContent = d.text;
+      buildPollButtons();
+      // If they already voted (refresh / late join after voting), show submitted state
+      if (hasVoted) {
+        hidePanel(pollBox);
+        showPanel(pollSubmitted);
+      } else {
+        hidePanel(pollSubmitted);
+        showPanel(pollBox);
+      }
+    } else {
+      pollsQuestionShowing = false;
+      hidePanel(pollBox);
+      hidePanel(pollSubmitted);
+      pollOptionsList.innerHTML = "";
+    }
+  });
+});
+
+/* ── DRAWING ── */
+const drawOverlay    = document.getElementById("drawOverlay");
+const drawSubmitted  = document.getElementById("drawSubmitted");
+const drawPromptText = document.getElementById("drawPromptText");
+const drawCanvas     = document.getElementById("drawCanvas");
+const drawRestart    = document.getElementById("drawRestart");
+const drawSubmit     = document.getElementById("drawSubmit");
+const drawUndoBtn    = document.getElementById("drawUndo");
+const drawTimerBar   = document.getElementById("drawTimerBar");
+const drawTimerFill  = document.getElementById("drawTimerFill");
+const drawCtx        = drawCanvas.getContext("2d");
+const drawModeRef    = ref(db, "drawing/mode");
+const drawPromptRef  = ref(db, "drawing/prompt");
+
+let drawActive = false;
+let drawHasSubmitted = false;
+
+// On page load, check if this user already submitted a drawing this session.
+// If so, mark as submitted so the toolbar doesn't re-appear on refresh.
+// Uses onValue (not onlyOnce) so it also catches resets — when the teacher
+// clears submissions, this fires with snap.exists()===false and resets the flag.
+onValue(ref(db, `drawing/submissions/${userKey}`), snap => {
+  if (!snap.exists()) {
+    // Submission was cleared (teacher reset) — allow drawing again
+    drawHasSubmitted = false;
+  } else {
+    drawHasSubmitted = true;
+  }
+});
+
+function initDrawCanvas() {
+  // Size canvas to its CSS display size
+  const rect = drawCanvas.getBoundingClientRect();
+  drawCanvas.width  = rect.width  || drawCanvas.offsetWidth;
+  drawCanvas.height = rect.height || drawCanvas.offsetHeight;
+  drawCtx.fillStyle = "white";
+  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+  // Apply current tool settings (color/size/mode)
+  applyDrawSettings();
+  // Reset undo stack — every fresh canvas init starts with a blank baseline snapshot
+  resetUndoStack();
+}
+
+/* ── UNDO STACK ──
+ * Each completed stroke (or fill) pushes a canvas snapshot onto the stack.
+ * Undo pops the latest and redraws. Capped at 20 entries to control memory.
+ * Used by both regular draw mode and skribbl drawer canvas.
+ */
+const UNDO_MAX = 20;
+let undoStack = [];
+
+function captureUndoSnapshot() {
+  try {
+    if (undoStack.length >= UNDO_MAX) undoStack.shift();
+    undoStack.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+    drawUndoBtn.disabled = undoStack.length <= 1;
+  } catch (e) { /* getImageData can throw if canvas size is 0 — ignore */ }
+}
+function performUndo() {
+  if (undoStack.length <= 1) return;
+  undoStack.pop();                     // discard current state
+  const prev = undoStack[undoStack.length - 1];
+  drawCtx.putImageData(prev, 0, 0);
+  drawUndoBtn.disabled = undoStack.length <= 1;
+}
+function resetUndoStack() {
+  undoStack = [];
+  // Push the blank baseline so the very first stroke can be undone back to white
+  captureUndoSnapshot();
+}
+
+// Drawing input — works with both touch and mouse
+let isPainting = false;
+
+function getPos(e) {
+  const rect = drawCanvas.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+}
+drawCanvas.addEventListener("pointerdown", e => {
+  if (toolMode === "fill") return; // handled by capture listener
+  e.preventDefault(); isPainting = true;
+  applyDrawSettings();
+  const { x, y } = getPos(e);
+  drawCtx.beginPath(); drawCtx.moveTo(x, y);
+});
+drawCanvas.addEventListener("pointermove", e => {
+  e.preventDefault(); if (!isPainting) return;
+  if (toolMode === "fill") return;
+  const { x, y } = getPos(e);
+  drawCtx.lineTo(x, y); drawCtx.stroke();
+});
+drawCanvas.addEventListener("pointerup",     () => {
+  if (isPainting) { isPainting = false; captureUndoSnapshot(); }
+});
+drawCanvas.addEventListener("pointercancel", () => {
+  if (isPainting) { isPainting = false; captureUndoSnapshot(); }
+});
+
+drawRestart.addEventListener("click", () => {
+  drawCtx.fillStyle = "white";
+  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+  applyDrawSettings();
+  resetUndoStack(); // clear undo history when canvas is wiped
+});
+
+drawUndoBtn.addEventListener("click", performUndo);
+
+drawSubmit.addEventListener("click", async () => {
+  if (drawHasSubmitted) return;
+  drawHasSubmitted = true;
+  drawSubmit.textContent = "SENDING…";
+  hideDrawToolbar();
+  stopDrawTimer(); // they're done — stop their countdown bar
+  // Compress to PNG at 480px wide max
+  const tmp = document.createElement("canvas");
+  const maxW = 480;
+  const scale = Math.min(1, maxW / drawCanvas.width);
+  tmp.width  = Math.round(drawCanvas.width  * scale);
+  tmp.height = Math.round(drawCanvas.height * scale);
+  tmp.getContext("2d").drawImage(drawCanvas, 0, 0, tmp.width, tmp.height);
+  const png = tmp.toDataURL("image/png");
+  await set(ref(db, `drawing/submissions/${userKey}`), { data: png, timestamp: Date.now() })
+    .catch(e => console.warn("Drawing submit failed:", e));
+  drawOverlay.classList.remove("show");
+  drawSubmitted.classList.add("show");
+  // After 3s, hide submitted state so camera returns
+  setTimeout(() => {
+    drawSubmitted.classList.remove("show");
+  }, 3000);
+});
+
+// Gate: listen to drawing mode
+onValue(drawModeRef, snap => {
+  drawActive = snap.val() === true;
+  if (!drawActive) {
+    drawOverlay.classList.remove("show");
+    drawSubmitted.classList.remove("show");
+    drawHasSubmitted = false;
+    drawSubmit.textContent = "SUBMIT";
+    hideDrawToolbar();
+    stopDrawTimer(); // any in-flight countdown should die when mode turns off
+  } else {
+    // Mode just turned on (or page loaded while mode was already on).
+    // Do a fresh one-time read of the prompt so late-joining students
+    // immediately receive any in-progress round without waiting for a
+    // Firebase value-change event that already fired before they connected.
+    get(drawPromptRef).then(snap => {
+      const d = snap.val() || {};
+      if (d.show && d.text) {
+        drawPromptText.textContent = d.text;
+        if (!drawHasSubmitted) {
+          // Fresh round for this student — open the canvas
+          drawOverlay.classList.add("show");
+          drawSubmitted.classList.remove("show");
+          drawSubmit.textContent = "SUBMIT";
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            initDrawCanvas();
+            showDrawToolbar();
+          }));
+        } else {
+          // Already submitted — don't open the drawing board at all.
+          // Just briefly confirm over the camera then return to it.
+          drawOverlay.classList.remove("show");
+          drawSubmitted.classList.add("show");
+          hideDrawToolbar();
+          setTimeout(() => { drawSubmitted.classList.remove("show"); }, 3000);
+        }
+      }
+    });
+  }
+});
+
+// When a prompt arrives, show the drawing overlay
+onValue(drawPromptRef, snap => {
+  const d = snap.val() || {};
+  if (drawActive && d.show && d.text) {
+    drawPromptText.textContent = d.text;
+    if (!drawHasSubmitted) {
+      // Fresh round — open canvas and show tools
+      drawOverlay.classList.add("show");
+      drawSubmitted.classList.remove("show");
+      drawSubmit.textContent = "SUBMIT";
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        initDrawCanvas();
+        showDrawToolbar();
+      }));
+    } else {
+      // Already submitted — stay on camera, briefly confirm, then clear
+      drawOverlay.classList.remove("show");
+      drawSubmitted.classList.add("show");
+      hideDrawToolbar();
+      setTimeout(() => { drawSubmitted.classList.remove("show"); }, 3000);
+    }
+  } else if (!d.show) {
+    // Prompt cleared (reset) — reset flag so next prompt works cleanly
+    drawHasSubmitted = false;
+    drawOverlay.classList.remove("show");
+    drawSubmitted.classList.remove("show");
+    hideDrawToolbar();
+  }
+});
+
+/* ── TIMES UP — auto-submit if not already submitted ── */
+onValue(ref(db, "drawing/timesUp"), snap => {
+  if (!snap.val()) return;
+  if (!drawActive) return;
+  stopDrawTimer();
+  if (drawHasSubmitted) return;
+  // Set a friendly "TIME'S UP!" message for this round only — drawSubmit.click()
+  // will fade in the drawSubmitted panel using its existing animation.
+  // We override the text BEFORE clicking so the user sees TIME'S UP, not DRAWING SENT.
+  const submittedLabel = drawSubmitted.querySelector("div");
+  if (submittedLabel) submittedLabel.textContent = "⏱ TIME'S UP!";
+  drawSubmit.click();
+  // After the fade-out runs, restore the default label so a future round starts fresh
+  setTimeout(() => {
+    if (submittedLabel) submittedLabel.textContent = "DRAWING SENT";
+  }, 3500);
+});
+
+/* ── DRAWING COUNTDOWN TIMER ──
+ * Optional: control may set drawing/timeEnd if a duration is configured.
+ * If absent, the bar stays hidden and nothing changes (manual times-up only).
+ */
+let drawTimerInterval = null;
+let drawRoundDurationMs = 60000;
+function startDrawTimer(timeEnd) {
+  if (drawTimerInterval) clearInterval(drawTimerInterval);
+  drawRoundDurationMs = Math.max(1, timeEnd - Date.now());
+  drawTimerBar.classList.add("show");
+  function tick() {
+    const remaining = Math.max(0, timeEnd - Date.now());
+    const pct = (remaining / drawRoundDurationMs) * 100;
+    drawTimerFill.style.width = pct + "%";
+    drawTimerFill.style.background = remaining <= 10000 ? "#cc0000" : "#00031F";
+    if (remaining <= 0) {
+      clearInterval(drawTimerInterval);
+      drawTimerInterval = null;
+    }
+  }
+  tick();
+  drawTimerInterval = setInterval(tick, 500);
+}
+function stopDrawTimer() {
+  if (drawTimerInterval) { clearInterval(drawTimerInterval); drawTimerInterval = null; }
+  drawTimerBar.classList.remove("show");
+  drawTimerFill.style.width = "100%";
+}
+onValue(ref(db, "drawing/timeEnd"), snap => {
+  const timeEnd = snap.val();
+  if (!drawActive || !timeEnd) { stopDrawTimer(); return; }
+  startDrawTimer(timeEnd);
+});
+
+/* ── SKRIBBL ── */
+const skribblBox          = document.getElementById("skribblBox");
+const skribblLabel        = document.getElementById("skribblLabel");
+const skribblGuess        = document.getElementById("skribblGuess");
+const skribblLeaderboardBox  = document.getElementById("skribblLeaderboardBox");
+const skribblLeaderboardList = document.getElementById("skribblLeaderboardList");
+const skribblLetterGrid   = document.getElementById("skribblLetterGrid");
+const skribblCloseToast   = document.getElementById("skribblCloseToast");
+const skribblTimerFill    = document.getElementById("skribblTimerFill");
+
+const skribblModeRef   = ref(db, "skribbl/mode");
+const skribblDrawerRef = ref(db, "skribbl/drawer");
+const skribblPromptRef = ref(db, "skribbl/prompt");
+const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
+const skribblHintRef   = ref(db, "skribbl/hint");
+const skribblCloseRef  = ref(db, `skribbl/close/${userKey}`);
+const skribblTimeEndRef    = ref(db, "skribbl/timeEnd");
+const skribblLeaderboardRef= ref(db, "skribbl/leaderboard");
+const skribblPhaseRef      = ref(db, "skribbl/phase");
+
+let skribblActive   = false;
+let skribblAmDrawer = false;
+let skribblWon      = false;   // true only for THIS user — keeps guess box hidden after they get it
+let skribblWordLen  = 0;
+let closeToastTimer = null;
+let skribblTimerInterval = null;
+let skribblRoundDuration = 60; // will be calculated from timeEnd
+let skribblPhase    = null;    // "playing" | "results" | null
+
+/* ── LETTER GRID ── */
+function buildLetterGrid(hint) {
+  skribblLetterGrid.innerHTML = "";
+  skribblWordLen = hint.length;
+  let groups = [], current = [];
+  hint.forEach((h, i) => {
+    if (h.letter === " ") { groups.push(current); current = []; }
+    else current.push({ ...h, index: i });
+  });
+  groups.push(current);
+  groups.forEach(group => {
+    if (!group.length) return;
+    const wordDiv = document.createElement("div");
+    wordDiv.className = "letter-word";
+    group.forEach(({ letter, revealed, index }) => {
+      const inp = document.createElement("input");
+      inp.className = "letter-cell" + (revealed ? " revealed" : "");
+      inp.type = "text"; inp.maxLength = 1; inp.autocomplete = "off";
+      inp.dataset.index = index;
+      if (revealed && letter) inp.placeholder = letter.toUpperCase();
+      inp.addEventListener("input", onLetterInput);
+      inp.addEventListener("keydown", onLetterKeydown);
+      inp.addEventListener("click", onLetterClick);
+      wordDiv.appendChild(inp);
+    });
+    skribblLetterGrid.appendChild(wordDiv);
+    const spacer = document.createElement("div");
+    spacer.className = "letter-spacer";
+    skribblLetterGrid.appendChild(spacer);
+  });
+  const spacers = skribblLetterGrid.querySelectorAll(".letter-spacer");
+  if (spacers.length) spacers[spacers.length - 1].remove();
+  focusFirstEmpty();
+}
+
+function focusFirstEmpty() {
+  const first = skribblLetterGrid.querySelector(".letter-cell:not([value]),.letter-cell[value='']");
+  if (first) first.focus();
+}
+
+function onLetterClick(e) { e.target.focus(); }
+
+function clearLetterGrid() {
+  skribblLetterGrid.querySelectorAll(".letter-cell").forEach(inp => { inp.value = ""; });
+  focusFirstEmpty();
+}
+
+function getGuessText() {
+  const wordDivs = skribblLetterGrid.querySelectorAll(".letter-word");
+  if (!wordDivs.length) return "";
+  let parts = [];
+  wordDivs.forEach(wd => {
+    const letters = wd.querySelectorAll(".letter-cell");
+    parts.push(Array.from(letters).map(c => c.value || c.placeholder || "_").join(""));
+  });
+  return parts.join(" ").toLowerCase();
+}
+
+function onLetterInput(e) {
+  const inp = e.target;
+  inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, "");
+}
+
+function onLetterKeydown(e) {
+  const inp = e.target;
+  const key = e.key;
+  if (/^[a-zA-Z]$/.test(key)) {
+    e.preventDefault();
+    inp.value = key.toUpperCase();
+    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
+    const idx = allCells.indexOf(inp);
+    const next = allCells.slice(idx + 1).find(c => !c.value);
+    if (next) next.focus();
+    return;
+  }
+  if (key === "Backspace") {
+    if (inp.value) { inp.value = ""; }
+    else {
+      const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
+      const idx = allCells.indexOf(inp);
+      if (idx > 0) { allCells[idx - 1].value = ""; allCells[idx - 1].focus(); }
+    }
+    e.preventDefault();
+  } else if (key === "ArrowLeft") {
+    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
+    const idx = allCells.indexOf(inp);
+    if (idx > 0) allCells[idx - 1].focus();
+    e.preventDefault();
+  } else if (key === "ArrowRight") {
+    const allCells = Array.from(skribblLetterGrid.querySelectorAll(".letter-cell"));
+    const idx = allCells.indexOf(inp);
+    if (idx < allCells.length - 1) allCells[idx + 1].focus();
+    e.preventDefault();
+  } else if (key === "Enter") {
+    skribblGuess.click();
+  }
+}
+
+function applyHintUpdate(hint) {
+  hint.forEach((h, i) => {
+    if (h.letter === " " || !h.revealed || !h.letter) return;
+    const cell = skribblLetterGrid.querySelector(`.letter-cell[data-index="${i}"]`);
+    if (cell && !cell.classList.contains("revealed")) {
+      cell.placeholder = h.letter.toUpperCase();
+      cell.classList.add("revealed");
+    }
+  });
+}
+
+/* ── SO CLOSE TOAST ── */
+function showCloseToast() {
+  if (closeToastTimer) clearTimeout(closeToastTimer);
+  skribblCloseToast.classList.add("show");
+  closeToastTimer = setTimeout(() => {
+    skribblCloseToast.classList.remove("show");
+    closeToastTimer = null;
+  }, 2500);
+}
+
+/* ── COUNTDOWN TIMER ── */
+function startSkribblTimer(timeEnd) {
+  if (skribblTimerInterval) clearInterval(skribblTimerInterval);
+  const total = timeEnd - Date.now();
+  skribblRoundDuration = total > 0 ? total : 60000;
+
+  function tick() {
+    const remaining = Math.max(0, timeEnd - Date.now());
+    const pct = (remaining / skribblRoundDuration) * 100;
+    skribblTimerFill.style.width = pct + "%";
+    skribblTimerFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
+    if (remaining <= 0) {
+      clearInterval(skribblTimerInterval);
+      skribblTimerInterval = null;
+    }
+  }
+  tick();
+  skribblTimerInterval = setInterval(tick, 500);
+}
+
+/* ── LEADERBOARD RENDER ── */
+const MEDALS = ["🥇","🥈","🥉"];
+function renderLeaderboard(entries) {
+  if (!entries || !entries.length) {
+    skribblLeaderboardList.innerHTML = `<div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:15px;color:rgba(255,255,255,0.4);padding:8px 0;">No correct guesses yet</div>`;
+    return;
+  }
+  skribblLeaderboardList.innerHTML = entries.map((e, i) => `
+    <div class="skribbl-lb-row${e.userKey === userKey ? " mine" : ""}">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:20px;min-width:1.5em;text-align:center;">${MEDALS[i] || (i+1)}</span>
+      <span style="flex:1;">${e.name}</span>
+      ${e.userKey === userKey ? `<span style="font-size:13px;opacity:0.7;">YOU</span>` : ""}
+    </div>`).join("");
+}
+
+/* ── CANVAS STREAM ── */
+let skribblStreamInterval = null;
+
+function startSkribblStream() {
+  if (skribblStreamInterval) return;
+  skribblStreamInterval = setInterval(() => {
+    if (!skribblAmDrawer || !skribblActive) {
+      clearInterval(skribblStreamInterval); skribblStreamInterval = null; return;
+    }
+    const tmp = document.createElement("canvas");
+    const maxW = 400;
+    const scale = Math.min(1, maxW / (drawCanvas.width || 1));
+    tmp.width  = Math.round((drawCanvas.width  || 400) * scale);
+    tmp.height = Math.round((drawCanvas.height || 533) * scale);
+    tmp.getContext("2d").drawImage(drawCanvas, 0, 0, tmp.width, tmp.height);
+    const jpeg = tmp.toDataURL("image/jpeg", 0.40);
+    if (jpeg && jpeg.startsWith("data:image")) {
+      set(skribblLiveRef, jpeg).catch(() => {});
+    }
+  }, 300);
+}
+
+function stopSkribblStream() {
+  if (skribblStreamInterval) { clearInterval(skribblStreamInterval); skribblStreamInterval = null; }
+  set(skribblLiveRef, null).catch(() => {});
+}
+
+/* ── MODE GATE ── */
+onValue(skribblModeRef, snap => {
+  skribblActive = snap.val() === true;
+  if (!skribblActive) {
+    hidePanel(skribblBox);
+    hidePanel(skribblLeaderboardBox);
+    skribblLeaderboardList.innerHTML = "";
+    skribblLetterGrid.innerHTML = "";
+    skribblHintBuilt = false;
+    skribblWon = false;
+    skribblAmDrawer = false;
+    skribblPhase = null;
+    skribblLatestEntries = [];
+    if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
+    skribblTimerFill.style.width = "100%";
+    stopSkribblStream();
+    drawOverlay.classList.remove("show");
+    hideDrawToolbar();
+    drawSubmit.style.display = "";
+  }
+});
+
+// Phase listener — "results" freezes the round UI but keeps the leaderboard up
+onValue(skribblPhaseRef, snap => {
+  const prevPhase = skribblPhase;
+  skribblPhase = snap.val();
+  if (!skribblActive) return;
+  if (skribblPhase === "results") {
+    // Stop the timer visual (drain to 0 and freeze)
+    if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
+    skribblTimerFill.style.width = "0%";
+    // Hide the guess box — round is over, no more submitting
+    hidePanel(skribblBox);
+    // If I was the drawer, close my canvas (word is out)
+    if (skribblAmDrawer) {
+      drawOverlay.classList.remove("show");
+      hideDrawToolbar();
+      stopSkribblStream();
+    }
+    // Render leaderboard from cached entries — drawer never rendered them during play
+    if (skribblLatestEntries.length > 0) {
+      renderLeaderboard(skribblLatestEntries);
+      showPanel(skribblLeaderboardBox);
+    }
+  } else if (skribblPhase === null && prevPhase === "results") {
+    // Round was reset — clear per-round client state so the next round starts fresh.
+    // Without this, last round's correct guessers carry over skribblWon=true and
+    // the prompt listener won't show their guess box on the next prompt.
+    skribblWon = false;
+    skribblHintBuilt = false;
+    skribblLatestEntries = [];
+    skribblLetterGrid.innerHTML = "";
+    skribblLeaderboardList.innerHTML = "";
+    hidePanel(skribblLeaderboardBox);
+    skribblTimerFill.style.width = "100%";
+  }
+});
+
+// Who is the drawer? Track previous so we only act on actual transitions.
+let skribblWasDrawer = false;
+onValue(skribblDrawerRef, snap => {
+  const drawerKey = snap.val();
+  const isNowDrawer = drawerKey === userKey;
+  skribblAmDrawer = isNowDrawer;
+  // Only run stream cleanup if THIS user was previously the drawer and isn't anymore.
+  // Without this guard, every non-drawer phone hitting refresh would write
+  // null to skribbl/liveCanvas (via stopSkribblStream), wiping the drawing on
+  // the output page until the actual drawer's next frame arrives 300ms later.
+  if (!isNowDrawer && skribblWasDrawer) {
+    drawOverlay.classList.remove("show");
+    stopSkribblStream();
+  }
+  skribblWasDrawer = isNowDrawer;
+});
+
+// Prompt — gates both drawer canvas and guesser box
+onValue(skribblPromptRef, snap => {
+  const d = snap.val() || {};
+  const gameStarted = d.show && d.text;
+  if (!skribblActive) return;
+  // During results phase, don't re-open the drawer canvas or guess box even if prompt refires
+  if (skribblPhase === "results") return;
+  if (gameStarted) {
+    if (skribblAmDrawer) {
+      drawHasSubmitted = false;
+      drawSubmit.style.display = "none";
+      drawRestart.style.display = "";
+      drawPromptText.textContent = d.text;
+      drawOverlay.classList.add("show");
+      hidePanel(skribblBox);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        initDrawCanvas();
+        showDrawToolbar();
+        startSkribblStream();
+      }));
+    } else {
+      drawOverlay.classList.remove("show");
+      hideDrawToolbar();
+      // Show guess box only if this user hasn't guessed correctly yet
+      if (!skribblWon) showPanel(skribblBox);
+    }
+  } else {
+    drawOverlay.classList.remove("show");
+    hidePanel(skribblBox);
+    skribblLetterGrid.innerHTML = "";
+    skribblHintBuilt = false;
+    hideDrawToolbar();
+    stopSkribblStream();
+  }
+});
+
+// Timer — sync from Firebase timeEnd
+onValue(skribblTimeEndRef, snap => {
+  const timeEnd = snap.val();
+  if (!skribblActive || !timeEnd) return;
+  startSkribblTimer(timeEnd);
+});
+
+// Hint updates
+let skribblHintBuilt = false;
+onValue(skribblHintRef, snap => {
+  if (!skribblActive || skribblAmDrawer) return;
+  const hint = snap.val();
+  if (!hint || !Array.isArray(hint)) { skribblHintBuilt = false; return; }
+  if (!skribblHintBuilt) {
+    buildLetterGrid(hint);
+    skribblHintBuilt = true;
+  } else {
+    applyHintUpdate(hint);
+  }
+});
+
+// "So close!" toast
+onValue(skribblCloseRef, snap => {
+  if (!snap.exists() || skribblAmDrawer || skribblWon) return;
+  showCloseToast();
+  clearLetterGrid();
+});
+
+// Cache of the latest leaderboard entries — needed so the drawer's phone
+// can render the leaderboard at the moment phase flips to "results"
+// (the drawer skips rendering during play, so without the cache they'd
+// see an empty leaderboard until the next snap which may never come)
+let skribblLatestEntries = [];
+
+// Leaderboard — live updates as people guess correctly
+onValue(skribblLeaderboardRef, snap => {
+  if (!skribblActive) return;
+  const lb = snap.val();
+  const entries = lb ? (Array.isArray(lb) ? lb : Object.values(lb)) : [];
+  // Sort by rank in case Firebase returns out of order
+  entries.sort((a, b) => (a.rank ?? a.ts ?? 0) - (b.rank ?? b.ts ?? 0));
+  skribblLatestEntries = entries;
+
+  // Check if this user just got onto the leaderboard
+  const myEntry = entries.find(e => e.userKey === userKey);
+  if (myEntry && !skribblWon) {
+    skribblWon = true;
+    // Hide guess box, show leaderboard
+    hidePanel(skribblBox);
+  }
+
+  // Reset / round end with no entries — hide the panel
+  if (entries.length === 0) {
+    renderLeaderboard([]);
+    hidePanel(skribblLeaderboardBox);
+    return;
+  }
+
+  // During PLAY phase, the drawer doesn't see the leaderboard (less clutter while drawing).
+  // It appears for them in RESULTS phase to celebrate together.
+  if (skribblAmDrawer && skribblPhase !== "results") {
+    hidePanel(skribblLeaderboardBox);
+    return;
+  }
+
+  renderLeaderboard(entries);
+  showPanel(skribblLeaderboardBox);
+});
+
+// Guess submission — no longer blocked after winning (others still guess)
+let skribblSubmitting = false;
+skribblGuess.addEventListener("click", async () => {
+  if (skribblSubmitting) return;
+  if (skribblPhase === "results") return; // round over — no more guesses
+  const text = getGuessText().trim();
+  if (!text || text.includes("_") || skribblWon) return;
+  skribblSubmitting = true;
+  clearLetterGrid();
+  const guessKey = `${userKey}_${Date.now()}`;
+  try {
+    await set(ref(db, `skribbl/guesses/${guessKey}`), {
+      text,
+      name: name || userKey,
+      guesserKey: userKey,
+      timestamp: Date.now()
+    });
+  } catch (e) { /* ignore */ }
+  skribblSubmitting = false;
+});
+
+/* ── WORDLE ──
+ * Two states for the phone:
+ *   - I'm the current guesser → show grid + keyboard, can type and submit
+ *   - I'm not the guesser → show "watching X guess..." panel
+ * Phase 3 will replace the spectator panel with confidence buttons.
+ *
+ * The phone never learns the answer — only wordLength, guesses, keyboardState,
+ * and currentGuesser. The Wordle algorithm runs entirely on control.
+ */
+const wordleBox             = document.getElementById("wordleBox");
+const wordleGridOverlay     = document.getElementById("wordleGridOverlay");
+const wordleWaitBox         = document.getElementById("wordleWaitBox");
+const wordleResultBox       = document.getElementById("wordleResultBox");
+const wordleResultIcon      = document.getElementById("wordleResultIcon");
+const wordleResultLine1     = document.getElementById("wordleResultLine1");
+const wordleResultLine2     = document.getElementById("wordleResultLine2");
+const wordleGuessGrid       = document.getElementById("wordleGuessGrid");
+const wordleKb              = document.getElementById("wordleKb");
+const wordleWaitGuesserName = document.getElementById("wordleWaitGuesserName");
+const wordleIdxTimerBar     = document.getElementById("wordleTurnTimerBar");
+const wordleIdxTimerFill    = document.getElementById("wordleTurnTimerFill");
+
+const wordleModeRef          = ref(db, "wordle/mode");
+const wordlePhaseRef         = ref(db, "wordle/phase");
+const wordleWordLengthRef    = ref(db, "wordle/wordLength");
+const wordleAttemptsRef      = ref(db, "wordle/attempts");
+const wordleGuessesRef       = ref(db, "wordle/guesses");
+const wordleKbStateRef       = ref(db, "wordle/keyboardState");
+const wordleCurrentGuesserRef= ref(db, "wordle/currentGuesser");
+const wordlePendingGuessRef  = ref(db, "wordle/pendingGuess");
+const wordleTurnEndEpochRef_idx  = ref(db, "wordle/turnEndEpoch");
+const wordleWinnerRef_idx        = ref(db, "wordle/winner");
+
+let wordleActive       = false;
+let wordlePhase_idx    = null;          // local copy (named to avoid clash with skribblPhase)
+let wordleAmGuesser    = false;
+let wordleWordLength   = 0;
+let wordleAttemptsLocal= 6;
+let wordleGuessesLocal = [];            // [{ text, evaluation, guesserName, ... }]
+let wordleKbStateLocal = {};
+let wordleCurrentInput = "";            // letters this guesser has typed for the current row
+let wordleSubmitting   = false;
+
+const KB_LAYOUT = [
+  ["Q","W","E","R","T","Y","U","I","O","P"],
+  ["A","S","D","F","G","H","J","K","L"],
+  ["ENTER","Z","X","C","V","B","N","M","DEL"],
+];
+
+function renderWordleGuessGrid() {
+  if (!wordleGuessGrid) return;
+  wordleGuessGrid.innerHTML = "";
+  const cols = wordleWordLength;
+  if (!cols) return;
+
+  for (let r = 0; r < wordleAttemptsLocal; r++) {
+    const row = document.createElement("div");
+    row.className = "wordle-i-row";
+    row.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    const guess = wordleGuessesLocal[r];
+    const isActiveRow = !guess && r === wordleGuessesLocal.length;
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement("div");
+      cell.className = "wordle-i-cell";
+      if (guess) {
+        const letter = (guess.text || "")[c] || "";
+        const evalState = guess.evaluation?.[c];
+        if (letter) cell.textContent = letter.toUpperCase();
+        if (evalState) cell.classList.add(evalState);
+      } else if (isActiveRow && wordleAmGuesser) {
+        const letter = wordleCurrentInput[c];
+        if (letter) {
+          cell.textContent = letter.toUpperCase();
+          cell.classList.add("filled");
+        }
+      }
+      row.appendChild(cell);
+    }
+    wordleGuessGrid.appendChild(row);
+  }
+  // Cells are square + sized to fit both dimensions of the overlay container.
+  // Recompute after the row elements exist so the grid's offsetHeight is accurate.
+  sizeWordleGridCells();
+}
+
+// Compute the largest square cell size that fits BOTH:
+//   • columns × cellSize + (cols-1)*gap ≤ available width
+//   • rows × cellSize + (rows-1)*gap ≤ available height
+// Sets the result as a CSS variable on the grid container.
+function sizeWordleGridCells() {
+  if (!wordleGuessGrid) return;
+  const cols = wordleWordLength;
+  const rows = wordleAttemptsLocal;
+  if (!cols || !rows) return;
+  const containerW = wordleGuessGrid.clientWidth;
+  const containerH = wordleGuessGrid.clientHeight;
+  if (containerW <= 0 || containerH <= 0) return; // not yet laid out — try later
+  const gap = 4;
+  const maxByWidth  = (containerW - (cols - 1) * gap) / cols;
+  const maxByHeight = (containerH - (rows - 1) * gap) / rows;
+  // Cap at 42px so cells never look gigantic with a tiny grid (e.g. 5×3)
+  const cellSize = Math.max(18, Math.min(maxByWidth, maxByHeight, 42));
+  wordleGuessGrid.style.setProperty("--wordle-cell-size", cellSize + "px");
+}
+
+// Recompute sizing whenever the overlay/container changes size (orientation
+// flips, viewport resize, panel show/hide can all change clientHeight)
+if (typeof ResizeObserver !== "undefined" && wordleGuessGrid) {
+  const ro = new ResizeObserver(() => sizeWordleGridCells());
+  ro.observe(wordleGuessGrid);
+}
+window.addEventListener("resize", () => sizeWordleGridCells());
+
+function renderWordleKb() {
+  if (!wordleKb) return;
+  wordleKb.innerHTML = "";
+  for (const row of KB_LAYOUT) {
+    const rowEl = document.createElement("div");
+    rowEl.className = "wordle-i-kb-row";
+    for (const key of row) {
+      const k = document.createElement("button");
+      k.className = "wordle-i-key";
+      k.type = "button";
+      if (key === "ENTER" || key === "DEL") k.classList.add("wide");
+      k.textContent = key === "DEL" ? "DEL" : key;
+      k.dataset.key = key;
+      // Apply per-letter state (for single-letter keys only)
+      if (key.length === 1) {
+        const state = wordleKbStateLocal[key];
+        if (state) k.classList.add(state);
+      }
+      k.addEventListener("click", () => handleWordleKey(key));
+      rowEl.appendChild(k);
+    }
+    wordleKb.appendChild(rowEl);
+  }
+}
+
+function handleWordleKey(key) {
+  if (!wordleAmGuesser || wordlePhase_idx !== "playing") return;
+  if (key === "DEL") {
+    if (wordleCurrentInput.length === 0) return;
+    wordleCurrentInput = wordleCurrentInput.slice(0, -1);
+    renderWordleGuessGrid();
+    return;
+  }
+  if (key === "ENTER") {
+    submitWordleGuess();
+    return;
+  }
+  if (wordleCurrentInput.length >= wordleWordLength) return;
+  wordleCurrentInput += key.toUpperCase();
+  renderWordleGuessGrid();
+}
+
+async function submitWordleGuess() {
+  if (wordleSubmitting) return;
+  if (wordleCurrentInput.length !== wordleWordLength) return;
+  if (!wordleAmGuesser) return;
+  wordleSubmitting = true;
+  const text = wordleCurrentInput;
+  // Optimistic clear so user can see the next row open up
+  wordleCurrentInput = "";
+  try {
+    await set(wordlePendingGuessRef, {
+      text,
+      guesserKey:  userKey,
+      guesserName: name || userKey,
+      ts:          Date.now(),
+    });
+  } catch (e) { /* ignore — control will eventually evaluate */ }
+  wordleSubmitting = false;
+}
+
+function updateWordleVisibility() {
+  // Grid overlay is shown ONLY when you're the active guesser in playing phase
+  const showGridOverlay = wordleActive && wordlePhase_idx === "playing" && wordleAmGuesser;
+  if (wordleGridOverlay) {
+    wordleGridOverlay.classList.toggle("show", showGridOverlay);
+  }
+
+  if (!wordleActive) {
+    hidePanel(wordleBox);
+    hidePanel(wordleWaitBox);
+    hidePanel(wordleResultBox);
+    return;
+  }
+  if (wordlePhase_idx === "results") {
+    // Show results panel to everyone, hide the playing/spectator panels
+    hidePanel(wordleBox);
+    hidePanel(wordleWaitBox);
+    showPanel(wordleResultBox);
+    return;
+  }
+  if (wordlePhase_idx !== "playing") {
+    hidePanel(wordleBox);
+    hidePanel(wordleWaitBox);
+    hidePanel(wordleResultBox);
+    return;
+  }
+  // Playing phase
+  hidePanel(wordleResultBox);
+  if (wordleAmGuesser) {
+    hidePanel(wordleWaitBox);
+    showPanel(wordleBox); // keyboard panel below cam
+  } else {
+    hidePanel(wordleBox);
+    showPanel(wordleWaitBox); // confidence buttons below cam
+  }
+}
+
+onValue(wordleModeRef, snap => {
+  wordleActive = snap.val() === true;
+  if (!wordleActive) {
+    wordleAmGuesser    = false;
+    wordleCurrentInput = "";
+    wordleGuessesLocal = [];
+    wordleKbStateLocal = {};
+    wordleWordLength   = 0;
+    wordleMyConfidence = null;
+    wordleGuessGrid && (wordleGuessGrid.innerHTML = "");
+    wordleKb && (wordleKb.innerHTML = "");
+    paintConfidenceButtons();
+    // Phase 4 cleanup
+    stopWordleIdxTimer();
+    if (wordleIdxTimerBar) wordleIdxTimerBar.classList.remove("show");
+    if (wordleResultBox) {
+      wordleResultBox.classList.remove("show");
+      wordleResultBox.classList.remove("lost");
+    }
+  }
+  updateWordleVisibility();
+});
+
+onValue(wordlePhaseRef, snap => {
+  wordlePhase_idx = snap.val();
+  // New round starting → clear the in-progress input
+  if (wordlePhase_idx === "playing") wordleCurrentInput = "";
+  // Stop timer if leaving playing phase
+  if (wordlePhase_idx !== "playing") {
+    stopWordleIdxTimer();
+    if (wordleIdxTimerBar) wordleIdxTimerBar.classList.remove("show");
+  }
+  updateWordleVisibility();
+  renderWordleGuessGrid();
+});
+
+onValue(wordleWordLengthRef, snap => {
+  wordleWordLength = parseInt(snap.val(), 10) || 0;
+  if (wordleActive) renderWordleGuessGrid();
+});
+
+onValue(wordleAttemptsRef, snap => {
+  wordleAttemptsLocal = parseInt(snap.val(), 10) || 6;
+  if (wordleActive) renderWordleGuessGrid();
+});
+
+onValue(wordleGuessesRef, snap => {
+  const v = snap.val();
+  wordleGuessesLocal = v
+    ? (Array.isArray(v) ? v.filter(Boolean) : Object.values(v))
+    : [];
+  // Successful submission round-trip → input is now part of the grid as the
+  // newest guess row, so make sure local input is empty for the next row
+  wordleCurrentInput = "";
+  if (wordleActive) renderWordleGuessGrid();
+});
+
+onValue(wordleKbStateRef, snap => {
+  wordleKbStateLocal = snap.val() || {};
+  if (wordleActive) renderWordleKb();
+});
+
+/* ── CONFIDENCE BUTTONS (non-guesser state) ──
+ * User picks one of three confidence levels; their vote is written to
+ * /wordle/confidence/{userKey}: { level, name, ts }. Vote can be changed
+ * any time during the round. Restored on refresh from Firebase truth.
+ */
+const wordleConfidenceButtons = document.querySelectorAll(".wordle-conf-btn");
+const wordleConfidenceConfirm = document.getElementById("wordleConfidenceConfirm");
+const wordleConfidenceRef     = ref(db, `wordle/confidence/${userKey}`);
+const wordleCurrentGuesserNameRef = ref(db, "wordle/currentGuesserName");
+
+let wordleMyConfidence = null;
+
+function paintConfidenceButtons() {
+  wordleConfidenceButtons.forEach(b => {
+    b.classList.toggle("selected", b.dataset.confidence === wordleMyConfidence);
+  });
+  if (wordleConfidenceConfirm) {
+    wordleConfidenceConfirm.classList.toggle("show", !!wordleMyConfidence);
+  }
+}
+
+wordleConfidenceButtons.forEach(btn => {
+  btn.addEventListener("click", async () => {
+    if (!wordleActive || wordlePhase_idx !== "playing") return;
+    const level = btn.dataset.confidence;
+    if (level === wordleMyConfidence) return; // no-op if same
+    wordleMyConfidence = level;
+    paintConfidenceButtons();
+    try {
+      await set(wordleConfidenceRef, {
+        level,
+        name: name || userKey,
+        ts:   Date.now(),
+      });
+    } catch (e) { /* ignore network blips */ }
+  });
+});
+
+// Restore vote on page load / re-attach
+onValue(wordleConfidenceRef, snap => {
+  const v = snap.val();
+  wordleMyConfidence = v?.level || null;
+  paintConfidenceButtons();
+});
+
+onValue(wordleCurrentGuesserRef, snap => {
+  const guesserKey = snap.val();
+  wordleAmGuesser = (guesserKey && guesserKey === userKey);
+  // Switching to/from being the guesser: clear any half-typed input
+  wordleCurrentInput = "";
+  updateWordleVisibility();
+  renderWordleGuessGrid();
+  renderWordleKb();
+});
+
+// Separate listener for the guesser's display name (control writes both this
+// and currentGuesser when picking; we keep them in two paths so this can update
+// the spectator label without forcing the full guesser-render flow).
+onValue(wordleCurrentGuesserNameRef, snap => {
+  const guesserName = snap.val();
+  if (wordleWaitGuesserName) {
+    wordleWaitGuesserName.textContent = wordleAmGuesser
+      ? "you"
+      : (guesserName || "someone");
+  }
+});
+
+/* ─── PHASE 4: turn timer bar (visible to everyone — guesser sees their countdown,
+ * spectators see how much time remains for current guesser) ─── */
+let wordleIdxTickInterval = null;
+function stopWordleIdxTimer() {
+  if (wordleIdxTickInterval) {
+    clearInterval(wordleIdxTickInterval);
+    wordleIdxTickInterval = null;
+  }
+}
+onValue(wordleTurnEndEpochRef_idx, snap => {
+  if (!wordleIdxTimerBar || !wordleIdxTimerFill) return;
+  const epoch = snap.val();
+  stopWordleIdxTimer();
+  if (!epoch || wordlePhase_idx !== "playing" || !wordleActive) {
+    wordleIdxTimerBar.classList.remove("show");
+    wordleIdxTimerFill.style.width = "100%";
+    return;
+  }
+  const startMs = Date.now();
+  const totalMs = Math.max(1, epoch - startMs);
+  wordleIdxTimerBar.classList.add("show");
+  function tick() {
+    const remaining = Math.max(0, epoch - Date.now());
+    const pct = (remaining / totalMs) * 100;
+    wordleIdxTimerFill.style.width = pct + "%";
+    wordleIdxTimerFill.style.background = remaining <= 5000 ? "#ff647c" : "white";
+    if (remaining <= 0) {
+      stopWordleIdxTimer();
+      setTimeout(() => wordleIdxTimerBar.classList.remove("show"), 600);
+    }
+  }
+  tick();
+  wordleIdxTickInterval = setInterval(tick, 250);
+});
+
+/* ─── PHASE 4: results panel content — paint the winner / no-winner reveal ─── */
+onValue(wordleWinnerRef_idx, snap => {
+  const w = snap.val();
+  if (!wordleResultBox || !wordleResultLine1 || !wordleResultLine2 || !wordleResultIcon) return;
+  if (!w) {
+    wordleResultBox.classList.remove("show");
+    wordleResultBox.classList.remove("lost");
+    wordleResultIcon.textContent = "🎉";
+    wordleResultLine1.textContent = "";
+    wordleResultLine2.textContent = "";
+    return;
+  }
+  if (w.userKey && w.name) {
+    wordleResultBox.classList.remove("lost");
+    wordleResultIcon.textContent = "🎉";
+    const isMe = w.userKey === userKey;
+    wordleResultLine1.textContent = isMe ? "You got it!" : `${w.name} got it!`;
+    wordleResultLine2.textContent = `Word: ${w.word || ""}`;
+  } else {
+    wordleResultBox.classList.add("lost");
+    wordleResultIcon.textContent = "🤐";
+    wordleResultLine1.textContent = "Nobody got it.";
+    wordleResultLine2.textContent = `Word was: ${w.word || ""}`;
+  }
+});
+
+/* ── DRAW TOOLBAR ── */
+const drawToolbar = document.getElementById("drawToolbar");
+const colorPalette = document.getElementById("colorPalette");
+const fillBtn  = document.getElementById("fillBtn");
+const eraserBtn = document.getElementById("eraserBtn");
+
+// Palette colors: neutrals first, then rainbow
+const COLORS = [
+  "#000000","#555555","#aaaaaa","#ffffff","#7b4f2e",
+  "#ff2020","#ff8800","#ffe600","#22cc44","#0088ff","#5500ff","#cc00ff"
+];
+
+let currentColor = "#000000";
+let currentSize  = 3;
+let toolMode     = "draw"; // "draw" | "fill" | "erase"
+
+// Build palette swatches
+COLORS.forEach(hex => {
+  const sw = document.createElement("button");
+  sw.className = "color-swatch" + (hex === currentColor ? " active" : "");
+  sw.dataset.color = hex;
+  sw.style.background = hex;
+  sw.setAttribute("aria-label", hex);
+  sw.addEventListener("click", () => {
+    document.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("active"));
+    sw.classList.add("active");
+    currentColor = hex;
+    // Switching to a color auto-deactivates fill/erase and goes back to draw
+    setToolMode("draw");
+    applyDrawSettings();
+  });
+  colorPalette.appendChild(sw);
+});
+
+// Brush size buttons
+document.querySelectorAll(".brush-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".brush-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentSize = parseFloat(btn.dataset.size);
+    setToolMode("draw");
+    applyDrawSettings();
+  });
+});
+
+// Fill / erase
+fillBtn.addEventListener("click", () => {
+  setToolMode(toolMode === "fill" ? "draw" : "fill");
+});
+eraserBtn.addEventListener("click", () => {
+  setToolMode(toolMode === "erase" ? "draw" : "erase");
+});
+
+function setToolMode(mode) {
+  toolMode = mode;
+  fillBtn.classList.toggle("active", mode === "fill");
+  eraserBtn.classList.toggle("active", mode === "erase");
+  drawCanvas.style.cursor = mode === "fill" ? "crosshair" : "crosshair";
+}
+
+function applyDrawSettings() {
+  drawCtx.globalCompositeOperation = "source-over";
+  if (toolMode === "erase") {
+    drawCtx.lineWidth   = currentSize * 4;
+    drawCtx.strokeStyle = "#ffffff";
+  } else {
+    drawCtx.lineWidth   = currentSize;
+    drawCtx.strokeStyle = currentColor;
+  }
+  drawCtx.lineCap  = "round";
+  drawCtx.lineJoin = "round";
+}
+
+function showDrawToolbar() {
+  showPanel(drawToolbar);
+}
+function hideDrawToolbar() {
+  hidePanel(drawToolbar);
+  // Reset tool state for next round
+  setToolMode("draw");
+  currentColor = "#000000";
+  currentSize  = 3;
+  document.querySelectorAll(".color-swatch").forEach(s => s.classList.toggle("active", s.dataset.color === "#000000"));
+  document.querySelectorAll(".brush-btn").forEach(b => b.classList.toggle("active", b.dataset.size === "3"));
+  applyDrawSettings();
+}
+
+/* ── FLOOD FILL ── */
+function floodFill(canvas, ctx, startX, startY, fillColorHex) {
+  const w = canvas.width, h = canvas.height;
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const data = imageData.data;
+
+  function hexToRgba(hex) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return [r,g,b,255];
+  }
+
+  const idx = (x, y) => (y * w + x) * 4;
+  const si = idx(Math.floor(startX), Math.floor(startY));
+  const targetR = data[si], targetG = data[si+1], targetB = data[si+2], targetA = data[si+3];
+  const [fillR, fillG, fillB, fillA] = hexToRgba(fillColorHex);
+
+  // If clicking on same color, do nothing
+  if (targetR===fillR && targetG===fillG && targetB===fillB && targetA===fillA) return;
+
+  function matchesTarget(i) {
+    return Math.abs(data[i]-targetR)<32 && Math.abs(data[i+1]-targetG)<32 &&
+           Math.abs(data[i+2]-targetB)<32 && Math.abs(data[i+3]-targetA)<32;
+  }
+
+  const stack = [[Math.floor(startX), Math.floor(startY)]];
+  const visited = new Uint8Array(w * h);
+
+  while (stack.length) {
+    const [x, y] = stack.pop();
+    if (x < 0 || x >= w || y < 0 || y >= h) continue;
+    const vi = y * w + x;
+    if (visited[vi]) continue;
+    const i = vi * 4;
+    if (!matchesTarget(i)) continue;
+    visited[vi] = 1;
+    data[i]   = fillR;
+    data[i+1] = fillG;
+    data[i+2] = fillB;
+    data[i+3] = fillA;
+    stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+/* ── FILL MODE — capture phase fires before bubble draw handler ── */
+drawCanvas.addEventListener("pointerdown", e => {
+  if (toolMode === "fill") {
+    e.preventDefault();
+    const rect = drawCanvas.getBoundingClientRect();
+    const scaleX = drawCanvas.width  / rect.width;
+    const scaleY = drawCanvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top)  * scaleY;
+    floodFill(drawCanvas, drawCtx, x, y, currentColor);
+    captureUndoSnapshot(); // fill is a single discrete action — snapshot immediately
+    return;
+  }
+  applyDrawSettings();
+}, true);
+
+/* ── SUPPRESS TEXT SELECTION & ZOOM ON TOUCH DRAG ── */
+drawCanvas.addEventListener("touchstart", e => e.preventDefault(), { passive: false });
+drawCanvas.addEventListener("touchmove",  e => e.preventDefault(), { passive: false });
+drawCanvas.addEventListener("touchend",   e => e.preventDefault(), { passive: false });
+
+// Prevent long-press context menu on the canvas and toolbar
+[drawCanvas, drawToolbar, document.getElementById("drawOverlay")].forEach(el => {
+  if (!el) return;
+  el.addEventListener("contextmenu", e => e.preventDefault());
+});
+
+/* ── VISIBILITY ── */
+document.addEventListener("visibilitychange", () => {
+  streamingEnabled = !document.hidden;
+});
+</script>
+</body>
+</html>

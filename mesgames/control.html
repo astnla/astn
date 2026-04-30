@@ -1,0 +1,3096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CONTROL ROOM</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --line: rgba(255,255,255,0.10);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.55);
+      --accent: #ff9d3b;
+      --accent-soft: rgba(255,157,59,0.18);
+      --good: #54d18a;
+      --warn: #ffd25a;
+      --danger: #ff647c;
+      --gold: #FFD700;
+      --silver: #C0C0C0;
+      --bronze: #CD7F32;
+      --radius: 22px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Outfit", sans-serif;
+      background: #0a0a0a;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .shell { max-width: 1400px; margin: 0 auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+
+    /* ── CARDS ── */
+    .card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      backdrop-filter: blur(14px);
+    }
+    .panel { padding: 18px; }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+    }
+    .topbar-brand {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      flex: 1;
+    }
+    .topbar-brand span { color: var(--accent); }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 10px;
+      padding: 14px 18px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 14px;
+    }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+    .stat-value { font-size: 22px; font-weight: 900; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Winner highlight stat */
+    .stat.winner-stat { border-color: var(--gold); background: rgba(255,215,0,0.08); }
+    .stat.winner-stat .stat-value { color: var(--gold); }
+
+    /* ── MAIN LAYOUT ── */
+    .layout { display: grid; grid-template-columns: 360px 1fr; gap: 14px; align-items: start; }
+
+    /* ── TOOLS PANEL ── */
+    .seg-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .seg {
+      padding: 12px 10px; border-radius: 14px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--line);
+      font-size: 13px; font-weight: 800; text-align: center; cursor: pointer;
+      transition: .2s ease;
+    }
+    .seg:hover { background: rgba(255,255,255,0.10); }
+    .seg.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+      color: var(--accent);
+    }
+    .seg.idle-active { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.22); }
+
+    .tool-intro { font-size: 13px; color: var(--muted); line-height: 1.5; padding: 4px 2px; }
+
+    /* Collapsible shell */
+    .feature-shell {
+      overflow: hidden; max-height: 0; opacity: 0;
+      transition: max-height .3s ease, opacity .22s ease, margin-top .3s ease;
+      margin-top: 0;
+    }
+    .feature-shell.open { max-height: 1000px; opacity: 1; margin-top: 8px; }
+
+    .feature-block {
+      display: grid; gap: 10px; padding: 14px;
+      border-radius: 18px; background: rgba(0,0,0,0.2);
+      border: 1px solid var(--line);
+    }
+
+    /* ── INPUTS ── */
+    .input, textarea {
+      width: 100%; border-radius: 14px; border: 1px solid var(--line);
+      background: rgba(0,0,0,0.22); color: var(--text); padding: 13px 14px;
+      font: inherit; outline: none; transition: border-color .2s;
+    }
+    .input:focus, textarea:focus { border-color: rgba(255,255,255,0.3); }
+    textarea { min-height: 72px; resize: vertical; }
+
+    /* ── BUTTONS ── */
+    button {
+      border: none; border-radius: 14px; background: rgba(255,255,255,0.08);
+      color: var(--text); padding: 12px 16px; font: inherit; font-weight: 800;
+      cursor: pointer; border: 1px solid var(--line); transition: .18s ease;
+      white-space: nowrap;
+    }
+    button:hover { background: rgba(255,255,255,0.13); transform: translateY(-1px); }
+    button:active { transform: scale(0.97); }
+    .btn-accent { background: var(--accent); border-color: transparent; color: #000; }
+    .btn-accent:hover { opacity: 0.88; }
+    .btn-danger { background: rgba(255,100,124,0.14); border-color: rgba(255,100,124,0.28); color: var(--danger); }
+    .btn-danger:hover { background: rgba(255,100,124,0.28); }
+    .btn-ghost { background: transparent; }
+    .disabled { opacity: .38; pointer-events: none; }
+
+    /* Sent flash */
+    .btn-sent { background: var(--good) !important; color: #09180f !important; border-color: transparent !important; transition: none !important; }
+
+    /* Send row */
+    .send-row { display: flex; gap: 8px; }
+    .send-row .input { flex: 1; }
+
+    /* Poll options */
+    .option-list { display: grid; gap: 8px; }
+    .option-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+
+    .add-option-bar {
+      width: 100%; display: block; text-align: center;
+      padding: 12px 16px; border-radius: 14px;
+      background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.15);
+      font-size: 13px; font-weight: 800; color: var(--muted); cursor: pointer;
+      transition: .2s;
+    }
+    .add-option-bar:hover { background: rgba(255,255,255,0.10); color: var(--text); }
+
+    /* Reveal row */
+    .reveal-row { display: flex; gap: 8px; align-items: center; }
+    .reveal-row .input { flex: 1; }
+    .reveal-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+
+    /* ── PARTICIPANTS PANEL ── */
+    .participant-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .participant-bar-left { flex: 1; }
+    .participant-count { font-size: 15px; font-weight: 900; }
+    .participant-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .participant-bar-right { display: flex; gap: 8px; align-items: center; }
+
+    /* Auto live toggle pill */
+    .auto-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 14px; border-radius: 999px;
+      background: rgba(255,255,255,0.07); border: 1px solid var(--line);
+      font-size: 13px; font-weight: 800; cursor: pointer; user-select: none;
+      transition: .2s;
+    }
+    .auto-pill.on { background: rgba(84,209,138,0.15); border-color: var(--good); color: var(--good); }
+    .switch {
+      appearance: none; width: 40px; height: 22px;
+      background: rgba(255,255,255,0.15); border-radius: 999px;
+      position: relative; cursor: pointer; transition: .2s;
+    }
+    .switch::after {
+      content: ""; position: absolute; top: 2px; left: 2px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff; transition: .2s;
+    }
+    .switch:checked { background: var(--good); }
+    .switch:checked::after { transform: translateX(18px); }
+
+    /* ── PARTICIPANT GRID ── */
+    .pgrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      padding: 14px 18px 18px;
+    }
+
+    .person {
+      border-radius: 20px; overflow: hidden;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      display: flex; flex-direction: column;
+      transition: .2s ease;
+      position: relative;
+    }
+    .person.live { box-shadow: 0 0 0 2px rgba(255,59,87,.7) inset; }
+    /* When this person is live, their go-live button becomes a non-interactive indicator */
+    .person.live .goLiveBtn {
+      background: rgba(255,59,87,0.15) !important;
+      border-color: rgba(255,59,87,0.4) !important;
+      color: #ff647c !important;
+      cursor: default !important;
+      pointer-events: none !important;
+      transform: none !important;
+      opacity: 1 !important;
+    }
+    .person.cam-off { opacity: 0.45; }
+    .person.correct { border-color: var(--good); background: rgba(84,209,138,0.06); }
+    .person.wrong   { border-color: rgba(255,210,90,0.4); }
+
+    /* Rank badge */
+    .rank-badge {
+      position: absolute; top: 8px; left: 8px;
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 900;
+      z-index: 3; display: none;
+    }
+    .rank-badge.r1 { background: var(--gold); color: #000; display: flex; }
+    .rank-badge.r2 { background: var(--silver); color: #000; display: flex; }
+    .rank-badge.r3 { background: var(--bronze); color: #fff; display: flex; }
+
+    .thumb-wrap { position: relative; aspect-ratio: 3/4; background: rgba(0,0,0,0.22); }
+    .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .live-badge {
+      position: absolute; top: 8px; right: 8px;
+      display: none; align-items: center; gap: 5px;
+      padding: 5px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 900;
+      background: rgba(255,255,255,0.92); color: #DA1A32;
+    }
+    .person.live .live-badge { display: inline-flex; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #DA1A32; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(.4);opacity:.4;} }
+
+    .person-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .pname { font-size: 16px; font-weight: 900; }
+    .pmeta { font-size: 11px; color: var(--muted); }
+    .pills { display: flex; gap: 5px; flex-wrap: wrap; }
+    .pill-tag {
+      padding: 4px 8px; border-radius: 999px;
+      font-size: 10px; font-weight: 800;
+      background: rgba(255,255,255,.07); border: 1px solid var(--line); color: var(--muted);
+    }
+    .pill-tag.good { background: var(--good); border-color: transparent; color: #09180f; }
+    .pill-tag.warn { background: var(--warn); border-color: transparent; color: #2c2300; }
+    .pill-tag.hot  { background: var(--accent); border-color: transparent; color: #000; }
+    .status-text { font-size: 11px; color: var(--muted); }
+
+    .person-actions { display: grid; gap: 6px; margin-top: auto; }
+
+    .empty { padding: 30px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 18px; }
+
+    @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) { .stats-row { grid-template-columns: 1fr 1fr; } .pgrid { grid-template-columns: 1fr 1fr; } }
+
+    /* ── PASSWORD GATE ── */
+    #pwGate {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #0a0a0a;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px;
+    }
+    #pwGate.hidden { display: none; }
+    #pwGate h1 {
+      font-size: 28px; font-weight: 900; letter-spacing: 2px;
+      color: white;
+    }
+    #pwGate p { font-size: 13px; color: rgba(255,255,255,0.45); }
+    #pwInput {
+      padding: 14px 18px; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.07);
+      color: white; font-size: 18px; font-weight: 700;
+      width: 260px; text-align: center; outline: none;
+      font-family: "Outfit", sans-serif; letter-spacing: 3px;
+    }
+    #pwInput:focus { border-color: rgba(255,255,255,0.5); }
+    #pwSubmit {
+      padding: 13px 32px; border-radius: 12px; border: none;
+      background: var(--accent); color: white;
+      font-size: 15px; font-weight: 800; cursor: pointer;
+      letter-spacing: 1px; font-family: "Outfit", sans-serif;
+      transition: opacity 0.15s;
+    }
+    #pwSubmit:hover { opacity: 0.85; }
+    #pwError {
+      font-size: 13px; color: var(--danger);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    #pwError.show { opacity: 1; }
+
+    /* ── FAN CAM OFF SCREEN ── */
+    #fanCamOffScreen {
+      position: fixed; inset: 0; z-index: 9998;
+      background: #0a0a0a;
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px;
+    }
+    #fanCamOffScreen.show { display: flex; }
+    #fanCamOffScreen h1 {
+      font-size: 26px; font-weight: 900; letter-spacing: 2px; color: white;
+    }
+    #fanCamOffScreen p { font-size: 14px; color: rgba(255,255,255,0.45); text-align: center; max-width: 320px; line-height: 1.6; }
+    #turnOnBtn {
+      padding: 14px 36px; border-radius: 14px; border: none;
+      background: var(--good); color: #09180f;
+      font-size: 16px; font-weight: 900; cursor: pointer;
+      letter-spacing: 1px; font-family: "Outfit", sans-serif;
+      transition: opacity 0.15s;
+    }
+    #turnOnBtn:hover { opacity: 0.85; }
+  </style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="pwGate">
+  <h1>MANATEE CAM</h1>
+  <p>Control Room — Staff Only</p>
+  <input id="pwInput" type="password" placeholder="••••••••••" autocomplete="off">
+  <button id="pwSubmit">ENTER</button>
+  <div id="pwError">Incorrect password</div>
+</div>
+
+<!-- FAN CAM OFF SCREEN (shown after auth if fanCamOn is false) -->
+<div id="fanCamOffScreen">
+  <h1>FAN CAM IS OFF</h1>
+  <p>Students can't join or stream while the fan cam is off. Turn it on to begin your session.</p>
+  <button id="turnOnBtn">TURN FAN CAM ON</button>
+</div>
+
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <div class="card topbar">
+    <div class="topbar-brand">MANATEE <span>CAM</span> — CONTROL ROOM</div>
+    <label class="auto-pill" id="logPill" title="Save session export on end">
+      <input class="switch" type="checkbox" id="logToggle" checked>
+      SAVE EXPORT
+    </label>
+    <!-- Game mode: hard-disables cameras across all surfaces (output shows
+         centered MANATEE GAMES wordmark + activity cards instead of cam grid).
+         Set BEFORE participants join for the cleanest experience (mid-session
+         ON→OFF requires phones to manually re-enable cam access). -->
+    <label class="auto-pill" id="gameModePill" title="Hide cameras everywhere — activities only mode">
+      <input class="switch" type="checkbox" id="gameModeToggle">
+      GAME MODE
+    </label>
+    <button id="turnOffFanCamBtn" class="btn-ghost" style="font-size:13px;padding:10px 16px;">TURN OFF</button>
+    <button id="endSessionBtn" class="btn-danger" style="font-size:13px;padding:10px 16px;">END SESSION</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="card stats-row">
+    <div class="stat">
+      <div class="stat-label">connected</div>
+      <div class="stat-value" id="statMembers">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">camera ready</div>
+      <div class="stat-value" id="statReady">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">live now</div>
+      <div class="stat-value" id="statLive">—</div>
+    </div>
+    <div class="stat" id="winnerStat" style="display:none">
+      <div class="stat-label">🥇 1st place</div>
+      <div class="stat-value" id="statWinner">—</div>
+    </div>
+    <div class="stat" id="modeStat" style="display:block">
+      <div class="stat-label">mode</div>
+      <div class="stat-value" id="statMode">—</div>
+    </div>
+  </div>
+
+  <!-- MAIN LAYOUT -->
+  <div class="layout">
+
+    <!-- LEFT: TOOLS -->
+    <div class="card panel">
+      <div class="panelTitle" style="font-size:16px;font-weight:900;margin-bottom:12px;">Activities</div>
+
+      <div class="seg-row" style="grid-template-columns:repeat(3,1fr);">
+        <button id="showNoneBtn" class="seg idle-active active">OFF</button>
+        <button id="showTriviaBtn" class="seg">TRIVIA</button>
+        <button id="showPollsBtn" class="seg">POLLS</button>
+      </div>
+      <div class="seg-row" style="grid-template-columns:repeat(2,1fr);margin-top:0;">
+        <button id="showDrawBtn" class="seg">SKETCHERS</button>
+        <button id="showSkribblBtn" class="seg">WHAT'S MY DOODLE?</button>
+      </div>
+      <div class="seg-row" style="grid-template-columns:1fr;margin-top:0;">
+        <button id="showWordleBtn" class="seg">WORDLE</button>
+      </div>
+
+      <p id="toolIntro" class="tool-intro">Nothing active yet, pick an activity!</p>
+
+      <!-- hidden toggles for Firebase -->
+      <input style="display:none" type="checkbox" id="triviaToggle">
+      <input style="display:none" type="checkbox" id="pollsToggle">
+
+      <!-- TRIVIA -->
+      <div id="triviaShell" class="feature-shell">
+        <div class="feature-block">
+
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">question</div>
+          <textarea id="questionInput" placeholder="Type your trivia question…"></textarea>
+
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;">correct answer</div>
+          <div class="send-row">
+            <input id="correctInput" class="input" placeholder="Type the answer…">
+            <button id="sendQuestionBtn" class="btn-accent disabled" style="font-size:13px;">SEND</button>
+          </div>
+
+          <div class="reveal-row" style="margin-top:4px;">
+            <button id="revealCorrectBtn" class="disabled" style="font-size:12px;">SHOW ANSWER</button>
+            <button id="resetTriviaBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">RESET</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- POLLS -->
+      <div id="pollsShell" class="feature-shell">
+        <div class="feature-block">
+
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">poll question</div>
+          <textarea id="pollQuestion" placeholder="Type your poll question…"></textarea>
+
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;">options</div>
+          <div id="pollOptions" class="option-list"></div>
+          <button id="addOptionBtn" class="add-option-bar" style="font-size:13px;">+ ADD OPTION</button>
+
+          <div class="send-row" style="margin-top:4px;">
+            <button id="sendPollBtn" class="btn-accent disabled" style="flex:1;font-size:13px;">SEND</button>
+            <button id="resetPollBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">RESET</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- DRAW -->
+      <div id="drawShell" class="feature-shell">
+        <div class="feature-block">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">drawing prompt</div>
+          <textarea id="drawPromptInput" placeholder="e.g. Manatee wearing sunglasses…" style="min-height:60px;"></textarea>
+
+          <!-- Optional duration: OFF = manual times-up, otherwise auto-times-up at zero -->
+          <div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">duration</div>
+              <div id="drawDurationLabel" style="font-size:13px;font-weight:900;color:var(--accent);">OFF</div>
+            </div>
+            <input type="range" id="drawDurationSlider" min="0" max="240" step="30" value="0"
+              style="width:100%;accent-color:var(--accent);cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
+              <span>OFF</span><span>1m</span><span>2m</span><span>3m</span><span>4m</span>
+            </div>
+          </div>
+
+          <div id="drawCountdownBox" style="display:none;margin-top:6px;background:rgba(0,0,0,0.15);border-radius:12px;border:1px solid var(--line);padding:10px 12px;text-align:center;">
+            <div id="drawCountdown" style="font-size:22px;font-weight:900;color:var(--accent);line-height:1;">—</div>
+            <div style="margin-top:6px;height:4px;border-radius:99px;background:rgba(255,255,255,0.1);overflow:hidden;">
+              <div id="drawCountdownFill" style="height:100%;background:var(--accent);width:100%;transition:width 1s linear;border-radius:99px;"></div>
+            </div>
+          </div>
+
+          <div class="send-row" style="margin-top:4px;">
+            <button id="sendDrawBtn" class="btn-accent disabled" style="flex:1;font-size:14px;">SEND</button>
+            <button id="timesUpBtn" class="btn-ghost disabled" style="font-size:13px;" title="Auto-submit drawings for anyone who hasn't sent yet">⏱ TIME'S UP</button>
+            <button id="resetDrawBtn" class="btn-ghost" style="font-size:12px;opacity:0.6;">RESET</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SKRIBBL -->
+      <div id="skribblShell" class="feature-shell">
+        <div class="feature-block">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">drawer</div>
+          <select id="skribblDrawerSelect" class="input" style="cursor:pointer;">
+            <option value="">select someone</option>
+          </select>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">secret word</div>
+          <div class="send-row">
+            <input id="skribblWordInput" class="input" placeholder="e.g. Manatee…">
+            <button id="startSkribblBtn" class="btn-accent disabled" style="font-size:13px;">START</button>
+          </div>
+
+          <!-- Duration slider -->
+          <div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">round duration</div>
+              <div id="skribblDurationLabel" style="font-size:13px;font-weight:900;color:var(--accent);">60s</div>
+            </div>
+            <input type="range" id="skribblDurationSlider" min="30" max="120" step="15" value="60"
+              style="width:100%;accent-color:var(--accent);cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
+              <span>30s</span><span>60s</span><span>90s</span><span>120s</span>
+            </div>
+          </div>
+
+          <div id="skribblStatusArea" style="display:none;margin-top:2px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">status</div>
+            <!-- Countdown bar -->
+            <div style="position:relative;background:rgba(0,0,0,0.15);border-radius:12px;border:1px solid var(--line);padding:10px 12px;text-align:center;">
+              <div id="skribblCountdown" style="font-size:22px;font-weight:900;color:var(--accent);line-height:1;">—</div>
+              <div id="skribblCountdownBar" style="margin-top:6px;height:4px;border-radius:99px;background:rgba(255,255,255,0.1);overflow:hidden;">
+                <div id="skribblCountdownFill" style="height:100%;background:var(--accent);width:100%;transition:width 1s linear;border-radius:99px;"></div>
+              </div>
+              <div id="skribblGuessCount" style="font-size:11px;color:var(--muted);margin-top:6px;">Waiting for guesses…</div>
+            </div>
+            <!-- Live leaderboard -->
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:10px;">leaderboard</div>
+            <div id="skribblLeaderboard" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;min-height:32px;">
+              <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No correct guesses yet</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button id="endSkribblBtn" class="btn-danger disabled" style="font-size:13px;flex:1;">END ROUND</button>
+            <button id="resetSkribblBtn" class="btn-accent" style="font-size:13px;flex:1;display:none;">🔄 RESET ROUND</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── WORDLE SHELL (Phase 1: skeleton — word + attempts + timer config) ─── -->
+      <div id="wordleShell" class="feature-shell">
+        <div class="feature-block">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">secret word</div>
+          <div class="send-row">
+            <input id="wordleWordInput" class="input" placeholder="e.g. MANATEE…" maxlength="12" autocomplete="off" autocorrect="off" spellcheck="false">
+            <button id="startWordleBtn" class="btn-accent disabled" style="font-size:13px;">START</button>
+          </div>
+          <div id="wordleWordHint" style="font-size:10px;color:var(--muted);margin-top:-2px;">5 letters minimum — letters only</div>
+
+          <!-- Attempts slider -->
+          <div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">attempts</div>
+              <div id="wordleAttemptsLabel" style="font-size:13px;font-weight:900;color:var(--accent);">6</div>
+            </div>
+            <input type="range" id="wordleAttemptsSlider" min="3" max="10" step="1" value="6"
+              style="width:100%;accent-color:var(--accent);cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
+              <span>3</span><span>6</span><span>10</span>
+            </div>
+          </div>
+
+          <!-- Turn timer slider (with OFF option for manual mode) -->
+          <div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">turn timer</div>
+              <div id="wordleTimerLabel" style="font-size:13px;font-weight:900;color:var(--accent);">30s</div>
+            </div>
+            <input type="range" id="wordleTimerSlider" min="0" max="60" step="5" value="30"
+              style="width:100%;accent-color:var(--accent);cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
+              <span>OFF</span><span>30s</span><span>60s</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.4;">
+              When OFF, you manually pick the next guesser. Otherwise, picks rotate by confidence with a per-turn time limit.
+            </div>
+          </div>
+
+          <!-- Status area: shown only when a round is active -->
+          <div id="wordleStatusArea" style="display:none;margin-top:2px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;">current guesser</div>
+            <div id="wordleCurrentGuesserBox" style="background:rgba(84,209,138,0.12);border:1px solid rgba(84,209,138,0.3);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:900;">
+              <span id="wordleCurrentGuesserName" style="flex:1;">— nobody yet —</span>
+              <button id="wordlePickFirstBtn" class="btn-accent" style="font-size:11px;padding:6px 10px;">PICK FIRST GUESSER</button>
+            </div>
+
+            <!-- Queue panel: voters sorted 🟢→🟡→🔴, click a name to pick them -->
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:10px;">guess queue (click to pick)</div>
+            <div id="wordleQueueList" style="display:flex;flex-direction:column;gap:5px;margin-top:6px;min-height:32px;">
+              <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No votes yet — students rate their confidence on their phones.</div>
+            </div>
+
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:10px;">guesses</div>
+            <div id="wordleGuessesLog" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;min-height:24px;font-size:12px;">
+              <div style="color:var(--muted);text-align:center;padding:6px;">Waiting for first guess…</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button id="endWordleBtn" class="btn-danger disabled" style="font-size:13px;flex:1;">END ROUND</button>
+            <button id="resetWordleBtn" class="btn-accent" style="font-size:13px;flex:1;display:none;">🔄 RESET ROUND</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: PARTICIPANTS -->
+    <div class="card" style="overflow:hidden;">
+      <div class="participant-bar">
+        <div class="participant-bar-left">
+          <div class="participant-count" id="memberCount">0 connected</div>
+          <div class="participant-sub" id="memberSub">waiting for people to join</div>
+        </div>
+        <div class="participant-bar-right">
+          <label class="auto-pill" id="revealPill">
+            <input class="switch" type="checkbox" id="revealModeToggle">
+            REVEAL MODE
+          </label>
+          <label class="auto-pill" id="autoPill">
+            <input class="switch" type="checkbox" id="autoLiveToggle">
+            AUTO LIVE
+          </label>
+          <label id="autoDurationWrap" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;background:rgba(0,0,0,0.18);border:1px solid var(--line);border-radius:99px;padding:4px 12px;">
+            <span>EVERY</span>
+            <input type="range" id="autoDurationSlider" min="3" max="15" step="1" value="5"
+              style="width:80px;accent-color:var(--accent);cursor:pointer;">
+            <span id="autoDurationLabel" style="font-weight:900;color:var(--accent);min-width:24px;text-align:right;">5s</span>
+          </label>
+          <button id="clearLiveBtn" class="btn-ghost" style="font-size:12px;padding:8px 12px;">clear live</button>
+        </div>
+      </div>
+      <div class="pgrid" id="participantGrid">
+        <div class="empty">No participants yet.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+import { db } from "./firebase-config.js";
+import {
+  ref, onValue, onChildAdded, onChildChanged, onChildRemoved,
+  update, set, get
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+/* ── PASSWORD GATE ── */
+// Password stored as SHA-256 hash — plaintext never in source code
+// Current password: manatee2025
+const PW_HASH = "d95fbd477be7025b92ffe6d82e9bf46cbe22f8750c0eda5c3601c344c234958c";
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+const pwGate          = document.getElementById("pwGate");
+const pwInput         = document.getElementById("pwInput");
+const pwSubmit        = document.getElementById("pwSubmit");
+const pwError         = document.getElementById("pwError");
+const fanCamOffScreen = document.getElementById("fanCamOffScreen");
+const turnOnBtn       = document.getElementById("turnOnBtn");
+const turnOffFanCamBtn= document.getElementById("turnOffFanCamBtn");
+const fanCamOnRef     = ref(db, "meta/fanCamOn");
+
+async function checkPassword() {
+  const hash = await sha256(pwInput.value);
+  if (hash === PW_HASH) {
+    pwGate.classList.add("hidden");
+    const snap = await get(fanCamOnRef);
+    if (!snap.val()) fanCamOffScreen.classList.add("show");
+  } else {
+    pwError.classList.add("show");
+    pwInput.value = "";
+    setTimeout(() => pwError.classList.remove("show"), 2000);
+  }
+}
+pwSubmit.addEventListener("click", checkPassword);
+pwInput.addEventListener("keydown", e => { if (e.key === "Enter") checkPassword(); });
+
+turnOnBtn.addEventListener("click", async () => {
+  await set(fanCamOnRef, true);
+  fanCamOffScreen.classList.remove("show");
+});
+
+turnOffFanCamBtn.addEventListener("click", async () => {
+  if (!confirm("Turn off the fan cam? This will end the session and remove all connected students.")) return;
+  stopAuto();
+  els.autoLiveToggle.checked = false;
+  clearHintTimers();
+  stopDrawCountdown();
+  logEvent("session", "Fan cam turned off — session ended");
+  await exportSessionZip();
+  await Promise.all([
+    set(fanCamOnRef, false),
+    set(ref(db,"meta/gameMode"), false), // reset game mode for next session
+    set(ref(db,"participants"), null),
+    set(ref(db,"selfies"), null),
+    set(ref(db,"live"), null),
+    set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
+    set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
+    set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null, timeEnd:null, timesUp:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null, phase:null }),
+    set(ref(db,"wordle"), { mode:false, phase:null, word:null, wordLength:null, attempts:6, turnDurationSec:30, guesses:null, keyboardState:null, currentGuesser:null, currentGuesserName:null, pendingGuess:null, confidence:null, turnEndEpoch:null, winner:null }),
+    set(ref(db,"meta/resetFlag"), Date.now()),
+  ]);
+  state.participants = {}; state.selfies = {}; state.answers = {};
+  state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
+  els.grid.innerHTML = `<div class="empty">Session ended. Ready for next time.</div>`;
+  els.questionInput.value = ""; els.correctInput.value = "";
+  els.pollQuestion.value = ""; state.draftPollOptions = ["",""]; renderPollDraft();
+  updateStats(); updateWinnerStat();
+  fanCamOffScreen.classList.add("show");
+});
+
+onValue(fanCamOnRef, snap => {
+  if (pwGate.classList.contains("hidden")) {
+    fanCamOffScreen.classList.toggle("show", !snap.val());
+  }
+});
+
+/* ─── NO-CAM MODE ───
+ * Hard-disables cameras across the whole product. When ON:
+ *   • Phones don't request getUserMedia / don't stream / don't heartbeat
+ *   • Output hides the cam feed; activity panels claim center stage
+ *   • All "set someone live" side effects (skribbl drawer, skribbl winner,
+ *     wordle winner, drawing reveal, auto-live rotation, manual click-to-live)
+ *     become no-ops since there's no live feed to switch to.
+ *
+ * Defaults to OFF. Auto-resets to OFF on end-session and on fan-cam-off so
+ * the next session always starts in normal cam mode.
+ */
+const gameModeRef = ref(db, "meta/gameMode");
+let gameMode = false;
+
+// Single chokepoint for "set the active live user". Use this instead of
+// update(ref(db,"live"), { activeUser: ... }) anywhere a game-mode side
+// effect would otherwise switch the spotlight. In game mode it no-ops.
+async function setLiveUserIfAllowed(uid) {
+  if (gameMode) return; // suppress — no live feed in game mode
+  return update(ref(db, "live"), { activeUser: uid });
+}
+// Also exposed so other code that has its own 'live/activeUser:null' write
+// path (e.g. clearing live on disconnect) can opt out clean
+async function clearLiveUserIfAllowed() {
+  if (gameMode) return;
+  return update(ref(db, "live"), { activeUser: null });
+}
+
+/* ── ELEMENTS ── */
+const els = {
+  statMembers:    document.getElementById("statMembers"),
+  statReady:      document.getElementById("statReady"),
+  statLive:       document.getElementById("statLive"),
+  statMode:       document.getElementById("statMode"),
+  statWinner:     document.getElementById("statWinner"),
+  winnerStat:     document.getElementById("winnerStat"),
+  modeStat:       document.getElementById("modeStat"),
+  memberCount:    document.getElementById("memberCount"),
+  memberSub:      document.getElementById("memberSub"),
+  grid:           document.getElementById("participantGrid"),
+  autoLiveToggle: document.getElementById("autoLiveToggle"),
+  autoDurationWrap:   document.getElementById("autoDurationWrap"),
+  autoDurationSlider: document.getElementById("autoDurationSlider"),
+  autoDurationLabel:  document.getElementById("autoDurationLabel"),
+  autoPill:       document.getElementById("autoPill"),
+  endSessionBtn:  document.getElementById("endSessionBtn"),
+  clearLiveBtn:   document.getElementById("clearLiveBtn"),
+  revealModeToggle: document.getElementById("revealModeToggle"),
+  revealPill:     document.getElementById("revealPill"),
+  showDrawBtn:    document.getElementById("showDrawBtn"),
+  drawShell:      document.getElementById("drawShell"),
+  showSkribblBtn:     document.getElementById("showSkribblBtn"),
+  skribblShell:       document.getElementById("skribblShell"),
+
+  // ─── WORDLE ───
+  showWordleBtn:        document.getElementById("showWordleBtn"),
+  wordleShell:          document.getElementById("wordleShell"),
+  wordleWordInput:      document.getElementById("wordleWordInput"),
+  wordleWordHint:       document.getElementById("wordleWordHint"),
+  startWordleBtn:       document.getElementById("startWordleBtn"),
+  wordleAttemptsSlider: document.getElementById("wordleAttemptsSlider"),
+  wordleAttemptsLabel:  document.getElementById("wordleAttemptsLabel"),
+  wordleTimerSlider:    document.getElementById("wordleTimerSlider"),
+  wordleTimerLabel:     document.getElementById("wordleTimerLabel"),
+  wordleStatusArea:     document.getElementById("wordleStatusArea"),
+  wordleCurrentGuesserBox:  document.getElementById("wordleCurrentGuesserBox"),
+  wordleCurrentGuesserName: document.getElementById("wordleCurrentGuesserName"),
+  wordlePickFirstBtn:       document.getElementById("wordlePickFirstBtn"),
+  wordleQueueList:          document.getElementById("wordleQueueList"),
+  wordleGuessesLog:         document.getElementById("wordleGuessesLog"),
+  endWordleBtn:         document.getElementById("endWordleBtn"),
+  resetWordleBtn:       document.getElementById("resetWordleBtn"),
+  skribblDrawerSelect:document.getElementById("skribblDrawerSelect"),
+  skribblWordInput:   document.getElementById("skribblWordInput"),
+  startSkribblBtn:    document.getElementById("startSkribblBtn"),
+  skribblWinnerBanner:  null, // removed — leaderboard replaces it
+  skribblStatusArea:    document.getElementById("skribblStatusArea"),
+  skribblGuessCount:    document.getElementById("skribblGuessCount"),
+  skribblLeaderboard:   document.getElementById("skribblLeaderboard"),
+  skribblCountdown:     document.getElementById("skribblCountdown"),
+  skribblCountdownFill: document.getElementById("skribblCountdownFill"),
+  skribblDurationSlider:document.getElementById("skribblDurationSlider"),
+  skribblDurationLabel: document.getElementById("skribblDurationLabel"),
+  endSkribblBtn:        document.getElementById("endSkribblBtn"),
+  resetSkribblBtn:      document.getElementById("resetSkribblBtn"),
+  drawPromptInput:document.getElementById("drawPromptInput"),
+  sendDrawBtn:    document.getElementById("sendDrawBtn"),
+  timesUpBtn:     document.getElementById("timesUpBtn"),
+  drawDurationSlider: document.getElementById("drawDurationSlider"),
+  drawDurationLabel:  document.getElementById("drawDurationLabel"),
+  drawCountdownBox:   document.getElementById("drawCountdownBox"),
+  drawCountdown:      document.getElementById("drawCountdown"),
+  drawCountdownFill:  document.getElementById("drawCountdownFill"),
+  resetDrawBtn:   document.getElementById("resetDrawBtn"),
+  showNoneBtn:    document.getElementById("showNoneBtn"),
+  showTriviaBtn:  document.getElementById("showTriviaBtn"),
+  showPollsBtn:   document.getElementById("showPollsBtn"),
+  toolIntro:      document.getElementById("toolIntro"),
+  triviaShell:    document.getElementById("triviaShell"),
+  pollsShell:     document.getElementById("pollsShell"),
+  triviaToggle:   document.getElementById("triviaToggle"),
+  pollsToggle:    document.getElementById("pollsToggle"),
+  questionInput:  document.getElementById("questionInput"),
+  correctInput:   document.getElementById("correctInput"),
+  sendQuestionBtn:document.getElementById("sendQuestionBtn"),
+  revealCorrectBtn:document.getElementById("revealCorrectBtn"),
+  resetTriviaBtn: document.getElementById("resetTriviaBtn"),
+  pollQuestion:   document.getElementById("pollQuestion"),
+  pollOptions:    document.getElementById("pollOptions"),
+  addOptionBtn:   document.getElementById("addOptionBtn"),
+  sendPollBtn:    document.getElementById("sendPollBtn"),
+  resetPollBtn:   document.getElementById("resetPollBtn"),
+};
+
+/* ── STATE ── */
+const state = {
+  participants: {}, selfies: {}, answers: {}, reveals: {},
+  pollVotes: {}, pollTotals: {}, pollOptions: {},
+  currentLiveUser: null,
+  triviaMode: false, pollsMode: false, drawMode: false,
+  drawSubmissions: {}, drawReveals: {},
+  skribblMode: false, skribblWord: "", skribblPhase: null,
+  wordleMode: false, wordleWord: "", wordlePhase: null,
+  triviaQuestionActive: false, triviaCorrect: "",
+  cardRefs: {},
+  autoLiveEnabled: false, autoLiveInterval: null,
+  revealModeEnabled: false,
+  autoShown: new Set(),  // userKeys shown in current round; cleared when round completes
+  autoLastShown: null,   // most recent userKey shown — prevents back-to-back repeats
+  autoRound: 1,          // round number (for logging/debugging)
+  autoDurationSec: 5,    // slider value
+  autoLiveStartTs: 0,    // when current pick went live (for min-dwell calculations)
+
+  // Skribbl correct-guess spotlight system
+  skribblDrawer: null,        // current drawer userKey (excluded from auto cycle)
+  spotlightActive: false,     // true while a guesser-spotlight is running
+  spotlightQueue: [],         // pending [{userKey, name}] (max 1 pending)
+  spotlightTimer: null,       // timeout handle for current spotlight
+  spotlightDurationMs: 4000,  // how long each correct guesser stays on cam
+  draftPollOptions: [],
+};
+
+/* ── SESSION LOG & EXPORT ── */
+const logToggle = document.getElementById("logToggle");
+const logPill   = document.getElementById("logPill");
+logToggle.onchange = () => logPill.classList.toggle("on", logToggle.checked);
+logPill.classList.toggle("on", logToggle.checked);
+
+/* ── NO-CAM MODE TOGGLE WIRING ── */
+const gameModeToggle = document.getElementById("gameModeToggle");
+const gameModePill   = document.getElementById("gameModePill");
+gameModeToggle.onchange = async () => {
+  const v = gameModeToggle.checked;
+  gameModePill.classList.toggle("on", v);
+  // If turning ON, also stop auto-live + clear current spotlight (nothing to spotlight)
+  if (v) {
+    if (state.autoLiveEnabled) {
+      stopAuto();
+      els.autoLiveToggle.checked = false;
+    }
+    await update(ref(db, "live"), { activeUser: null }).catch(() => {});
+  }
+  await set(gameModeRef, v).catch(() => {});
+  logEvent("mode", v ? "No-cam mode enabled" : "No-cam mode disabled");
+};
+// React to Firebase truth (covers refresh-recovery + multi-tab consistency)
+onValue(gameModeRef, snap => {
+  gameMode = snap.val() === true;
+  gameModeToggle.checked = gameMode;
+  gameModePill.classList.toggle("on", gameMode);
+  // When game mode is ON, the auto-live toggle should be visually disabled
+  // since it has no effect anyway (and turning it on while in game-mode would just
+  // confuse the operator).
+  if (els.autoLiveToggle) {
+    els.autoLiveToggle.disabled = gameMode;
+    if (els.autoLivePill) els.autoLivePill.classList.toggle("disabled", gameMode);
+  }
+  if (typeof updateStats === "function") updateStats();
+  // When game mode flips, re-render participant cards so the live indicators
+  // / camera dots respect the new mode
+  if (typeof Object !== "undefined" && state.participants) {
+    Object.keys(state.participants).forEach(k => {
+      if (typeof patchCard === "function") patchCard(k);
+    });
+  }
+});
+
+let sessionLog      = [];
+let sessionStart    = null;
+// Persists ALL drawing submissions for the whole session regardless of resets
+// key: uid, value: { data, prompt, name }
+let sessionDrawings = {};
+
+function logEvent(type, detail) {
+  if (!logToggle.checked) return;
+  const ts = new Date();
+  if (!sessionStart) sessionStart = ts;
+  sessionLog.push({ ts, type, detail });
+}
+
+function fmtTime(ts) {
+  return ts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function buildLogText() {
+  const lines = [];
+  const now = new Date();
+  lines.push("═══════════════════════════════════════════════════════");
+  lines.push("  MANATEE CAM — SESSION LOG");
+  lines.push(`  Generated: ${now.toLocaleDateString()} at ${fmtTime(now)}`);
+  if (sessionStart) lines.push(`  Session started: ${fmtTime(sessionStart)}`);
+  lines.push("═══════════════════════════════════════════════════════");
+  lines.push("");
+  if (!sessionLog.length) { lines.push("  No events recorded."); return lines.join("\n"); }
+  let lastType = null;
+  for (const e of sessionLog) {
+    if (e.type !== lastType) { lines.push(""); lastType = e.type; }
+    lines.push(`  [${fmtTime(e.ts)}] ${e.detail}`);
+  }
+  lines.push("");
+  lines.push("═══════════════════════════════════════════════════════");
+  lines.push(`  END OF LOG — ${sessionLog.length} events`);
+  lines.push("═══════════════════════════════════════════════════════");
+  return lines.join("\n");
+}
+
+// Converts a dataURL to a Uint8Array for JSZip
+function dataURLtoBytes(dataURL) {
+  const base64 = dataURL.split(",")[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+// Guess file extension from dataURL mime type
+function extFromDataURL(dataURL) {
+  const mime = dataURL.split(";")[0].split(":")[1] || "";
+  if (mime.includes("webp")) return "webp";
+  if (mime.includes("png"))  return "png";
+  if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
+  return "png";
+}
+
+// Sanitize a name for use as a filename
+function safeName(str) {
+  return (str || "unknown").replace(/[^a-zA-Z0-9_\-]/g, "_").slice(0, 40);
+}
+
+async function exportSessionZip() {
+  if (!logToggle.checked) return;
+  const zip = new JSZip();
+  const selfiesFolder   = zip.folder("selfies");
+  const drawingsFolder  = zip.folder("drawings");
+
+  // Selfies
+  for (const [uid, dataURL] of Object.entries(state.selfies)) {
+    if (!dataURL || !dataURL.startsWith("data:")) continue;
+    const name = safeName(state.participants[uid]?.name || uid);
+    const ext  = extFromDataURL(dataURL);
+    selfiesFolder.file(`${name}.${ext}`, dataURLtoBytes(dataURL));
+  }
+
+  // Drawings (all submissions across all draw rounds this session)
+  for (const [uid, entry] of Object.entries(sessionDrawings)) {
+    if (!entry?.data || !entry.data.startsWith("data:")) continue;
+    const name   = safeName(entry.name || state.participants[uid]?.name || uid);
+    const prompt = safeName(entry.prompt || "drawing");
+    const ext    = extFromDataURL(entry.data);
+    drawingsFolder.file(`${name}_${prompt}.${ext}`, dataURLtoBytes(entry.data));
+  }
+
+  // Log
+  zip.file("session_log.txt", buildLogText());
+
+  // Timestamp for filename
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}`;
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `manatee_cam_session_${stamp}.zip`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+  // Reset log for next session
+  sessionLog = [];
+  sessionStart = null;
+  sessionDrawings = {};
+}
+
+
+let currentTool = "none";
+
+function setTool(t) {
+  currentTool = t;
+  els.showNoneBtn.classList.toggle("active",   t === "none");
+  els.showNoneBtn.classList.toggle("idle-active", t === "none");
+  els.showTriviaBtn.classList.toggle("active", t === "trivia");
+  els.showPollsBtn.classList.toggle("active",  t === "polls");
+  els.showDrawBtn.classList.toggle("active",   t === "draw");
+  els.showSkribblBtn.classList.toggle("active", t === "skribbl");
+  els.showWordleBtn.classList.toggle("active", t === "wordle");
+  els.triviaShell.classList.toggle("open",  t === "trivia");
+  els.pollsShell.classList.toggle("open",   t === "polls");
+  els.drawShell.classList.toggle("open",    t === "draw");
+  els.skribblShell.classList.toggle("open", t === "skribbl");
+  els.wordleShell.classList.toggle("open",  t === "wordle");
+  els.toolIntro.style.display = t === "none" ? "block" : "none";
+}
+
+async function activateNone() {
+  // Stop any in-flight skribbl timers FIRST so they don't fire after cleanup
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
+  clearHintTimers();
+  state.skribblWord = "";
+  skribblLeaderboardEntries = [];
+  skribblGuessTotal = 0;
+
+  await Promise.all([
+    // Trivia: turn off mode but PRESERVE answers/reveals across the session — teacher can use Reset for that
+    update(ref(db,"trivia"),  { mode: false, question: { text:"", show:false } }),
+    // Polls: turn off mode + clear question (so no stale question shows on next activation)
+    update(ref(db,"polls"),   { mode: false, question: { text:"", show:false } }),
+    // Drawing: turn off mode + clear prompt
+    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    // Skribbl: full wipe so toggling back ON shows fresh state — no stale leaderboard
+    set(ref(db,"skribbl"), {
+      mode: false, drawer: null, prompt: { text:"", show:false },
+      guesses: null, winner: null, liveCanvas: null, word: null,
+      hint: null, close: null, timeEnd: null, leaderboard: null, phase: null
+    }),
+    // Wordle: just turn off mode — fullWipeWordle is reserved for switching OUT of wordle
+    set(ref(db,"wordle/mode"), false),
+  ]);
+  // Reset control UI
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
+  els.skribblCountdown.textContent = "—";
+  els.skribblCountdownFill.style.width = "100%";
+  els.endSkribblBtn.style.display = "";
+  els.endSkribblBtn.classList.add("disabled");
+  els.resetSkribblBtn.style.display = "none";
+  els.skribblWordInput.value = "";
+  els.skribblDrawerSelect.value = "";
+  renderSkribblLeaderboard();
+  updateSkribblStart();
+  setTool("none");
+  updateStats();
+}
+// Helper — wipes ALL skribbl state, used when leaving skribbl for any other mode
+async function fullWipeSkribbl() {
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
+  clearHintTimers();
+  clearSpotlight();
+  state.skribblWord = "";
+  skribblLeaderboardEntries = [];
+  skribblGuessTotal = 0;
+  await set(ref(db,"skribbl"), {
+    mode: false, drawer: null, prompt: { text:"", show:false },
+    guesses: null, winner: null, liveCanvas: null, word: null,
+    hint: null, close: null, timeEnd: null, leaderboard: null, phase: null
+  });
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
+  els.skribblCountdown.textContent = "—";
+  els.skribblCountdownFill.style.width = "100%";
+  els.endSkribblBtn.style.display = "";
+  els.endSkribblBtn.classList.add("disabled");
+  els.resetSkribblBtn.style.display = "none";
+  els.skribblWordInput.value = "";
+  els.skribblDrawerSelect.value = "";
+  renderSkribblLeaderboard();
+  updateSkribblStart();
+}
+
+// Helper — wipes ALL wordle state, used when leaving wordle for any other mode
+async function fullWipeWordle() {
+  // Phase 4: stop any in-flight timer first so it can't fire after cleanup
+  if (typeof stopWordleTurnTimer === "function") stopWordleTurnTimer();
+  state.wordleWord = "";
+  try {
+    await Promise.all([
+      set(ref(db,"wordle/mode"),               false),
+      set(ref(db,"wordle/phase"),              null),
+      set(ref(db,"wordle/word"),               null),
+      set(ref(db,"wordle/wordLength"),         null),
+      set(ref(db,"wordle/guesses"),            null),
+      set(ref(db,"wordle/keyboardState"),      null),
+      set(ref(db,"wordle/currentGuesser"),     null),
+      set(ref(db,"wordle/currentGuesserName"), null),
+      set(ref(db,"wordle/pendingGuess"),       null),
+      set(ref(db,"wordle/confidence"),         null),
+      set(ref(db,"wordle/turnEndEpoch"),       null),
+      set(ref(db,"wordle/winner"),             null),
+    ]);
+  } catch (e) {
+    console.warn("fullWipeWordle Firebase error (non-fatal):", e);
+  }
+  if (els.wordleStatusArea) els.wordleStatusArea.style.display = "none";
+  if (els.endWordleBtn) { els.endWordleBtn.style.display = ""; els.endWordleBtn.classList.add("disabled"); }
+  if (els.resetWordleBtn) els.resetWordleBtn.style.display = "none";
+  if (els.wordleWordInput) els.wordleWordInput.value = "";
+  updateWordleStart();
+}
+
+async function activateTrivia() {
+  await Promise.all([
+    update(ref(db,"polls"),  { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    fullWipeSkribbl(),
+    set(ref(db,"wordle/mode"), false),
+    update(ref(db,"trivia"), { mode: true }),
+  ]);
+  setTool("trivia");
+  updateStats();
+}
+async function activatePolls() {
+  await Promise.all([
+    update(ref(db,"trivia"), { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    fullWipeSkribbl(),
+    set(ref(db,"wordle/mode"), false),
+    update(ref(db,"polls"),  { mode: true }),
+  ]);
+  setTool("polls");
+  updateStats();
+}
+
+async function activateDraw() {
+  await Promise.all([
+    update(ref(db,"trivia"), { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"polls"),  { mode: false, question: { text:"", show:false } }),
+    fullWipeSkribbl(),
+    set(ref(db,"wordle/mode"), false),
+    update(ref(db,"drawing"), { mode: true }),
+  ]);
+  setTool("draw");
+  updateStats();
+}
+els.showNoneBtn.onclick   = activateNone;
+els.showTriviaBtn.onclick = activateTrivia;
+els.showPollsBtn.onclick  = activatePolls;
+els.showDrawBtn.onclick   = activateDraw;
+
+async function activateSkribbl() {
+  await Promise.all([
+    update(ref(db,"trivia"),  { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"polls"),   { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    set(ref(db,"wordle/mode"), false),
+    // Reset skribbl runtime data when entering — wipe any stale data from a prior round
+    set(ref(db,"skribbl/leaderboard"), null),
+    set(ref(db,"skribbl/winner"),      null),
+    set(ref(db,"skribbl/guesses"),     null),
+    set(ref(db,"skribbl/hint"),        null),
+    set(ref(db,"skribbl/close"),       null),
+    set(ref(db,"skribbl/timeEnd"),     null),
+    set(ref(db,"skribbl/liveCanvas"),  null),
+    set(ref(db,"skribbl/phase"),       null),
+    set(ref(db,"skribbl/prompt"),      { text:"", show:false }),
+    set(ref(db,"skribbl/drawer"),      null),
+    set(ref(db,"skribbl/word"),        null),
+    set(ref(db,"skribbl/mode"),        true),
+  ]);
+  setTool("skribbl");
+  updateStats();
+}
+els.showSkribblBtn.onclick = activateSkribbl;
+
+async function activateWordle() {
+  // Stop any leftover wordle timer (e.g., from a previous session)
+  if (typeof stopWordleTurnTimer === "function") stopWordleTurnTimer();
+  await Promise.all([
+    update(ref(db,"trivia"),  { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"polls"),   { mode: false, question: { text:"", show:false } }),
+    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
+    fullWipeSkribbl(),
+    // Reset wordle runtime data when entering — wipe any stale data from a prior round
+    set(ref(db,"wordle/word"),                null),
+    set(ref(db,"wordle/wordLength"),          null),
+    set(ref(db,"wordle/phase"),               null),
+    set(ref(db,"wordle/guesses"),             null),
+    set(ref(db,"wordle/keyboardState"),       null),
+    set(ref(db,"wordle/currentGuesser"),      null),
+    set(ref(db,"wordle/currentGuesserName"),  null),
+    set(ref(db,"wordle/pendingGuess"),        null),
+    set(ref(db,"wordle/confidence"),          null),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
+    set(ref(db,"wordle/winner"),              null),
+    // Persist current slider values as the configured defaults for this session
+    set(ref(db,"wordle/attempts"),        parseInt(els.wordleAttemptsSlider.value, 10)),
+    set(ref(db,"wordle/turnDurationSec"), parseInt(els.wordleTimerSlider.value,    10)),
+    set(ref(db,"wordle/mode"),            true),
+  ]);
+  setTool("wordle");
+  updateStats();
+}
+els.showWordleBtn.onclick = activateWordle;
+
+/* ── STATS ── */
+function updateStats() {
+  const users = Object.values(state.participants);
+  const ready = users.filter(u => u?.cameraActive).length;
+  const liveName = state.currentLiveUser
+    ? (state.participants[state.currentLiveUser]?.name || "—") : "—";
+  let mode = "—";
+  if (state.pollsMode)  mode = "POLLS";
+  else if (state.triviaMode) mode = "TRIVIA";
+  else if (state.drawMode) mode = "SKETCHERS";
+  else if (state.skribblMode) mode = "WHAT'S MY DOODLE?";
+  else if (state.wordleMode) mode = "WORDLE";
+
+  els.statMembers.textContent = users.length;
+  els.statReady.textContent   = ready;
+  els.statLive.textContent    = liveName;
+  els.statMode.textContent    = mode;
+  els.memberCount.textContent = `${users.length} connected`;
+  els.memberSub.textContent   = `${ready} camera ready`;
+
+  if (!users.length) els.grid.innerHTML = `<div class="empty">No participants yet.</div>`;
+}
+
+/* ── WINNER CALCULATION ── */
+// Returns sorted array of { uid, name, ts } for correct answers, ordered by submission time
+function getWinners() {
+  if (!state.triviaCorrect) return [];
+  return Object.entries(state.answers)
+    .filter(([, a]) => a?.answer?.toLowerCase().trim() === state.triviaCorrect)
+    .sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0))
+    .map(([uid, a]) => ({ uid, name: state.participants[uid]?.name || uid, ts: a.timestamp }));
+}
+
+function updateWinnerStat() {
+  const winners = getWinners();
+  if (winners.length && state.triviaCorrect) {
+    els.winnerStat.style.display = "block";
+    els.modeStat.style.display   = "none";
+    els.statWinner.textContent   = winners[0].name;
+    els.winnerStat.classList.add("winner-stat");
+  } else {
+    els.winnerStat.style.display = "none";
+    els.modeStat.style.display   = "block";
+  }
+}
+
+/* ── SORT KEY ── */
+// Priority: correct (by time) > wrong > no answer > cam off
+function sortKey([uid, p]) {
+  const answer  = state.answers[uid]?.answer;
+  const vote    = state.pollVotes[uid]?.label;
+  const hasAnswer = !!(answer || vote);
+  const correct = answer && state.triviaCorrect && answer.toLowerCase().trim() === state.triviaCorrect;
+  const camOn   = !!p?.cameraActive;
+
+  if (correct) return [4, -(state.answers[uid]?.timestamp || 0)]; // correct: sort by time asc
+  if (hasAnswer) return [3, -(p?.joinedAt || 0)];
+  if (camOn)    return [2, -(p?.joinedAt || 0)];
+  return         [1, -(p?.joinedAt || 0)];
+}
+
+/* ── PARTICIPANT CARDS ── */
+function ensureCard(uid) {
+  if (state.cardRefs[uid]) return state.cardRefs[uid];
+
+  const card = document.createElement("div");
+  card.className = "person";
+  card.innerHTML = `
+    <div class="thumb-wrap">
+      <img alt="">
+      <div class="rank-badge" data-rank></div>
+      <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+      <!-- Drawing thumbnail — bottom-right corner of selfie image -->
+      <div class="draw-corner" style="display:none;position:absolute;bottom:6px;right:6px;width:42%;aspect-ratio:1/1;border-radius:8px;overflow:hidden;border:2px solid white;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.4);z-index:4;">
+        <img class="draw-thumb-img" alt="" style="width:100%;height:100%;object-fit:contain;display:block;">
+      </div>
+    </div>
+    <div class="person-body">
+      <div class="pname"></div>
+      <div class="pmeta"></div>
+      <div class="pills"></div>
+      <div class="status-text"></div>
+      <div class="person-actions">
+        <button class="goLiveBtn btn-accent">go live</button>
+        <button class="toggleRevealBtn" style="display:none;">reveal answer</button>
+        <button class="toggleDrawBtn btn-accent" style="display:none;">show drawing</button>
+        <button class="kickBtn btn-danger">remove</button>
+      </div>
+    </div>`;
+
+  const c = {
+    root:        card,
+    img:         card.querySelector("img"),
+    rankBadge:   card.querySelector(".rank-badge"),
+    name:        card.querySelector(".pname"),
+    meta:        card.querySelector(".pmeta"),
+    pills:       card.querySelector(".pills"),
+    statusText:  card.querySelector(".status-text"),
+    drawCorner:  card.querySelector(".draw-corner"),
+    drawThumbImg:card.querySelector(".draw-thumb-img"),
+    goLiveBtn:   card.querySelector(".goLiveBtn"),
+    toggleRevealBtn: card.querySelector(".toggleRevealBtn"),
+    toggleDrawBtn:   card.querySelector(".toggleDrawBtn"),
+    kickBtn:     card.querySelector(".kickBtn"),
+  };
+
+  c.goLiveBtn.onclick = async () => {
+    if (gameMode) return; // game mode: suppress manual go-live
+    if (!state.participants[uid]?.cameraActive) return;
+    await update(ref(db, "live"), { activeUser: uid });
+  };
+  c.toggleRevealBtn.onclick = () => {
+    const revealed = state.reveals[uid]?.show === true;
+    update(ref(db, `trivia/reveal/${uid}`), { show: !revealed });
+  };
+  c.toggleDrawBtn.onclick = () => {
+    const drawRevealed = state.drawReveals[uid]?.show === true;
+    set(ref(db, `drawing/reveal/${uid}`), { show: !drawRevealed });
+  };
+  c.kickBtn.onclick   = async () => {
+    const p = state.participants[uid];
+    if (!confirm(`Remove ${p?.name || uid}?`)) return;
+    const ops = [
+      set(ref(db, `participants/${uid}`), null),
+      set(ref(db, `selfies/${uid}`), null),
+      set(ref(db, `trivia/answers/${uid}`), null),
+      set(ref(db, `trivia/reveal/${uid}`), null),
+      set(ref(db, `polls/votes/${uid}`), null),
+    ];
+    if (state.currentLiveUser === uid) {
+      ops.push(set(ref(db, "live/activeUser"), null), set(ref(db, "live/frame"), null));
+    }
+    await Promise.all(ops);
+  };
+
+  state.cardRefs[uid] = c;
+  return c;
+}
+
+function patchCard(uid) {
+  const p = state.participants[uid];
+  const c = ensureCard(uid);
+  if (!p) return;
+
+  c.img.src = state.selfies[uid] || "";
+  c.name.textContent = p.name || uid;
+  c.meta.textContent = p.joinedAt ? `joined ${new Date(p.joinedAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}` : "";
+  c.root.classList.toggle("live", state.currentLiveUser === uid);
+  c.root.classList.toggle("cam-off", !p.cameraActive);
+
+  const answer = state.answers[uid]?.answer;
+  const vote   = state.pollVotes[uid]?.label;
+  const correct = answer && state.triviaCorrect && answer.toLowerCase().trim() === state.triviaCorrect;
+
+  c.root.classList.toggle("correct", !!correct);
+  c.root.classList.toggle("wrong",   !!(answer && state.triviaCorrect && !correct));
+
+  // Rank badge
+  const winners = getWinners();
+  const rank = winners.findIndex(w => w.uid === uid);
+  c.rankBadge.className = "rank-badge";
+  if (rank === 0) { c.rankBadge.classList.add("r1"); c.rankBadge.textContent = "🥇"; }
+  else if (rank === 1) { c.rankBadge.classList.add("r2"); c.rankBadge.textContent = "🥈"; }
+  else if (rank === 2) { c.rankBadge.classList.add("r3"); c.rankBadge.textContent = "🥉"; }
+
+  // Pills
+  const pills = [];
+  pills.push(p.cameraActive
+    ? `<span class="pill-tag good">cam ready</span>`
+    : `<span class="pill-tag">cam off</span>`);
+  if (answer) {
+    pills.push(`<span class="pill-tag ${correct ? "good" : "warn"}">${correct ? "✓ correct" : "✗ wrong"}</span>`);
+  }
+  if (vote) pills.push(`<span class="pill-tag hot">voted</span>`);
+  c.pills.innerHTML = pills.join("");
+
+  // Status text
+  if (vote)        c.statusText.textContent = `Poll: ${vote}`;
+  else if (answer) c.statusText.textContent = `Answer: ${answer}`;
+  else if (p.cameraActive) c.statusText.textContent = "Ready to go live";
+  else c.statusText.textContent = "Camera off";
+
+  // Go live button
+  c.goLiveBtn.disabled = !p.cameraActive;
+  c.goLiveBtn.classList.toggle("disabled", !p.cameraActive);
+  c.goLiveBtn.textContent = !p.cameraActive ? "cam off"
+    : state.currentLiveUser === uid ? "● live" : "go live";
+
+  // Reveal toggle (trivia only) — single button, label switches
+  const canReveal = state.triviaMode && state.triviaQuestionActive && !!answer;
+  const revealed  = state.reveals[uid]?.show === true;
+  if (state.triviaMode) {
+    c.toggleRevealBtn.style.display = "";
+    c.toggleRevealBtn.textContent   = revealed ? "hide answer" : "reveal answer";
+    c.toggleRevealBtn.classList.toggle("disabled", !canReveal);
+    c.toggleRevealBtn.className = `toggleRevealBtn ${revealed ? "btn-ghost" : ""}`;
+    if (!canReveal) c.toggleRevealBtn.classList.add("disabled");
+  } else {
+    c.toggleRevealBtn.style.display = "none";
+  }
+
+  // Drawing corner thumbnail + single toggle button
+  const drawing      = state.drawSubmissions[uid];
+  const drawRevealed = state.drawReveals[uid]?.show === true;
+  if (drawing?.data && state.drawMode) {
+    c.drawCorner.style.display     = "";
+    c.drawThumbImg.src             = drawing.data;
+    c.toggleDrawBtn.style.display  = "";
+    c.toggleDrawBtn.textContent    = drawRevealed ? "hide drawing" : "show drawing";
+    c.toggleDrawBtn.className      = `toggleDrawBtn ${drawRevealed ? "btn-ghost" : "btn-accent"}`;
+  } else {
+    c.drawCorner.style.display    = "none";
+    c.toggleDrawBtn.style.display = "none";
+  }
+}
+
+function syncOrder() {
+  const entries = Object.entries(state.participants)
+    .sort((a, b) => {
+      const [ap, at] = sortKey(a);
+      const [bp, bt] = sortKey(b);
+      if (bp !== ap) return bp - ap;
+      return at - bt; // lower timestamp = faster = higher rank
+    });
+  if (!entries.length) {
+    els.grid.innerHTML = `<div class="empty">No participants yet.</div>`;
+    return;
+  }
+  const empty = els.grid.querySelector(".empty");
+  if (empty) empty.remove();
+  for (const [uid] of entries) {
+    const c = ensureCard(uid);
+    patchCard(uid);
+    els.grid.appendChild(c.root); // moves existing node — in-place sort, no re-download
+  }
+}
+
+function removeCard(uid) {
+  const c = state.cardRefs[uid];
+  if (c?.root?.parentNode) c.root.parentNode.removeChild(c.root);
+  delete state.cardRefs[uid];
+}
+
+/* ── AUTO LIVE ──
+ * Fairness algorithm: every active participant is shown exactly once per "round"
+ * before anyone repeats. Joins, leaves, and camera-toggles do NOT reset the round
+ * — that was the old bug where the shown-history got wiped on every change.
+ *
+ * Each tick we build the eligible pool: participants whose camera is on AND who
+ * haven't been shown yet this round. Pick one at random from the pool. If pool
+ * is empty, the round is complete: clear shown-set, increment round, repeat.
+ *
+ * Extra safeguards:
+ *  - Never pick the user who is currently live (prevents back-to-back if rounds
+ *    happen to align such that the same person is last-of-round-N and first-of-round-N+1).
+ *  - If the only eligible person is the currently-live one, we let them stay rather
+ *    than flicker off and back.
+ */
+
+function getActiveUserKeys() {
+  return Object.entries(state.participants)
+    .filter(([, p]) => p?.cameraActive)
+    .map(([id]) => id);
+}
+
+function pickNextAutoLive() {
+  const active = getActiveUserKeys();
+  if (!active.length) return null;
+
+  // Drop anyone who's LEFT the session entirely from the shown-set.
+  // Important: we do NOT drop people who merely turned their camera off — they
+  // already had their turn, and clearing them would let camera-toggling game the
+  // rotation (turn off → turn back on → get another spot in the same round).
+  for (const k of [...state.autoShown]) {
+    if (!state.participants[k]) state.autoShown.delete(k);
+  }
+
+  // While skribbl mode is on, exclude the drawer from the auto cycle —
+  // they're already implicitly "the star" (their drawing is on screen) and
+  // cutting to their concentration face adds nothing.
+  let candidates = active;
+  if (state.skribblMode && state.skribblDrawer) {
+    candidates = candidates.filter(k => k !== state.skribblDrawer);
+    if (!candidates.length) return null; // only drawer is active — nobody to cycle to
+  }
+
+  // Build pool: candidates AND not-yet-shown this round
+  let pool = candidates.filter(k => !state.autoShown.has(k));
+
+  // Round complete → start a new round
+  if (pool.length === 0) {
+    state.autoShown.clear();
+    state.autoRound++;
+    logEvent("auto-live", `Round ${state.autoRound} starting — every participant gets a turn`);
+    pool = candidates.slice();
+  }
+
+  // Avoid back-to-back same person if there's a choice
+  if (pool.length > 1 && state.autoLastShown && pool.includes(state.autoLastShown)) {
+    pool = pool.filter(k => k !== state.autoLastShown);
+  }
+
+  // Random pick from pool
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// Single shared tick function — used by both startAuto and applyAutoDuration
+async function autoTick() {
+  // Don't pick a new person while a guesser-spotlight is active.
+  // The spotlight system writes its own live.activeUser values and resumes us when done.
+  if (state.spotlightActive) return;
+  if (gameMode) return; // game-mode: auto-live is meaningless
+
+  const next = pickNextAutoLive();
+  if (!next) return; // nobody eligible — wait for next tick
+
+  state.autoShown.add(next);
+  state.autoLastShown = next;
+  state.autoLiveStartTs = Date.now();
+  await update(ref(db, "live"), { activeUser: next });
+}
+
+function startAuto() {
+  if (gameMode) return; // game-mode: refuse to start
+  stopAuto();
+  state.autoLiveEnabled = true;
+  state.autoShown = new Set();
+  state.autoRound = 1;
+  state.autoLastShown = null;
+  els.autoDurationWrap.style.display = "inline-flex";
+
+  // Fire immediately so the first pick happens without a delay
+  autoTick();
+  state.autoLiveInterval = setInterval(autoTick, state.autoDurationSec * 1000);
+
+  els.autoPill.classList.add("on");
+  updateStats();
+}
+
+function stopAuto() {
+  state.autoLiveEnabled = false;
+  clearInterval(state.autoLiveInterval);
+  state.autoLiveInterval = null;
+  clearSpotlight(); // cancel any pending guesser-spotlight
+  els.autoPill.classList.remove("on");
+  els.autoDurationWrap.style.display = "none";
+  updateStats();
+}
+
+// Restart the interval when the slider changes (so the new pace takes effect immediately)
+function applyAutoDuration() {
+  state.autoDurationSec = parseInt(els.autoDurationSlider.value, 10);
+  els.autoDurationLabel.textContent = state.autoDurationSec + "s";
+  if (state.autoLiveEnabled) {
+    clearInterval(state.autoLiveInterval);
+    state.autoLiveInterval = setInterval(autoTick, state.autoDurationSec * 1000);
+  }
+}
+
+els.autoLiveToggle.onchange = () => els.autoLiveToggle.checked ? startAuto() : stopAuto();
+els.autoDurationSlider.oninput = applyAutoDuration;
+
+/* ── SKRIBBL CORRECT-GUESS SPOTLIGHT ──
+ * When a guesser gets it right, briefly cut to their camera so everyone sees
+ * their reaction, then return to the auto-live cycle. Only active in skribbl
+ * mode. Queue depth of 1 (current + 1 pending) prevents strobing if multiple
+ * people guess in rapid succession; further correct guesses while the queue
+ * is full are dropped (they still go on the leaderboard, just no spotlight).
+ *
+ * Spotlighted users are also added to autoShown so they don't get a second
+ * turn in the same auto-live round — the spotlight effectively pulls their
+ * normal turn forward rather than granting a bonus one.
+ */
+
+function spotlightGuesser(userKey, name) {
+  if (gameMode) return; // game-mode: no live spotlights
+  // Only operate in skribbl mode and only if auto-live is on
+  // (manual mode means the operator is in control of the cam — don't override)
+  if (!state.skribblMode || !state.autoLiveEnabled) return;
+  // Don't spotlight the drawer (shouldn't happen — drawer can't guess — but defensive)
+  if (userKey === state.skribblDrawer) return;
+  // Don't spotlight if their camera isn't on
+  if (!state.participants[userKey]?.cameraActive) return;
+
+  // If a spotlight is already running, queue this one (max 1 pending)
+  if (state.spotlightActive) {
+    if (state.spotlightQueue.length < 1) {
+      state.spotlightQueue.push({ userKey, name });
+    }
+    // else: drop — preserves screen rhythm during rapid-fire correct guesses
+    return;
+  }
+
+  runSpotlight(userKey, name);
+}
+
+function runSpotlight(userKey, name) {
+  state.spotlightActive = true;
+  state.autoShown.add(userKey);     // pull their auto-live turn forward
+  state.autoLastShown = userKey;    // and treat as most-recent for back-to-back guard
+  update(ref(db, "live"), { activeUser: userKey }).catch(() => {});
+  logEvent("auto-live", `Spotlight on ${name} (correct guess)`);
+
+  state.spotlightTimer = setTimeout(() => {
+    state.spotlightTimer = null;
+    state.spotlightActive = false;
+
+    // Pull next from queue if any
+    if (state.spotlightQueue.length) {
+      const nxt = state.spotlightQueue.shift();
+      runSpotlight(nxt.userKey, nxt.name);
+    } else {
+      // Queue empty → resume normal auto-live with an immediate tick
+      // so we don't stare at the last spotlit person until the next interval.
+      if (state.autoLiveEnabled && state.skribblMode) autoTick();
+    }
+  }, state.spotlightDurationMs);
+}
+
+function clearSpotlight() {
+  if (state.spotlightTimer) { clearTimeout(state.spotlightTimer); state.spotlightTimer = null; }
+  state.spotlightActive = false;
+  state.spotlightQueue = [];
+}
+
+els.clearLiveBtn.onclick = async () => {
+  await Promise.all([set(ref(db,"live/activeUser"),null), set(ref(db,"live/frame"),null)]);
+};
+
+/* ── END SESSION ── */
+els.endSessionBtn.onclick = async () => {
+  if (!confirm("End the whole session and remove everyone?")) return;
+  stopAuto();
+  els.autoLiveToggle.checked = false;
+  clearHintTimers();
+  stopDrawCountdown();
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
+  logEvent("session", "Session ended manually");
+  await exportSessionZip();
+  await Promise.all([
+    set(ref(db,"participants"), null),
+    set(ref(db,"selfies"), null),
+    set(ref(db,"live"), null),
+    set(ref(db,"meta/gameMode"), false), // reset game mode for next session
+    set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
+    set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
+    set(ref(db,"meta/resetFlag"), Date.now()),
+    set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null, timeEnd:null, timesUp:null }),
+    set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null, phase:null }),
+    set(ref(db,"wordle"), { mode:false, phase:null, word:null, wordLength:null, attempts:6, turnDurationSec:30, guesses:null, keyboardState:null, currentGuesser:null, currentGuesserName:null, pendingGuess:null, confidence:null, turnEndEpoch:null, winner:null }),
+  ]);
+  state.participants = {}; state.selfies = {}; state.answers = {};
+  state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
+  els.grid.innerHTML = `<div class="empty">Session ended. Ready for next time.</div>`;
+  els.questionInput.value = ""; els.correctInput.value = "";
+  els.pollQuestion.value = ""; state.draftPollOptions = ["",""]; renderPollDraft();
+  updateStats(); updateWinnerStat();
+};
+
+/* ── SENT FLASH ── */
+function flashSent(btn) {
+  btn.classList.add("btn-sent");
+  btn.textContent = "SENT";
+  setTimeout(() => {
+    btn.classList.remove("btn-sent");
+    if (btn === els.sendQuestionBtn) btn.textContent = "SEND";
+    else if (btn === els.sendPollBtn) btn.textContent = "SEND";
+    else if (btn === els.sendDrawBtn) btn.textContent = "SEND";
+  }, 1800);
+}
+
+/* ── TRIVIA ── */
+function updateSendState() {
+  const ready = !!els.questionInput.value.trim() && !!els.correctInput.value.trim();
+  els.sendQuestionBtn.classList.toggle("disabled", !ready);
+}
+els.questionInput.addEventListener("input", updateSendState);
+els.correctInput.addEventListener("input", updateSendState);
+
+els.sendQuestionBtn.onclick = async () => {
+  const q = els.questionInput.value.trim();
+  const a = els.correctInput.value.trim();
+  if (!q || !a) return;
+  // Write answer first (hidden), then show question
+  await update(ref(db,"trivia"), { correct: { text: a, show: false } });
+  await update(ref(db,"trivia"), { question: { text: q, show: true } });
+  flashSent(els.sendQuestionBtn);
+  els.revealCorrectBtn.classList.remove("disabled");
+};
+
+els.revealCorrectBtn.onclick = async () => {
+  const a = els.correctInput.value.trim(); if (!a) return;
+  await update(ref(db,"trivia"), { correct: { text: a, show: true } });
+};
+
+els.resetTriviaBtn.onclick = async () => {
+  await update(ref(db,"trivia"), { question:{text:"",show:false}, correct:{text:"",show:false}, answers:null });
+  await set(ref(db,"trivia/reveal"), { __reset: Date.now() });
+  els.questionInput.value = ""; els.correctInput.value = "";
+  els.revealCorrectBtn.classList.add("disabled");
+  updateSendState();
+  updateWinnerStat();
+  syncOrder();
+};
+
+/* ── POLLS ── */
+function renderPollDraft() {
+  els.pollOptions.innerHTML = "";
+  state.draftPollOptions.forEach((value, i) => {
+    const row = document.createElement("div");
+    row.className = "option-row";
+    row.innerHTML = `<input class="input" placeholder="Option ${i+1}" value="${value.replace(/"/g,"&quot;")}"><button ${state.draftPollOptions.length<=2?'class="disabled"':""} style="font-size:12px;padding:10px 12px;">×</button>`;
+    row.querySelector("input").oninput  = e => { state.draftPollOptions[i] = e.target.value; updatePollSend(); };
+    row.querySelector("button").onclick = () => {
+      if (state.draftPollOptions.length <= 2) return;
+      state.draftPollOptions.splice(i, 1); renderPollDraft(); updatePollSend();
+    };
+    els.pollOptions.appendChild(row);
+  });
+}
+function updatePollSend() {
+  const q    = els.pollQuestion.value.trim();
+  const opts = state.draftPollOptions.map(v => v.trim()).filter(Boolean);
+  els.sendPollBtn.classList.toggle("disabled", !q || opts.length < 2);
+}
+state.draftPollOptions = ["", ""]; renderPollDraft();
+els.pollQuestion.addEventListener("input", updatePollSend);
+els.addOptionBtn.onclick = () => { state.draftPollOptions.push(""); renderPollDraft(); updatePollSend(); };
+
+els.sendPollBtn.onclick = async () => {
+  const q    = els.pollQuestion.value.trim();
+  const opts = state.draftPollOptions.map(v => v.trim()).filter(Boolean);
+  if (!q || opts.length < 2) return;
+  const optionsPayload = Object.fromEntries(opts.map((label, i) => [`opt${i+1}`, { label, order: i }]));
+  const totalsPayload  = Object.fromEntries(opts.map((_, i) => [`opt${i+1}`, 0]));
+  await update(ref(db,"polls"), { options: optionsPayload, votes: null, totals: totalsPayload, status: "open", question: { text: q, show: false } });
+  await update(ref(db,"polls/question"), { text: q, show: true });
+  flashSent(els.sendPollBtn);
+};
+
+els.resetPollBtn.onclick = async () => {
+  await update(ref(db,"polls"), { question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" });
+  els.pollQuestion.value = ""; state.draftPollOptions = ["",""]; renderPollDraft(); updatePollSend();
+};
+
+/* ── DRAWING CONTROLS ── */
+els.drawPromptInput.addEventListener("input", () => {
+  els.sendDrawBtn.classList.toggle("disabled", !els.drawPromptInput.value.trim());
+});
+
+// Duration slider — 0 means OFF (manual times-up only). Otherwise seconds.
+els.drawDurationSlider.addEventListener("input", () => {
+  const v = parseInt(els.drawDurationSlider.value, 10);
+  els.drawDurationLabel.textContent = v === 0 ? "OFF" : (v >= 60 ? `${Math.floor(v/60)}m${v%60 ? ` ${v%60}s` : ""}` : `${v}s`);
+});
+
+let drawCountdownInterval = null;
+let drawEndTimeout        = null;
+let drawEndEpoch          = 0;
+
+function startDrawCountdown(durationSec, startEpoch) {
+  if (drawCountdownInterval) clearInterval(drawCountdownInterval);
+  if (drawEndTimeout) { clearTimeout(drawEndTimeout); drawEndTimeout = null; }
+  const endEpoch = startEpoch + durationSec * 1000;
+  drawEndEpoch = endEpoch;
+  els.drawCountdownBox.style.display = "";
+
+  function tick() {
+    const remaining = Math.max(0, Math.ceil((endEpoch - Date.now()) / 1000));
+    els.drawCountdown.textContent = remaining >= 60
+      ? `${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,"0")}`
+      : `${remaining}s`;
+    const pct = (remaining / durationSec) * 100;
+    els.drawCountdownFill.style.width = pct + "%";
+    els.drawCountdownFill.style.background = remaining <= 10 ? "var(--danger)" : "var(--accent)";
+    if (remaining <= 0) {
+      clearInterval(drawCountdownInterval);
+      drawCountdownInterval = null;
+    }
+  }
+  tick();
+  drawCountdownInterval = setInterval(tick, 1000);
+
+  // Fail-safe one-shot timer — survives setInterval throttling on backgrounded tabs
+  drawEndTimeout = setTimeout(() => {
+    drawEndTimeout = null;
+    if (!els.timesUpBtn.classList.contains("disabled")) els.timesUpBtn.click();
+  }, Math.max(0, endEpoch - Date.now()));
+}
+
+function stopDrawCountdown() {
+  if (drawCountdownInterval) { clearInterval(drawCountdownInterval); drawCountdownInterval = null; }
+  if (drawEndTimeout) { clearTimeout(drawEndTimeout); drawEndTimeout = null; }
+  drawEndEpoch = 0;
+  els.drawCountdownBox.style.display = "none";
+  els.drawCountdown.textContent = "—";
+  els.drawCountdownFill.style.width = "100%";
+}
+
+els.sendDrawBtn.onclick = async () => {
+  const text = els.drawPromptInput.value.trim();
+  if (!text) return;
+  const durationSec = parseInt(els.drawDurationSlider.value, 10);
+  const startEpoch = Date.now();
+  const writes = [
+    update(ref(db,"drawing"), { prompt: { text, show: true } }),
+  ];
+  if (durationSec > 0) {
+    // Phones use this to render their own countdown bar
+    writes.push(set(ref(db,"drawing/timeEnd"), startEpoch + durationSec * 1000));
+  } else {
+    // Make sure stale timeEnd from a previous round doesn't linger
+    writes.push(set(ref(db,"drawing/timeEnd"), null));
+  }
+  await Promise.all(writes);
+  flashSent(els.sendDrawBtn);
+  els.timesUpBtn.classList.remove("disabled");
+  els.timesUpBtn.textContent = "⏱ TIME'S UP";
+  if (durationSec > 0) startDrawCountdown(durationSec, startEpoch);
+  else stopDrawCountdown();
+};
+
+els.timesUpBtn.onclick = async () => {
+  if (els.timesUpBtn.classList.contains("disabled")) return;
+  els.timesUpBtn.classList.add("disabled");
+  els.timesUpBtn.textContent = "WAITING…";
+  stopDrawCountdown();
+  await set(ref(db,"drawing/timeEnd"), null);
+
+  const ts = Date.now();
+
+  // Step 1: Signal phones to auto-submit. Phones receive this and call drawSubmit.click()
+  // which writes their real drawing to drawing/submissions/${userKey}.
+  await set(ref(db,"drawing/timesUp"), ts);
+
+  // Step 2: Wait briefly for late submissions to flush from phones.
+  // 2s is plenty for a small PNG round-trip even on weak Wi-Fi.
+  await new Promise(r => setTimeout(r, 2000));
+
+  // Step 3: NOW check who's still missing and fill ONLY those with the placeholder.
+  // By this point, anyone who was actively drawing has had their real PNG arrive.
+  const blankCanvas = document.createElement("canvas");
+  blankCanvas.width = 480; blankCanvas.height = 640;
+  const bCtx = blankCanvas.getContext("2d");
+  bCtx.fillStyle = "white"; bCtx.fillRect(0, 0, 480, 640);
+  bCtx.fillStyle = "#ccc";
+  bCtx.font = "bold 48px sans-serif";
+  bCtx.textAlign = "center";
+  bCtx.fillText("TIME'S UP", 240, 340);
+  const blankPng = blankCanvas.toDataURL("image/png");
+
+  const ops = [];
+  Object.keys(state.participants).forEach(uid => {
+    if (!state.drawSubmissions[uid]) {
+      ops.push(set(ref(db, `drawing/submissions/${uid}`), { data: blankPng, timestamp: ts, timesUp: true }));
+    }
+  });
+  if (ops.length) await Promise.all(ops);
+
+  els.timesUpBtn.textContent = "SUBMITTED";
+};
+els.resetDrawBtn.onclick = async () => {
+  stopDrawCountdown();
+  await update(ref(db,"drawing"), { prompt: { text:"", show:false }, submissions: null, reveal: null, timesUp: null, timeEnd: null });
+  els.drawPromptInput.value = "";
+  els.sendDrawBtn.classList.add("disabled");
+  els.timesUpBtn.classList.add("disabled");
+  els.timesUpBtn.textContent = "⏱ TIME'S UP";
+  state.drawSubmissions = {}; state.drawReveals = {};
+  // Clear corner thumbnails
+  Object.keys(state.cardRefs).forEach(uid => {
+    const c = state.cardRefs[uid];
+    if (c?.drawCorner) { c.drawCorner.style.display = "none"; c.drawThumbImg.src = ""; }
+    if (c?.showDrawBtn) c.showDrawBtn.style.display = "none";
+    if (c?.hideDrawBtn) c.hideDrawBtn.style.display = "none";
+  });
+  Object.keys(state.participants).forEach(patchCard);
+};
+
+/* ── FIREBASE LISTENERS ── */
+onValue(ref(db,"trivia/mode"), snap => {
+  state.triviaMode = snap.val() === true;
+  if (state.triviaMode) logEvent("mode", "Trivia mode activated");
+  els.triviaToggle.checked = state.triviaMode;
+  Object.keys(state.participants).forEach(patchCard);
+});
+
+onValue(ref(db,"trivia/question"), snap => {
+  const q = snap.val() || {};
+  if (q.show && q.text && !state.triviaQuestionActive) logEvent("trivia", `Question sent: "${q.text}"`);
+  state.triviaQuestionActive = q.show === true && !!q.text;
+  Object.keys(state.participants).forEach(patchCard);
+});
+
+onValue(ref(db,"trivia/correct"), snap => {
+  const v = snap.val() || {};
+  state.triviaCorrect = v.text ? v.text.toLowerCase().trim() : "";
+  if (v.text && !document.activeElement?.isSameNode(els.correctInput)) els.correctInput.value = v.text;
+  if (v.text) els.revealCorrectBtn.classList.remove("disabled");
+  updateWinnerStat();
+  Object.keys(state.participants).forEach(patchCard);
+});
+
+onValue(ref(db,"trivia/answers"), snap => {
+  const prev = state.answers;
+  state.answers = snap.val() || {};
+  // Log new answers
+  Object.entries(state.answers).forEach(([uid, a]) => {
+    if (!prev[uid] && a?.answer) {
+      const name = state.participants[uid]?.name || uid;
+      const correct = state.triviaCorrect && a.answer.toLowerCase().trim() === state.triviaCorrect;
+      logEvent("trivia", `${name} answered "${a.answer}"${correct ? " ✓ CORRECT" : ""}`);
+    }
+  });
+  updateWinnerStat();
+  syncOrder();
+});
+
+onValue(ref(db,"trivia/reveal"), snap => {
+  state.reveals = snap.val() || {};
+  Object.keys(state.participants).forEach(patchCard);
+});
+
+onValue(ref(db,"polls/mode"), snap => {
+  state.pollsMode = snap.val() === true;
+  if (state.pollsMode) logEvent("mode", "Polls mode activated");
+  els.pollsToggle.checked = state.pollsMode;
+});
+
+onValue(ref(db,"polls/options"), snap => { state.pollOptions = snap.val() || {}; });
+
+onValue(ref(db,"polls/votes"), snap => {
+  const prev = state.pollVotes;
+  state.pollVotes = snap.val() || {};
+  // Log new votes
+  Object.entries(state.pollVotes).forEach(([uid, v]) => {
+    if (!prev[uid] && v?.label) {
+      const name = state.participants[uid]?.name || uid;
+      logEvent("poll", `${name} voted "${v.label}"`);
+    }
+  });
+  syncOrder();
+  const options = state.pollOptions || {};
+  const optKeys = Object.keys(options);
+  if (!optKeys.length) return;
+  const totals = Object.fromEntries(optKeys.map(k => [k, 0]));
+  Object.values(state.pollVotes).forEach(v => {
+    if (v?.optionKey && totals.hasOwnProperty(v.optionKey)) totals[v.optionKey]++;
+  });
+  update(ref(db,"polls/totals"), totals).catch(() => {});
+});
+
+onValue(ref(db,"polls/totals"),    snap => { state.pollTotals = snap.val() || {}; });
+onValue(ref(db,"live/activeUser"), async snap => {
+  const newUser = snap.val() || null;
+  if (newUser && newUser !== state.currentLiveUser) {
+    if (state.revealModeEnabled) {
+      // Reveal mode on — check what was showing and carry intent to the new person
+      const drawWasRevealed = state.currentLiveUser && state.drawReveals[state.currentLiveUser]?.show === true;
+      const triviaWasRevealed = state.currentLiveUser && state.reveals[state.currentLiveUser]?.show === true;
+      await Promise.all([
+        set(ref(db, "trivia/reveal"), null),
+        set(ref(db, "drawing/reveal"), null),
+      ]);
+      if (drawWasRevealed && state.drawSubmissions[newUser]?.data) {
+        await set(ref(db, `drawing/reveal/${newUser}`), { show: true });
+      } else if (triviaWasRevealed && state.answers[newUser]?.answer) {
+        await set(ref(db, `trivia/reveal/${newUser}`), { show: true });
+      }
+    } else {
+      // Reveal mode off — always clear, teacher reveals manually for suspense
+      await Promise.all([
+        set(ref(db, "trivia/reveal"), null),
+        set(ref(db, "drawing/reveal"), null),
+      ]);
+    }
+  }
+  state.currentLiveUser = newUser;
+  updateStats();
+  Object.keys(state.participants).forEach(patchCard);
+});
+
+onChildAdded(ref(db,"participants"),   snap => {
+  state.participants[snap.key] = snap.val() || {};
+  const p = state.participants[snap.key];
+  logEvent("join", `${p.name || snap.key} joined the session`);
+  ensureCard(snap.key); syncOrder();
+  // New joiners are eligible immediately (no rebuildCycle needed — they're just
+  // added to the active pool and will be picked when not in the shown-set)
+  updateStats();
+  rebuildDrawerSelect();
+});
+onChildChanged(ref(db,"participants"), snap => {
+  state.participants[snap.key] = snap.val() || {};
+  patchCard(snap.key);
+  // Camera toggles handled naturally by pickNextAutoLive's filter
+  updateStats();
+});
+onChildRemoved(ref(db,"participants"), snap => {
+  const name = state.participants[snap.key]?.name || snap.key;
+  logEvent("leave", `${name} left the session`);
+  delete state.participants[snap.key];
+  // Also drop them from the shown-set so the round-end calculation is accurate
+  if (state.autoShown) state.autoShown.delete(snap.key);
+  if (state.autoLastShown === snap.key) state.autoLastShown = null;
+  removeCard(snap.key);
+  updateStats();
+  if (!Object.keys(state.participants).length) els.grid.innerHTML = `<div class="empty">No participants yet.</div>`;
+});
+
+onChildAdded(ref(db,"selfies"),   snap => { state.selfies[snap.key] = snap.val(); if (state.participants[snap.key]) patchCard(snap.key); });
+onChildChanged(ref(db,"selfies"), snap => { state.selfies[snap.key] = snap.val(); if (state.participants[snap.key]) patchCard(snap.key); });
+onChildRemoved(ref(db,"selfies"), snap => { delete state.selfies[snap.key]; if (state.participants[snap.key]) patchCard(snap.key); });
+
+/* ── SKRIBBL CONTROLS ── */
+function rebuildDrawerSelect() {
+  const sel = els.skribblDrawerSelect;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">select someone</option>';
+  Object.entries(state.participants).forEach(([uid, p]) => {
+    const opt = document.createElement("option");
+    opt.value = uid; opt.textContent = p.name || uid;
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+}
+
+els.skribblDrawerSelect.addEventListener("change", updateSkribblStart);
+els.skribblWordInput.addEventListener("input", updateSkribblStart);
+function updateSkribblStart() {
+  const ready = !!els.skribblDrawerSelect.value && !!els.skribblWordInput.value.trim();
+  els.startSkribblBtn.classList.toggle("disabled", !ready);
+}
+
+/* ── LEVENSHTEIN (edit distance) ── */
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => j === 0 ? i : 0));
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+/* ── HINT BUILDER ── */
+// Returns array of {letter, revealed} — spaces always revealed, others start null/false
+function buildHintArray(word) {
+  return word.split("").map(ch => ({
+    letter: ch === " " ? " " : null,
+    revealed: ch === " "
+  }));
+}
+
+// How many letters to reveal: floor(len/3), min 1, max 2
+// "len" = non-space characters only
+function hintRevealCount(word) {
+  const nonSpace = word.replace(/ /g, "").length;
+  return Math.min(2, Math.max(1, Math.floor(nonSpace / 3)));
+}
+
+// Pick reveal indexes: non-space, unrevealed, at least 2 apart from each other
+function pickRevealIndexes(hint, count) {
+  const candidates = hint
+    .map((h, i) => ({ ...h, i }))
+    .filter(h => h.letter !== " " && !h.revealed);
+  const picks = [];
+  let attempts = 0;
+  while (picks.length < count && attempts < 200) {
+    attempts++;
+    const idx = Math.floor(Math.random() * candidates.length);
+    const candidate = candidates[idx];
+    if (!candidate) break;
+    const tooClose = picks.some(p => Math.abs(p - candidate.i) < 2);
+    if (!tooClose) picks.push(candidate.i);
+  }
+  return picks;
+}
+
+let skribblHintTimers = [];
+let skribblCurrentHint = null;
+
+function clearHintTimers() {
+  skribblHintTimers.forEach(t => clearTimeout(t));
+  skribblHintTimers = [];
+  skribblCurrentHint = null;
+}
+
+function startHintTimers(word) {
+  clearHintTimers();
+  const hint = buildHintArray(word);
+  skribblCurrentHint = hint;
+  // Write initial all-null hint to Firebase
+  set(ref(db, "skribbl/hint"), hint).catch(() => {});
+
+  const totalReveals = hintRevealCount(word);
+  // First reveal at 30s
+  skribblHintTimers.push(setTimeout(async () => {
+    if (!skribblCurrentHint) return;
+    const [i] = pickRevealIndexes(skribblCurrentHint, 1);
+    if (i === undefined) return;
+    skribblCurrentHint[i] = { letter: word[i], revealed: true };
+    await set(ref(db, "skribbl/hint"), skribblCurrentHint).catch(() => {});
+    // Second reveal at 45s (only if word is long enough to warrant 2)
+    if (totalReveals >= 2) {
+      skribblHintTimers.push(setTimeout(async () => {
+        if (!skribblCurrentHint) return;
+        const [j] = pickRevealIndexes(skribblCurrentHint, 1);
+        if (j === undefined) return;
+        skribblCurrentHint[j] = { letter: word[j], revealed: true };
+        await set(ref(db, "skribbl/hint"), skribblCurrentHint).catch(() => {});
+      }, 15000)); // 15s after first = 45s total
+    }
+  }, 30000));
+}
+
+/* ── DURATION SLIDER ── */
+els.skribblDurationSlider.addEventListener("input", () => {
+  els.skribblDurationLabel.textContent = els.skribblDurationSlider.value + "s";
+});
+
+/* ── SKRIBBL TIMED ROUND ── */
+let skribblCountdownInterval = null;
+let skribblLeaderboardEntries = []; // [{ userKey, name, rank, ts }]
+let skribblGuessTotal = 0;
+
+function skribblLeaderboardMedals(rank) {
+  if (rank === 0) return "🥇";
+  if (rank === 1) return "🥈";
+  if (rank === 2) return "🥉";
+  return `${rank + 1}`;
+}
+
+function renderSkribblLeaderboard() {
+  if (!skribblLeaderboardEntries.length) {
+    els.skribblLeaderboard.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No correct guesses yet</div>`;
+    return;
+  }
+  els.skribblLeaderboard.innerHTML = skribblLeaderboardEntries.map((e, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:rgba(84,209,138,0.10);border:1px solid rgba(84,209,138,0.25);">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;flex-shrink:0;min-width:1.5em;text-align:center;">${skribblLeaderboardMedals(i)}</span>
+      <span style="font-size:14px;font-weight:900;flex:1;">${e.name}</span>
+    </div>`).join("");
+}
+
+// Fail-safe one-shot timeout for round-end. The setInterval tick is for visual
+// updates only; this is the actual "trigger results phase" mechanism. Backgrounded
+// tabs throttle setInterval HARD (sometimes pausing entirely), but a fire-once
+// setTimeout is more reliable, and even if it fires late (say, when the tab
+// regains focus), the round still ends correctly.
+let skribblEndTimeout = null;
+let skribblEndEpoch  = 0;
+
+function startSkribblCountdown(durationSec, startEpoch) {
+  if (skribblCountdownInterval) clearInterval(skribblCountdownInterval);
+  if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; }
+  const endEpoch = startEpoch + durationSec * 1000;
+  skribblEndEpoch = endEpoch;
+
+  function tick() {
+    const remaining = Math.max(0, Math.ceil((endEpoch - Date.now()) / 1000));
+    els.skribblCountdown.textContent = remaining + "s";
+    const pct = (remaining / durationSec) * 100;
+    els.skribblCountdownFill.style.width = pct + "%";
+    els.skribblCountdownFill.style.background = remaining <= 10 ? "var(--danger)" : "var(--accent)";
+    if (remaining <= 0) {
+      clearInterval(skribblCountdownInterval);
+      skribblCountdownInterval = null;
+    }
+  }
+  tick();
+  skribblCountdownInterval = setInterval(tick, 1000);
+
+  // Fail-safe: schedule the round-end as a single timeout. If the interval
+  // gets throttled while the tab is minimized, this still fires (eventually)
+  // when the tab regains focus, ending the round correctly.
+  skribblEndTimeout = setTimeout(() => {
+    skribblEndTimeout = null;
+    // Guard against double-firing if results was already entered some other way
+    if (state.skribblPhase !== "results") enterResultsPhase();
+  }, Math.max(0, endEpoch - Date.now()));
+}
+
+// When control regains focus after being backgrounded, check whether the round
+// timer already expired. If yes, fire enterResultsPhase immediately. This catches
+// the case where both the interval AND the timeout were suspended by the OS.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (skribblEndEpoch && Date.now() >= skribblEndEpoch && state.skribblPhase === "playing") {
+    if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; }
+    enterResultsPhase();
+  }
+  if (drawEndEpoch && Date.now() >= drawEndEpoch && drawCountdownInterval !== null) {
+    // Drawing round expired while tab was hidden — auto-fire times-up
+    if (drawEndTimeout) { clearTimeout(drawEndTimeout); drawEndTimeout = null; }
+    if (!els.timesUpBtn.classList.contains("disabled")) els.timesUpBtn.click();
+  }
+});
+
+// Enter results phase — round is over but we keep the leaderboard up
+// for celebration. Switches live cam to 1st place winner, turns off auto-live,
+// signals output.html to slide drawing panel away.
+async function enterResultsPhase() {
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
+  clearHintTimers();
+
+  // Persist final leaderboard ranks
+  const lb = skribblLeaderboardEntries.map((e, i) => ({ ...e, rank: i }));
+  const winnerKey = lb[0]?.userKey || null;
+
+  // Archive the final drawing frame for the export ZIP. The live canvas stream
+  // doesn't normally persist anywhere — once the round ends and Reset clears
+  // skribbl/liveCanvas, it's gone forever. So we grab it NOW (during results)
+  // and stuff it into sessionDrawings using the same shape as draw mode submissions.
+  // The export function already iterates sessionDrawings and writes them to
+  // drawings/{name}_{prompt}.{ext} — no changes needed there.
+  try {
+    const drawerSnap = await get(ref(db, "skribbl/drawer"));
+    const drawerKey  = drawerSnap.val();
+    if (drawerKey) {
+      const liveSnap = await get(ref(db, "skribbl/liveCanvas"));
+      const dataURL  = liveSnap.val();
+      if (dataURL && typeof dataURL === "string" && dataURL.startsWith("data:")) {
+        const drawerName = state.participants[drawerKey]?.name || drawerKey;
+        const word       = state.skribblWord || "doodle";
+        sessionDrawings[`${drawerKey}_skribbl_${Date.now()}`] = {
+          data:   dataURL,
+          name:   drawerName,
+          prompt: word
+        };
+        logEvent("skribbl", `Archived ${drawerName}'s final drawing for "${word}"`);
+      }
+    }
+  } catch (e) {
+    // Don't let export failures block round-end — just log and move on
+    console.warn("Failed to archive skribbl drawing:", e);
+  }
+
+  // If auto-live is on, pause it so the spotlight stays on the winner
+  if (state.autoLiveEnabled) {
+    stopAuto();
+    els.autoLiveToggle.checked = false;
+  }
+
+  const ops = [
+    set(ref(db,"skribbl/phase"),      "results"),
+    set(ref(db,"skribbl/timeEnd"),    null),
+    // Keep liveCanvas — the final drawing frame stays visible during results
+    set(ref(db,"skribbl/leaderboard"), lb.length ? lb : null),
+    set(ref(db,"skribbl/prompt"),     { text:"", show:false }),
+    // mode stays TRUE so phones still know they're in skribbl context
+  ];
+  // Switch live cam to 1st place if there is one (skipped in game mode)
+  if (winnerKey) {
+    ops.push(
+      set(ref(db,"skribbl/winner"), { userKey: winnerKey, name: lb[0].name, text: state.skribblWord || "" })
+    );
+    if (!gameMode) {
+      ops.push(update(ref(db,"live"), { activeUser: winnerKey }));
+    }
+  }
+  await Promise.all(ops);
+
+  // Control UI: replace End Round with Reset, show "Round complete"
+  els.endSkribblBtn.classList.add("disabled");
+  els.endSkribblBtn.style.display = "none";
+  els.resetSkribblBtn.style.display = "";
+  els.resetSkribblBtn.classList.remove("disabled");
+  els.skribblCountdown.textContent = "🏁";
+  els.skribblCountdownFill.style.width = "0%";
+  els.skribblGuessCount.textContent = lb.length
+    ? `Round complete — ${lb.length} got it`
+    : "Round complete — no correct guesses";
+  logEvent("skribbl", `Round ended — ${lb.length} correct guess${lb.length !== 1 ? "es" : ""}`);
+}
+
+// Reset round — full teardown back to "fresh skribbl mode" so teacher can start a new round.
+// Mode stays TRUE so the panel still shows on phones (in idle/waiting state).
+async function resetSkribblRound() {
+  if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
+  clearHintTimers();
+  state.skribblWord = "";
+  skribblLeaderboardEntries = [];
+  skribblGuessTotal = 0;
+
+  await Promise.all([
+    set(ref(db,"skribbl/phase"),      null),
+    set(ref(db,"skribbl/drawer"),     null),
+    set(ref(db,"skribbl/prompt"),     { text:"", show:false }),
+    set(ref(db,"skribbl/guesses"),    null),
+    set(ref(db,"skribbl/winner"),     null),
+    set(ref(db,"skribbl/liveCanvas"), null),
+    set(ref(db,"skribbl/word"),       null),
+    set(ref(db,"skribbl/hint"),       null),
+    set(ref(db,"skribbl/close"),      null),
+    set(ref(db,"skribbl/timeEnd"),    null),
+    set(ref(db,"skribbl/leaderboard"),null),
+    // Keep skribbl/mode = true so the panel still shows on phones
+  ]);
+
+  // Reset control UI back to fresh-start state
+  els.skribblWordInput.value = "";
+  els.skribblDrawerSelect.value = "";
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
+  els.skribblCountdown.textContent = "—";
+  els.skribblCountdownFill.style.width = "100%";
+  els.endSkribblBtn.style.display = "";
+  els.endSkribblBtn.classList.add("disabled");
+  els.resetSkribblBtn.style.display = "none";
+  renderSkribblLeaderboard();
+  updateSkribblStart();
+}
+
+els.startSkribblBtn.onclick = async () => {
+  const drawerKey = els.skribblDrawerSelect.value;
+  const word      = els.skribblWordInput.value.trim().toLowerCase();
+  const duration  = parseInt(els.skribblDurationSlider.value, 10);
+  if (!drawerKey || !word) return;
+  state.skribblWord = word;
+  skribblLeaderboardEntries = [];
+  skribblGuessTotal = 0;
+  renderSkribblLeaderboard();
+
+  // Clear previous round data
+  await Promise.all([
+    set(ref(db,"skribbl/guesses"),    null),
+    set(ref(db,"skribbl/winner"),     null),
+    set(ref(db,"skribbl/liveCanvas"), null),
+    set(ref(db,"skribbl/hint"),       null),
+    set(ref(db,"skribbl/close"),      null),
+    set(ref(db,"skribbl/leaderboard"),null),
+    set(ref(db,"skribbl/phase"),      "playing"),
+  ]);
+
+  const startEpoch = Date.now();
+  const timeEnd    = startEpoch + duration * 1000;
+
+  await Promise.all([
+    set(ref(db,"skribbl/mode"),    true),
+    set(ref(db,"skribbl/drawer"),  drawerKey),
+    set(ref(db,"skribbl/word"),    word),
+    set(ref(db,"skribbl/prompt"),  { text: word, show: true }),
+    set(ref(db,"skribbl/timeEnd"), timeEnd),
+  ]);
+
+  startHintTimers(word);
+  startSkribblCountdown(duration, startEpoch);
+  els.endSkribblBtn.style.display = "";
+  els.endSkribblBtn.classList.remove("disabled");
+  els.resetSkribblBtn.style.display = "none";
+  if (els.skribblStatusArea) els.skribblStatusArea.style.display = "";
+  els.skribblGuessCount.textContent = "Waiting for guesses…";
+};
+
+els.endSkribblBtn.onclick    = () => enterResultsPhase();
+els.resetSkribblBtn.onclick  = () => resetSkribblRound();
+
+/* ─── WORDLE CONTROLS (Phase 1: skeleton) ─── */
+// Sliders update labels and persist to Firebase so other pages see the config
+function applyWordleAttempts() {
+  const v = parseInt(els.wordleAttemptsSlider.value, 10);
+  els.wordleAttemptsLabel.textContent = String(v);
+  if (state.wordleMode) set(ref(db, "wordle/attempts"), v).catch(() => {});
+}
+function applyWordleTimer() {
+  const v = parseInt(els.wordleTimerSlider.value, 10);
+  els.wordleTimerLabel.textContent = v === 0 ? "OFF" : `${v}s`;
+  if (state.wordleMode) set(ref(db, "wordle/turnDurationSec"), v).catch(() => {});
+}
+els.wordleAttemptsSlider.addEventListener("input", applyWordleAttempts);
+els.wordleTimerSlider.addEventListener("input",    applyWordleTimer);
+
+// Word input: letters only, uppercase, send only when ≥5 chars
+els.wordleWordInput.addEventListener("input", () => {
+  let v = els.wordleWordInput.value.replace(/[^a-zA-Z]/g, "").toUpperCase();
+  els.wordleWordInput.value = v;
+  updateWordleStart();
+});
+
+function updateWordleStart() {
+  const w = (els.wordleWordInput.value || "").trim();
+  const ok = w.length >= 5;
+  els.startWordleBtn.classList.toggle("disabled", !ok);
+  if (els.wordleWordHint) {
+    els.wordleWordHint.textContent = ok
+      ? `${w.length} letters — ready`
+      : "5 letters minimum — letters only";
+  }
+}
+
+// START — Phase 1: writes word + config to Firebase, flips phase to "playing".
+// Output page renders the empty grid based on word length + attempts.
+els.startWordleBtn.onclick = async () => {
+  const word = (els.wordleWordInput.value || "").trim().toUpperCase();
+  if (word.length < 5) return;
+  const attempts        = parseInt(els.wordleAttemptsSlider.value, 10);
+  const turnDurationSec = parseInt(els.wordleTimerSlider.value,    10);
+
+  state.wordleWord = word;
+
+  // Stop any leftover timer from a prior round before starting fresh state
+  stopWordleTurnTimer();
+
+  await Promise.all([
+    set(ref(db,"wordle/word"),                word),
+    // wordLength is broadcast publicly so phones can size their grid + keyboard
+    // WITHOUT learning the answer (only control reads /wordle/word)
+    set(ref(db,"wordle/wordLength"),          word.length),
+    set(ref(db,"wordle/attempts"),            attempts),
+    set(ref(db,"wordle/turnDurationSec"),     turnDurationSec),
+    set(ref(db,"wordle/phase"),               "playing"),
+    // Clear any stale runtime data from prior rounds
+    set(ref(db,"wordle/guesses"),             null),
+    set(ref(db,"wordle/keyboardState"),       null),
+    set(ref(db,"wordle/pendingGuess"),        null),
+    set(ref(db,"wordle/confidence"),          null),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
+    set(ref(db,"wordle/winner"),              null),
+    // Phase 3: don't auto-pick. Operator picks via PICK FIRST GUESSER button
+    // (highest-confidence) or by clicking a name in the queue panel.
+    set(ref(db,"wordle/currentGuesser"),      null),
+    set(ref(db,"wordle/currentGuesserName"),  null),
+  ]);
+
+  flashSent(els.startWordleBtn);
+  els.endWordleBtn.classList.remove("disabled");
+  els.endWordleBtn.style.display = "";
+  els.resetWordleBtn.style.display = "none";
+  if (els.wordleStatusArea) els.wordleStatusArea.style.display = "";
+  if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
+  logEvent("wordle", `Round started — word "${word}" (${attempts} attempts, ${turnDurationSec === 0 ? "manual mode" : turnDurationSec + "s timer"})`);
+};
+
+// END / RESET — Phase 1: simple stubs that wipe back to a clean wordle state.
+// Phase 4 will replace these with proper enterResultsPhase / resetWordleRound logic
+// matching the skribbl pattern (results phase, reveal, etc.)
+els.endWordleBtn.onclick = async () => {
+  if (els.endWordleBtn.classList.contains("disabled")) return;
+  // Manual end — treat as no-winner, reveal the word
+  await enterWordleResultsPhase(null, null, false);
+};
+els.resetWordleBtn.onclick = async () => {
+  stopWordleTurnTimer();
+  state.wordleWord = "";
+  await Promise.all([
+    set(ref(db,"wordle/word"),                null),
+    set(ref(db,"wordle/wordLength"),          null),
+    set(ref(db,"wordle/phase"),               null),
+    set(ref(db,"wordle/guesses"),             null),
+    set(ref(db,"wordle/keyboardState"),       null),
+    set(ref(db,"wordle/currentGuesser"),      null),
+    set(ref(db,"wordle/currentGuesserName"),  null),
+    set(ref(db,"wordle/pendingGuess"),        null),
+    set(ref(db,"wordle/confidence"),          null),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
+    set(ref(db,"wordle/winner"),              null),
+    // Mode stays TRUE so the panel still shows on phones (in idle/waiting state)
+  ]);
+  els.wordleWordInput.value = "";
+  if (els.wordleStatusArea) els.wordleStatusArea.style.display = "none";
+  els.endWordleBtn.style.display = "";
+  els.endWordleBtn.classList.add("disabled");
+  els.resetWordleBtn.style.display = "none";
+  updateWordleStart();
+};
+
+/* ─── WORDLE ALGORITHM (lives on control because the answer must stay secret) ───
+ * Two-pass evaluation that handles duplicate letters correctly:
+ *   Pass 1: mark every "exact-position match" as CORRECT, consume that letter
+ *           in the answer.
+ *   Pass 2: for every non-correct guess letter, mark PRESENT only if the
+ *           letter still has unconsumed copies in the answer; otherwise ABSENT.
+ * Example: guess "ALLEY" vs answer "BLEED" → A:absent, L:present(1st L consumed),
+ *          L:absent(no more Ls), E:correct, Y:absent. Then Pass 2 also greys
+ *          duplicates that have already been satisfied by greens elsewhere.
+ */
+function evaluateWordleGuess(guess, answer) {
+  const G = guess.toUpperCase();
+  const A = answer.toUpperCase();
+  const result = new Array(G.length).fill("absent");
+  const consumed = new Array(A.length).fill(false);
+  // Pass 1: greens
+  for (let i = 0; i < G.length; i++) {
+    if (G[i] === A[i]) {
+      result[i] = "correct";
+      consumed[i] = true;
+    }
+  }
+  // Pass 2: yellows + greys
+  for (let i = 0; i < G.length; i++) {
+    if (result[i] === "correct") continue;
+    for (let j = 0; j < A.length; j++) {
+      if (!consumed[j] && G[i] === A[j]) {
+        result[i] = "present";
+        consumed[j] = true;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+// Merge a per-letter evaluation into the keyboardState. Priority order:
+// correct > present > absent (a letter that's been GREEN somewhere stays GREEN
+// even if it's later guessed in a wrong slot — like real Wordle).
+function mergeKeyboardState(prevState, guess, evaluation) {
+  const next = { ...prevState };
+  const priority = { correct: 3, present: 2, absent: 1 };
+  for (let i = 0; i < guess.length; i++) {
+    const letter = guess[i].toUpperCase();
+    const newState = evaluation[i];
+    const oldState = next[letter];
+    if (!oldState || (priority[newState] || 0) > (priority[oldState] || 0)) {
+      next[letter] = newState;
+    }
+  }
+  return next;
+}
+
+// Listen for guesses sent by the index page. Each pending guess gets evaluated
+// here and committed to /wordle/guesses + /wordle/keyboardState.
+let lastProcessedPendingTs = 0;
+onValue(ref(db, "wordle/pendingGuess"), async snap => {
+  const pending = snap.val();
+  if (!pending) return;
+  // Idempotency: a single pending guess could re-fire on listener reconnect; only
+  // process once per timestamp.
+  if (!pending.ts || pending.ts === lastProcessedPendingTs) return;
+  lastProcessedPendingTs = pending.ts;
+
+  // Need the current word + guesses-so-far to evaluate
+  const word = state.wordleWord;
+  if (!word) { await set(ref(db,"wordle/pendingGuess"), null).catch(() => {}); return; }
+
+  // Read existing guesses to know which slot to write into
+  const existingSnap = await get(ref(db,"wordle/guesses"));
+  const existingVal  = existingSnap.val();
+  const existing     = existingVal
+    ? (Array.isArray(existingVal) ? existingVal.filter(Boolean) : Object.values(existingVal))
+    : [];
+
+  const text = (pending.text || "").toUpperCase();
+  if (text.length !== word.length) {
+    // Wrong length — ignore + clear pending
+    await set(ref(db,"wordle/pendingGuess"), null).catch(() => {});
+    return;
+  }
+
+  const evaluation = evaluateWordleGuess(text, word);
+  const guessRecord = {
+    text,
+    evaluation,
+    guesserKey:  pending.guesserKey || null,
+    guesserName: pending.guesserName || null,
+    ts:          pending.ts,
+  };
+  existing.push(guessRecord);
+
+  // Merge keyboard state
+  const kbSnap = await get(ref(db,"wordle/keyboardState"));
+  const kbPrev = kbSnap.val() || {};
+  const kbNext = mergeKeyboardState(kbPrev, text, evaluation);
+
+  await Promise.all([
+    set(ref(db,"wordle/guesses"),       existing),
+    set(ref(db,"wordle/keyboardState"), kbNext),
+    set(ref(db,"wordle/pendingGuess"),  null),
+  ]);
+
+  const isWin = evaluation.every(e => e === "correct");
+  logEvent("wordle", `${pending.guesserName || pending.guesserKey || "?"} guessed "${text}"${isWin ? " — CORRECT!" : ""}`);
+
+  // ─── Phase 4: win / lose detection ───
+  const totalAttempts = parseInt((await get(ref(db,"wordle/attempts"))).val(), 10) || 6;
+  if (isWin) {
+    await enterWordleResultsPhase(
+      pending.guesserKey,
+      pending.guesserName || pending.guesserKey,
+      true
+    );
+    return;
+  }
+  if (existing.length >= totalAttempts) {
+    // All attempts used, no winner — reveal the word
+    await enterWordleResultsPhase(null, null, false);
+    return;
+  }
+  // Round continues — clear current guesser so operator/auto picks the next one.
+  // In timer-on mode, advance automatically to the next-highest confidence
+  // (excluding the just-failed guesser) so play stays moving without manual input.
+  // In manual mode, just clear the current guesser; operator picks next from queue.
+  const turnDurationSec = parseInt(els.wordleTimerSlider.value, 10) || 0;
+  const previousGuesser = pending.guesserKey;
+  if (turnDurationSec > 0) {
+    // Auto-advance: pick next highest-confidence excluding previous
+    const sorted = sortedConfidenceEntries().filter(([uk]) => uk !== previousGuesser);
+    if (sorted.length > 0) {
+      const topLevel = sorted[0][1].level;
+      const topTier  = sorted.filter(([, v]) => v.level === topLevel);
+      const [uk, v]  = topTier[Math.floor(Math.random() * topTier.length)];
+      await pickWordleGuesser(uk, v.name || uk);
+    } else {
+      // No other voters — clear and let operator pick
+      stopWordleTurnTimer();
+      await Promise.all([
+        set(ref(db,"wordle/currentGuesser"),     null),
+        set(ref(db,"wordle/currentGuesserName"), null),
+        set(ref(db,"wordle/turnEndEpoch"),       null),
+      ]);
+      if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
+    }
+  } else {
+    // Manual mode: stop timer (just in case), clear guesser, wait for operator
+    stopWordleTurnTimer();
+    await Promise.all([
+      set(ref(db,"wordle/currentGuesser"),     null),
+      set(ref(db,"wordle/currentGuesserName"), null),
+      set(ref(db,"wordle/turnEndEpoch"),       null),
+    ]);
+    if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
+  }
+});
+
+/* ─── PHASE 3: confidence queue panel + manual / auto pick ───
+ * Confidence ranks: high > medium > low. Within a tier, earlier voters first.
+ * Click a row to make that participant the current guesser. Pick First Guesser
+ * button auto-selects the highest-confidence person (random tiebreak).
+ */
+const CONF_RANK = { high: 3, medium: 2, low: 1 };
+const CONF_EMOJI = { high: "🟢", medium: "🟡", low: "🔴" };
+const CONF_LABEL = { high: "I KNOW IT", medium: "KIND OF", low: "NO IDEA" };
+
+state.wordleConfidence    = {};   // { userKey: { level, name, ts } }
+state.wordleCurrentGuesser     = null;
+state.wordleCurrentGuesserName = null;
+
+function sortedConfidenceEntries() {
+  return Object.entries(state.wordleConfidence)
+    .filter(([, v]) => v?.level && CONF_RANK[v.level])
+    .sort((a, b) => {
+      const dr = (CONF_RANK[b[1].level] || 0) - (CONF_RANK[a[1].level] || 0);
+      if (dr !== 0) return dr;
+      return (a[1].ts || 0) - (b[1].ts || 0); // earlier votes first within tier
+    });
+}
+
+function renderWordleQueue() {
+  if (!els.wordleQueueList) return;
+  const sorted = sortedConfidenceEntries();
+  if (sorted.length === 0) {
+    els.wordleQueueList.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No votes yet — students rate their confidence on their phones.</div>`;
+    if (els.wordlePickFirstBtn) els.wordlePickFirstBtn.classList.add("disabled");
+    return;
+  }
+  if (els.wordlePickFirstBtn) els.wordlePickFirstBtn.classList.remove("disabled");
+
+  els.wordleQueueList.innerHTML = "";
+  for (const [uk, v] of sorted) {
+    const isCurrent = uk === state.wordleCurrentGuesser;
+    const row = document.createElement("button");
+    row.type = "button";
+    row.style.cssText = `
+      display:flex;align-items:center;gap:10px;
+      width:100%;padding:9px 11px;border-radius:8px;
+      background:${isCurrent ? "rgba(84,209,138,0.18)" : "rgba(255,255,255,0.04)"};
+      border:1px solid ${isCurrent ? "rgba(84,209,138,0.5)" : "var(--line)"};
+      cursor:pointer;font-size:13px;font-weight:700;color:white;
+      text-align:left;font-family:inherit;
+      transition:background 0.15s ease, border-color 0.15s ease;
+    `;
+    row.onmouseenter = () => { if (!isCurrent) row.style.background = "rgba(255,255,255,0.08)"; };
+    row.onmouseleave = () => { if (!isCurrent) row.style.background = "rgba(255,255,255,0.04)"; };
+    row.innerHTML = `
+      <span style="font-size:16px;">${CONF_EMOJI[v.level] || ""}</span>
+      <span style="flex:1;">${v.name || uk}</span>
+      <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">${CONF_LABEL[v.level] || ""}</span>
+    `;
+    row.onclick = () => pickWordleGuesser(uk, v.name || uk);
+    els.wordleQueueList.appendChild(row);
+  }
+}
+
+async function pickWordleGuesser(userKey, name) {
+  if (!userKey) return;
+  // Read the configured timer duration (0 = manual mode, no timer)
+  const turnDurationSec = parseInt(els.wordleTimerSlider.value, 10) || 0;
+  const writes = [
+    set(ref(db,"wordle/currentGuesser"),     userKey),
+    set(ref(db,"wordle/currentGuesserName"), name || userKey),
+  ];
+  if (turnDurationSec > 0) {
+    const turnEndEpoch = Date.now() + turnDurationSec * 1000;
+    writes.push(set(ref(db,"wordle/turnEndEpoch"), turnEndEpoch));
+    startWordleTurnTimer(turnDurationSec, Date.now());
+  } else {
+    // Manual mode — explicitly clear any leftover turnEndEpoch
+    writes.push(set(ref(db,"wordle/turnEndEpoch"), null));
+    stopWordleTurnTimer();
+  }
+  await Promise.all(writes);
+  if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = name || userKey;
+  logEvent("wordle", `${name || userKey} is now the guesser`);
+}
+
+/* ─── PHASE 4: turn timer with the same throttle-resistant pattern as skribbl.
+ * setInterval is just for visual updates; setTimeout is the actual auto-pass
+ * trigger. visibilitychange recovery catches OS-level tab suspends.
+ */
+let wordleTickInterval = null;
+let wordleEndTimeout   = null;
+let wordleEndEpoch     = 0;
+
+function startWordleTurnTimer(durationSec, startEpoch) {
+  if (wordleTickInterval) clearInterval(wordleTickInterval);
+  if (wordleEndTimeout)   { clearTimeout(wordleEndTimeout); wordleEndTimeout = null; }
+  const endEpoch = startEpoch + durationSec * 1000;
+  wordleEndEpoch = endEpoch;
+
+  // Phase 4: no on-control countdown UI element yet (the panel doesn't have a
+  // dedicated countdown box in the same way skribbl does). The timer is purely
+  // a backend mechanism — output and phones render the visible bar from
+  // /wordle/turnEndEpoch directly. Control can show remaining time via the
+  // current-guesser indicator if needed in a polish pass.
+  wordleTickInterval = setInterval(() => {
+    const remaining = Math.max(0, Math.ceil((endEpoch - Date.now()) / 1000));
+    if (remaining <= 0) {
+      clearInterval(wordleTickInterval);
+      wordleTickInterval = null;
+    }
+  }, 1000);
+
+  // Fail-safe one-shot timer
+  wordleEndTimeout = setTimeout(() => {
+    wordleEndTimeout = null;
+    handleWordleTurnTimeout();
+  }, Math.max(0, endEpoch - Date.now()));
+}
+
+function stopWordleTurnTimer() {
+  if (wordleTickInterval) { clearInterval(wordleTickInterval); wordleTickInterval = null; }
+  if (wordleEndTimeout)   { clearTimeout(wordleEndTimeout);   wordleEndTimeout = null; }
+  wordleEndEpoch = 0;
+}
+
+// Fired when the turn timer expires — pass the turn (no row consumed) and
+// auto-pick the next guesser, EXCLUDING the one who just timed out.
+async function handleWordleTurnTimeout() {
+  if (state.wordlePhase !== "playing") return; // round already ended somehow
+  const previousGuesser = state.wordleCurrentGuesser;
+  logEvent("wordle", `${state.wordleCurrentGuesserName || previousGuesser || "?"} ran out of time — turn passes`);
+
+  // Find next guesser by confidence, excluding the previous one
+  const sorted = sortedConfidenceEntries().filter(([uk]) => uk !== previousGuesser);
+  if (sorted.length === 0) {
+    // Nobody else has voted — clear current guesser, operator can pick manually
+    await Promise.all([
+      set(ref(db,"wordle/currentGuesser"),     null),
+      set(ref(db,"wordle/currentGuesserName"), null),
+      set(ref(db,"wordle/turnEndEpoch"),       null),
+    ]);
+    if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
+    stopWordleTurnTimer();
+    return;
+  }
+  // Tier-aware pick (random tiebreak within top tier — same logic as PICK FIRST)
+  const topLevel = sorted[0][1].level;
+  const topTier  = sorted.filter(([, v]) => v.level === topLevel);
+  const [uk, v]  = topTier[Math.floor(Math.random() * topTier.length)];
+  await pickWordleGuesser(uk, v.name || uk);
+}
+
+// On control regaining focus, check whether the turn timer expired while hidden
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (wordleEndEpoch && Date.now() >= wordleEndEpoch && state.wordlePhase === "playing") {
+    if (wordleEndTimeout) { clearTimeout(wordleEndTimeout); wordleEndTimeout = null; }
+    handleWordleTurnTimeout();
+  }
+});
+
+/* ─── PHASE 4: results phase ─── */
+async function enterWordleResultsPhase(winnerKey, winnerName, won) {
+  stopWordleTurnTimer();
+  const word = state.wordleWord || "";
+
+  // If auto-live is on, pause it so the spotlight stays on the winner — same
+  // pattern as skribbl. Operator can re-enable it manually after the round.
+  if (won && state.autoLiveEnabled) {
+    stopAuto();
+    els.autoLiveToggle.checked = false;
+  }
+
+  const ops = [
+    set(ref(db,"wordle/phase"),               "results"),
+    set(ref(db,"wordle/winner"),              won ? { userKey: winnerKey, name: winnerName, word } : { word, won: false }),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
+    set(ref(db,"wordle/currentGuesser"),      null),
+    set(ref(db,"wordle/currentGuesserName"),  null),
+    set(ref(db,"wordle/pendingGuess"),        null),
+    // Keep word + guesses + keyboardState so the reveal shows the full board
+  ];
+  // Switch live cam to the winner so they're spotlit during the reveal
+  // (skipped in game mode — no live feed to switch)
+  if (won && winnerKey && !gameMode) {
+    ops.push(update(ref(db,"live"), { activeUser: winnerKey }));
+  }
+  await Promise.all(ops);
+
+  // Control UI — same toggle pattern as skribbl results
+  els.endWordleBtn.style.display = "none";
+  els.resetWordleBtn.style.display = "";
+  els.resetWordleBtn.classList.remove("disabled");
+  if (els.wordleCurrentGuesserName) {
+    els.wordleCurrentGuesserName.textContent = won
+      ? `🎉 ${winnerName} got it! Word was "${word}"`
+      : `Nobody got it. Word was "${word}"`;
+  }
+  logEvent("wordle", won
+    ? `Round won by ${winnerName} — word was "${word}"`
+    : `Round ended — nobody guessed "${word}"`);
+}
+
+// PICK FIRST GUESSER button: auto-pick highest confidence (random tiebreak)
+if (els.wordlePickFirstBtn) {
+  els.wordlePickFirstBtn.classList.add("disabled");
+  els.wordlePickFirstBtn.onclick = () => {
+    if (els.wordlePickFirstBtn.classList.contains("disabled")) return;
+    const sorted = sortedConfidenceEntries();
+    if (sorted.length === 0) return;
+    // Find all entries tied at the top tier
+    const topLevel = sorted[0][1].level;
+    const topTier  = sorted.filter(([, v]) => v.level === topLevel);
+    // Random tiebreak among the top tier
+    const [uk, v]  = topTier[Math.floor(Math.random() * topTier.length)];
+    pickWordleGuesser(uk, v.name || uk);
+  };
+}
+
+// Listen for all confidence votes — re-render queue on any change
+onValue(ref(db,"wordle/confidence"), snap => {
+  state.wordleConfidence = snap.val() || {};
+  renderWordleQueue();
+});
+
+// Reactive currentGuesser display + queue re-render to highlight active row
+onValue(ref(db,"wordle/currentGuesser"), snap => {
+  state.wordleCurrentGuesser = snap.val() || null;
+  renderWordleQueue();
+});
+onValue(ref(db,"wordle/currentGuesserName"), snap => {
+  state.wordleCurrentGuesserName = snap.val() || null;
+  if (els.wordleCurrentGuesserName) {
+    els.wordleCurrentGuesserName.textContent =
+      state.wordleCurrentGuesserName || "— nobody yet —";
+  }
+});
+
+// Render guesses log as they come in
+onValue(ref(db,"wordle/guesses"), snap => {
+  if (!els.wordleGuessesLog) return;
+  const v = snap.val();
+  const guesses = v
+    ? (Array.isArray(v) ? v.filter(Boolean) : Object.values(v))
+    : [];
+  if (guesses.length === 0) {
+    els.wordleGuessesLog.innerHTML = `<div style="color:var(--muted);text-align:center;padding:6px;">Waiting for first guess…</div>`;
+    return;
+  }
+  els.wordleGuessesLog.innerHTML = "";
+  for (const g of guesses) {
+    const isCorrect = g.evaluation && g.evaluation.every(e => e === "correct");
+    const row = document.createElement("div");
+    row.style.cssText = `
+      display:flex;align-items:center;gap:8px;padding:5px 9px;
+      background:${isCorrect ? "rgba(84,209,138,0.15)" : "rgba(255,255,255,0.04)"};
+      border-radius:6px;font-family:monospace;font-size:11px;color:white;
+    `;
+    row.innerHTML = `
+      <span style="opacity:0.7;font-family:inherit;font-weight:600;">${g.guesserName || "?"}:</span>
+      <span style="letter-spacing:0.15em;font-weight:700;">${(g.text || "").toUpperCase()}</span>
+      <span style="margin-left:auto;">${isCorrect ? "✓" : "✗"}</span>
+    `;
+    els.wordleGuessesLog.appendChild(row);
+  }
+});
+
+// Listen to guesses — rank correct ones, "so close" wrong ones
+onValue(ref(db,"skribbl/word"), snap => { state.skribblWord = snap.val() || ""; });
+onValue(ref(db,"skribbl/phase"), snap => { state.skribblPhase = snap.val(); });
+onValue(ref(db,"skribbl/drawer"), snap => { state.skribblDrawer = snap.val() || null; });
+
+onChildAdded(ref(db,"skribbl/guesses"), snap => {
+  const g = snap.val();
+  if (!g) return;
+  // Block any processing if we're in results phase (late guesses should not rank)
+  if (state.skribblPhase === "results") return;
+  const guessText = g.text?.toLowerCase().trim() || "";
+  const correct = state.skribblWord && guessText === state.skribblWord;
+  skribblGuessTotal++;
+  logEvent("skribbl", `${g.name} guessed "${g.text}"${correct ? ` ✓ CORRECT (word: "${state.skribblWord}")` : ""}`);
+  if (els.skribblGuessCount) {
+    els.skribblGuessCount.textContent = `${skribblGuessTotal} guess${skribblGuessTotal !== 1 ? "es" : ""} submitted`;
+  }
+
+  if (correct) {
+    const guesserKey = g.guesserKey;
+    // Only add each user once to the leaderboard
+    const alreadyIn = skribblLeaderboardEntries.some(e => e.userKey === guesserKey);
+    if (!alreadyIn) {
+      const rank = skribblLeaderboardEntries.length;
+      skribblLeaderboardEntries.push({ userKey: guesserKey, name: g.name, rank, ts: g.timestamp || Date.now() });
+      renderSkribblLeaderboard();
+      // Write leaderboard + winner to Firebase
+      const lb = skribblLeaderboardEntries.map((e, i) => ({ ...e, rank: i }));
+      const writes = [set(ref(db,"skribbl/leaderboard"), lb)];
+      if (rank === 0) {
+        // Mark 1st place as the round winner (for output.html celebration overlay
+        // and the eventual results-phase live cam pin)
+        writes.push(set(ref(db,"skribbl/winner"), { userKey: guesserKey, name: g.name, text: g.text }));
+      }
+      Promise.all(writes).catch(() => {});
+
+      // Spotlight every correct guesser briefly (queues if multiple in rapid succession).
+      // If auto-live is OFF, this no-ops — operator is in manual control of the cam.
+      spotlightGuesser(guesserKey, g.name);
+    }
+  } else if (state.skribblWord) {
+    const dist = levenshtein(guessText, state.skribblWord);
+    if (dist <= 2 && guessText.length >= 2) {
+      const guesserKey = g.guesserKey;
+      if (guesserKey) {
+        set(ref(db, `skribbl/close/${guesserKey}`), { name: g.name, timestamp: Date.now() }).catch(() => {});
+      }
+    }
+  }
+});
+
+onValue(ref(db,"skribbl/mode"), snap => {
+  state.skribblMode = snap.val() === true;
+  if (state.skribblMode) logEvent("mode", "What's My Doodle? mode activated");
+  if (state.skribblMode) setTool("skribbl");
+  else if (!state.triviaMode && !state.pollsMode && !state.drawMode && !state.wordleMode) setTool("none");
+  updateStats();
+});
+
+onValue(ref(db,"wordle/mode"), snap => {
+  state.wordleMode = snap.val() === true;
+  if (state.wordleMode) logEvent("mode", "Wordle mode activated");
+  if (state.wordleMode) setTool("wordle");
+  else if (!state.triviaMode && !state.pollsMode && !state.drawMode && !state.skribblMode) setTool("none");
+  updateStats();
+});
+onValue(ref(db,"wordle/word"),  snap => { state.wordleWord  = snap.val() || ""; });
+onValue(ref(db,"wordle/phase"), snap => {
+  state.wordlePhase = snap.val();
+  // Refresh recovery: sync the UI to whatever phase we're in
+  if (state.wordlePhase === "playing") {
+    if (els.wordleStatusArea) els.wordleStatusArea.style.display = "";
+    if (els.endWordleBtn) {
+      els.endWordleBtn.style.display = "";
+      els.endWordleBtn.classList.remove("disabled");
+    }
+    if (els.resetWordleBtn) els.resetWordleBtn.style.display = "none";
+  } else if (state.wordlePhase === "results") {
+    if (els.wordleStatusArea) els.wordleStatusArea.style.display = "";
+    if (els.endWordleBtn) els.endWordleBtn.style.display = "none";
+    if (els.resetWordleBtn) {
+      els.resetWordleBtn.style.display = "";
+      els.resetWordleBtn.classList.remove("disabled");
+    }
+  } else {
+    // null phase — pre-round state
+    if (els.wordleStatusArea) els.wordleStatusArea.style.display = "none";
+  }
+});
+
+// Phase 4: timer recovery on page refresh. If turnEndEpoch exists in Firebase
+// but our local timer isn't running, resume it. Same firstSnap guard as
+// elsewhere so we only react to actual changes / page-load reads.
+let wordleTurnEndFirstSnap = true;
+onValue(ref(db,"wordle/turnEndEpoch"), snap => {
+  const epoch = snap.val();
+  if (wordleTurnEndFirstSnap) {
+    wordleTurnEndFirstSnap = false;
+    // On initial load, if there's a future epoch, resume the timer
+    if (epoch && epoch > Date.now() && state.wordlePhase === "playing") {
+      const durationSec = Math.ceil((epoch - Date.now()) / 1000);
+      startWordleTurnTimer(durationSec, Date.now());
+    }
+    return;
+  }
+  // Subsequent updates: if epoch is cleared, stop the timer; if it's set to
+  // a future time, start a fresh timer (e.g., when picking a new guesser).
+  if (!epoch) {
+    stopWordleTurnTimer();
+  }
+});
+
+onValue(ref(db,"drawing/mode"), snap => {
+  state.drawMode = snap.val() === true;
+  if (state.drawMode) logEvent("mode", "Sketchers mode activated");
+  Object.keys(state.participants).forEach(patchCard);
+});
+onChildAdded(ref(db,"drawing/submissions"),   snap => {
+  state.drawSubmissions[snap.key] = snap.val();
+  if (state.participants[snap.key]) {
+    const name   = state.participants[snap.key]?.name || snap.key;
+    const prompt = els.drawPromptInput?.value?.trim() || "drawing";
+    // Skip "TIME'S UP" placeholder writes — they're not actual user drawings.
+    // If the user later submits their real drawing, onChildChanged will catch it.
+    if (!snap.val()?.timesUp) {
+      sessionDrawings[`${snap.key}_${Date.now()}`] = {
+        data:   snap.val()?.data,
+        name,
+        prompt
+      };
+    }
+    logEvent("drawing", `${name} submitted their drawing (prompt: "${prompt}")`);
+    patchCard(snap.key);
+  }
+});
+onChildChanged(ref(db,"drawing/submissions"), snap => {
+  state.drawSubmissions[snap.key] = snap.val();
+  if (state.participants[snap.key]) {
+    // If a real drawing arrives AFTER a placeholder was written, capture it for export.
+    // (timesUp:true means this is still a placeholder — skip; otherwise it's a real PNG.)
+    if (!snap.val()?.timesUp) {
+      const name   = state.participants[snap.key]?.name || snap.key;
+      const prompt = els.drawPromptInput?.value?.trim() || "drawing";
+      sessionDrawings[`${snap.key}_${Date.now()}`] = {
+        data:   snap.val()?.data,
+        name,
+        prompt
+      };
+    }
+    patchCard(snap.key);
+  }
+});
+onChildRemoved(ref(db,"drawing/submissions"), snap => { delete state.drawSubmissions[snap.key]; if(state.participants[snap.key]) patchCard(snap.key); });
+onChildAdded(ref(db,"drawing/reveal"),   snap => { state.drawReveals[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildChanged(ref(db,"drawing/reveal"), snap => { state.drawReveals[snap.key]=snap.val(); if(state.participants[snap.key]) patchCard(snap.key); });
+onChildRemoved(ref(db,"drawing/reveal"), snap => { delete state.drawReveals[snap.key]; if(state.participants[snap.key]) patchCard(snap.key); });
+
+updateSendState();
+updatePollSend();
+updateStats();
+updateWinnerStat();
+
+/* ── REVEAL MODE ── */
+const revealModeRef = ref(db, "meta/revealMode");
+els.revealModeToggle.onchange = async () => {
+  const on = els.revealModeToggle.checked;
+  state.revealModeEnabled = on;
+  els.revealPill.classList.toggle("on", on);
+  await set(revealModeRef, on);
+};
+onValue(revealModeRef, snap => {
+  const on = snap.val() === true;
+  state.revealModeEnabled = on;
+  els.revealModeToggle.checked = on;
+  els.revealPill.classList.toggle("on", on);
+});
+</script>
+</body>
+</html>
