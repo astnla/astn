@@ -121,7 +121,7 @@
 
     /* Countdown timer bar */
     #skribblTimerBar{width:100%;height:5px;border-radius:99px;background:rgba(255,255,255,0.12);overflow:hidden;}
-    #skribblTimerFill{height:100%;border-radius:99px;background:white;transition:width 1s linear;}
+    #skribblTimerFill{height:100%;border-radius:99px;background:white;transition:width 0.25s linear, background 0.4s ease;}
 
     /* Live leaderboard on index */
     #skribblLeaderboardBox{display:flex;flex-direction:column;gap:8px;width:min(82vw,320px);}
@@ -213,7 +213,7 @@
       height:100%;border-radius:99px;
       background:white;
       width:100%;
-      transition:width 1s linear, background 0.4s ease;
+      transition:width 0.25s linear, background 0.4s ease;
     }
 
     /* On-screen keyboard (panel below the cam — this is what wordleBox holds) */
@@ -416,7 +416,7 @@
       display:none;
     }
     #drawTimerBar.show{display:block;}
-    #drawTimerFill{height:100%;border-radius:99px;background:#00031F;transition:width 1s linear;}
+    #drawTimerFill{height:100%;border-radius:99px;background:#00031F;transition:width 0.25s linear;}
     #drawSubmitted{
       position:absolute;inset:0;z-index:21;
       background:white;border-radius:12px;

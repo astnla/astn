@@ -1848,11 +1848,11 @@ function startDrawCountdown(durationSec, startEpoch) {
   drawCountdownInterval = setInterval(tick, 1000);
 
   // Fail-safe one-shot timer — survives setInterval throttling on backgrounded tabs
-  // Added ~400ms grace period so phones see the bar reach 0% before times-up fires
+  // 700ms grace period after deadline so phones see the bar reach 0% before times-up fires
   drawEndTimeout = setTimeout(() => {
     drawEndTimeout = null;
     if (!els.timesUpBtn.classList.contains("disabled")) els.timesUpBtn.click();
-  }, Math.max(0, endEpoch - Date.now()) + 400);
+  }, Math.max(0, endEpoch - Date.now()) + 700);
 }
 
 function stopDrawCountdown() {
@@ -2241,14 +2241,13 @@ function startSkribblCountdown(durationSec, startEpoch) {
   // Fail-safe: schedule the round-end as a single timeout. If the interval
   // gets throttled while the tab is minimized, this still fires (eventually)
   // when the tab regains focus, ending the round correctly.
-  // Added ~400ms grace period so phones/output have time to render the bar
-  // reaching 0% before results phase hides the bar — otherwise it looks like
-  // the round ends with ~1s of bar still showing.
+  // 700ms grace period after deadline so phones/output have time to visibly
+  // render the bar reaching 0% before results phase hides it.
   skribblEndTimeout = setTimeout(() => {
     skribblEndTimeout = null;
     // Guard against double-firing if results was already entered some other way
     if (state.skribblPhase !== "results") enterResultsPhase();
-  }, Math.max(0, endEpoch - Date.now()) + 400);
+  }, Math.max(0, endEpoch - Date.now()) + 700);
 }
 
 // When control regains focus after being backgrounded, check whether the round
@@ -2800,14 +2799,13 @@ function startWordleTurnTimer(durationSec, startEpoch) {
   }, 1000);
 
   // Fail-safe one-shot timer
-  // We add ~400ms after the epoch before actually passing the turn so phones/output
-  // have time to render the bar reaching 0% before the new turn starts. Without this,
-  // the bar visually appears to "stop" with ~1 second of fill remaining because the
-  // next turn's epoch arrives and resets the bar before the previous one finishes draining.
+  // Add 700ms after the deadline before passing the turn so phones have time to
+  // visibly render the bar reaching 0% before the new turn replaces it. Without
+  // this grace period the bar appears to stop ~1s short of zero.
   wordleEndTimeout = setTimeout(() => {
     wordleEndTimeout = null;
     handleWordleTurnTimeout();
-  }, Math.max(0, endEpoch - Date.now()) + 400);
+  }, Math.max(0, endEpoch - Date.now()) + 700);
 }
 
 function stopWordleTurnTimer() {
