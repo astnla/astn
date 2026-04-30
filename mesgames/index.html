@@ -1441,11 +1441,10 @@ function stopDrawTimer() {
   drawTimerFill.style.width = "100%";
 }
 let drawDurationMs = 0;
-onValue(ref(db, "drawing/durationMs"), snap => { drawDurationMs = snap.val() || 0; });
-onValue(ref(db, "drawing/timeEnd"), snap => {
-  const timeEnd = snap.val();
-  if (!drawActive || !timeEnd) { stopDrawTimer(); return; }
-  startDrawTimer(timeEnd, drawDurationMs);
+onValue(ref(db, "drawing/timer"), snap => {
+  const t = snap.val();
+  if (!drawActive || !t?.endEpoch) { stopDrawTimer(); return; }
+  startDrawTimer(t.endEpoch, t.durationMs || 0);
 });
 
 /* ── SKRIBBL ── */
@@ -1464,8 +1463,6 @@ const skribblPromptRef = ref(db, "skribbl/prompt");
 const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
 const skribblHintRef   = ref(db, "skribbl/hint");
 const skribblCloseRef  = ref(db, `skribbl/close/${userKey}`);
-const skribblTimeEndRef    = ref(db, "skribbl/timeEnd");
-const skribblDurationMsRef = ref(db, "skribbl/durationMs");
 const skribblLeaderboardRef= ref(db, "skribbl/leaderboard");
 const skribblPhaseRef      = ref(db, "skribbl/phase");
 
@@ -1775,11 +1772,11 @@ onValue(skribblPromptRef, snap => {
 // Cache durationMs so the timeEnd listener always has it
 onValue(skribblDurationMsRef, snap => { skribblDurationMs = snap.val() || 0; });
 
-// Timer — sync from Firebase timeEnd
-onValue(skribblTimeEndRef, snap => {
-  const timeEnd = snap.val();
-  if (!skribblActive || !timeEnd) return;
-  startSkribblTimer(timeEnd, skribblDurationMs);
+// Timer — sync from Firebase timer object (endEpoch + durationMs arrive atomically)
+onValue(ref(db, "skribbl/timer"), snap => {
+  const t = snap.val();
+  if (!skribblActive || !t?.endEpoch) return;
+  startSkribblTimer(t.endEpoch, t.durationMs || 0);
 });
 
 // Hint updates
@@ -1895,10 +1892,8 @@ const wordleGuessesRef       = ref(db, "wordle/guesses");
 const wordleKbStateRef       = ref(db, "wordle/keyboardState");
 const wordleCurrentGuesserRef= ref(db, "wordle/currentGuesser");
 const wordlePendingGuessRef  = ref(db, "wordle/pendingGuess");
-const wordleTurnEndEpochRef_idx  = ref(db, "wordle/turnEndEpoch");
-const wordleTurnDurationMsRef_idx = ref(db, "wordle/turnDurationMs");
+const wordleTurnTimerRef_idx = ref(db, "wordle/timer");
 let wordleTurnDurationMs = 0;
-onValue(wordleTurnDurationMsRef_idx, snap => { wordleTurnDurationMs = snap.val() || 0; });
 const wordleWinnerRef_idx        = ref(db, "wordle/winner");
 
 let wordleActive       = false;
@@ -2213,17 +2208,17 @@ let wordleIdxRafRunning = false;
 function stopWordleIdxTimer() {
   wordleIdxRafRunning = false;
 }
-onValue(wordleTurnEndEpochRef_idx, snap => {
+onValue(wordleTurnTimerRef_idx, snap => {
   if (!wordleIdxTimerBar || !wordleIdxTimerFill) return;
-  const epoch = snap.val();
+  const t = snap.val();
   stopWordleIdxTimer();
-  if (!epoch || wordlePhase_idx !== "playing" || !wordleActive) {
+  if (!t?.endEpoch || wordlePhase_idx !== "playing" || !wordleActive) {
     wordleIdxTimerBar.classList.remove("show");
     wordleIdxTimerFill.style.width = "100%";
     return;
   }
-  const startMs = Date.now();
-  const totalMs = wordleTurnDurationMs > 0 ? wordleTurnDurationMs : Math.max(1, epoch - startMs);
+  const epoch   = t.endEpoch;
+  const totalMs = t.durationMs > 0 ? t.durationMs : Math.max(1, epoch - Date.now());
   wordleIdxTimerBar.classList.add("show");
   wordleIdxRafRunning = true;
 

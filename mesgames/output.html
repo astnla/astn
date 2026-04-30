@@ -2017,10 +2017,8 @@ const wordleAttemptsRef      = ref(db, "wordle/attempts");
 const wordleGuessesRef       = ref(db, "wordle/guesses");
 const wordleKeyboardStateRef = ref(db, "wordle/keyboardState");
 const wordleCurrentGuesserNameRef = ref(db, "wordle/currentGuesserName");
-const wordleTurnEndEpochRef  = ref(db, "wordle/turnEndEpoch");
-const wordleTurnDurationMsRef = ref(db, "wordle/turnDurationMs");
+const wordleTurnTimerRef  = ref(db, "wordle/timer");
 let wordleTurnDurationMs = 0;
-onValue(wordleTurnDurationMsRef, snap => { wordleTurnDurationMs = snap.val() || 0; });
 const wordleWinnerRef        = ref(db, "wordle/winner");
 let activeUser     = null;
 let lastFrame      = 0;
@@ -2502,12 +2500,10 @@ function stopOutputDrawTimer() {
     gmDrawingTimerFill.style.background = "white";
   }
 }
-let outputDrawDurationMs = 0;
-onValue(ref(db, "drawing/durationMs"), snap => { outputDrawDurationMs = snap.val() || 0; });
-onValue(ref(db, "drawing/timeEnd"), snap => {
-  const timeEnd = snap.val();
-  if (!drawingModeOn || !timeEnd) { stopOutputDrawTimer(); return; }
-  startOutputDrawTimer(timeEnd, outputDrawDurationMs);
+onValue(ref(db, "drawing/timer"), snap => {
+  const t = snap.val();
+  if (!drawingModeOn || !t?.endEpoch) { stopOutputDrawTimer(); return; }
+  startOutputDrawTimer(t.endEpoch, t.durationMs || 0);
 });
 
 /* Drawing round ended — fires whether by timer expiry or manual Times Up button.
@@ -2719,15 +2715,18 @@ let skribblOn = false;
 const skribblLbCard      = document.getElementById("skribblLbCard");
 const skribblLbRows      = document.getElementById("skribblLbRows");
 const skribblLeaderboardRef = ref(db, "skribbl/leaderboard");
-const skribblTimeEndRef     = ref(db, "skribbl/timeEnd");
-const skribblDurationMsRef  = ref(db, "skribbl/durationMs");
 const skribblPhaseRef       = ref(db, "skribbl/phase");
 const skribblDrawerRef      = ref(db, "skribbl/drawer");
 const participantsRefForDrawer = ref(db, "participants");
 
-let skribblDrawerKey  = null;
 let skribblDurationMs = 0;
-onValue(skribblDurationMsRef, snap => { skribblDurationMs = snap.val() || 0; });
+
+// Timer sync — single atomic object so endEpoch and durationMs always arrive together
+onValue(ref(db, "skribbl/timer"), snap => {
+  const t = snap.val();
+  if (!skribblOn || !t?.endEpoch) { stopOutputTimer(); return; }
+  startOutputTimer(t.endEpoch, t.durationMs || 0);
+});
 let participantsCache = {};
 // Fetch drawer name for the gm-mode eyebrow ("ALICE IS DRAWING").
 onValue(participantsRefForDrawer, snap => {
@@ -3016,13 +3015,6 @@ onValue(skribblPhaseRef, snap => {
     if (gmSkribblTimerBar) gmSkribblTimerBar.classList.remove("show");
     gmHide(gmSkribbl, "skribbl");
   }
-});
-
-// Timer sync
-onValue(skribblTimeEndRef, snap => {
-  const timeEnd = snap.val();
-  if (!skribblOn || !timeEnd) { stopOutputTimer(); return; }
-  startOutputTimer(timeEnd, skribblDurationMs);
 });
 
 // Live canvas stream from drawer
@@ -3542,19 +3534,19 @@ onValue(wordleCurrentGuesserNameRef, snap => {
 });
 
 // Turn timer — drains as the guesser's time runs out
-onValue(wordleTurnEndEpochRef, snap => {
+onValue(wordleTurnTimerRef, snap => {
   if (!wordleTurnTimerBar || !wordleTurnTimerFill) return;
-  const epoch = snap.val();
-  wordleTimerRafRunning = false; // stop any running loop
-  if (!epoch || wordlePhaseLocal !== "playing") {
+  const t = snap.val();
+  wordleTimerRafRunning = false;
+  if (!t?.endEpoch || wordlePhaseLocal !== "playing") {
     wordleTurnTimerBar.classList.remove("show");
     wordleTurnTimerFill.style.width = "100%";
     if (gmWordleTurnTimerBar)  gmWordleTurnTimerBar.classList.remove("show");
     if (gmWordleTurnTimerFill) gmWordleTurnTimerFill.style.width = "100%";
     return;
   }
-  const startMs = Date.now();
-  const totalMs = wordleTurnDurationMs > 0 ? wordleTurnDurationMs : Math.max(1, epoch - startMs);
+  const epoch   = t.endEpoch;
+  const totalMs = t.durationMs > 0 ? t.durationMs : Math.max(1, epoch - Date.now());
   wordleTurnTimerBar.classList.add("show");
   if (gmWordleTurnTimerBar) gmWordleTurnTimerBar.classList.add("show");
   wordleTimerRafRunning = true;
