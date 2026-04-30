@@ -1414,27 +1414,29 @@ onValue(ref(db, "drawing/timesUp"), snap => {
  * Optional: control may set drawing/timeEnd if a duration is configured.
  * If absent, the bar stays hidden and nothing changes (manual times-up only).
  */
-let drawTimerInterval = null;
+let drawTimerRafRunning = false;
 let drawRoundDurationMs = 60000;
 function startDrawTimer(timeEnd) {
-  if (drawTimerInterval) clearInterval(drawTimerInterval);
   drawRoundDurationMs = Math.max(1, timeEnd - Date.now());
   drawTimerBar.classList.add("show");
+  drawTimerRafRunning = true;
+
   function tick() {
+    if (!drawTimerRafRunning) return;
     const remaining = Math.max(0, timeEnd - Date.now());
     const pct = (remaining / drawRoundDurationMs) * 100;
     drawTimerFill.style.width = pct + "%";
     drawTimerFill.style.background = remaining <= 10000 ? "#cc0000" : "#00031F";
-    if (remaining <= 0) {
-      clearInterval(drawTimerInterval);
-      drawTimerInterval = null;
+    if (remaining > 0) {
+      requestAnimationFrame(tick);
+    } else {
+      drawTimerRafRunning = false;
     }
   }
-  tick();
-  drawTimerInterval = setInterval(tick, 500);
+  requestAnimationFrame(tick);
 }
 function stopDrawTimer() {
-  if (drawTimerInterval) { clearInterval(drawTimerInterval); drawTimerInterval = null; }
+  drawTimerRafRunning = false;
   drawTimerBar.classList.remove("show");
   drawTimerFill.style.width = "100%";
 }
@@ -1594,22 +1596,23 @@ function showCloseToast() {
 
 /* ── COUNTDOWN TIMER ── */
 function startSkribblTimer(timeEnd) {
-  if (skribblTimerInterval) clearInterval(skribblTimerInterval);
+  skribblTimerInterval = true; // mark as running (RAF doesn't return an id we store)
   const total = timeEnd - Date.now();
   skribblRoundDuration = total > 0 ? total : 60000;
 
   function tick() {
+    if (!skribblTimerInterval) return; // stopped externally
     const remaining = Math.max(0, timeEnd - Date.now());
     const pct = (remaining / skribblRoundDuration) * 100;
     skribblTimerFill.style.width = pct + "%";
     skribblTimerFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
-    if (remaining <= 0) {
-      clearInterval(skribblTimerInterval);
+    if (remaining > 0) {
+      requestAnimationFrame(tick);
+    } else {
       skribblTimerInterval = null;
     }
   }
-  tick();
-  skribblTimerInterval = setInterval(tick, 500);
+  requestAnimationFrame(tick);
 }
 
 /* ── LEADERBOARD RENDER ── */
@@ -1667,7 +1670,7 @@ onValue(skribblModeRef, snap => {
     skribblAmDrawer = false;
     skribblPhase = null;
     skribblLatestEntries = [];
-    if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
+    skribblTimerInterval = null; // stops the RAF loop
     skribblTimerFill.style.width = "100%";
     stopSkribblStream();
     drawOverlay.classList.remove("show");
@@ -1683,7 +1686,7 @@ onValue(skribblPhaseRef, snap => {
   if (!skribblActive) return;
   if (skribblPhase === "results") {
     // Stop the timer visual (drain to 0 and freeze)
-    if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
+    skribblTimerInterval = null;
     skribblTimerFill.style.width = "0%";
     // Hide the guess box — round is over, no more submitting
     hidePanel(skribblBox);
@@ -2195,14 +2198,10 @@ onValue(wordleCurrentGuesserNameRef, snap => {
   }
 });
 
-/* ─── PHASE 4: turn timer bar (visible to everyone — guesser sees their countdown,
- * spectators see how much time remains for current guesser) ─── */
-let wordleIdxTickInterval = null;
+/* ─── PHASE 4: turn timer bar ─── */
+let wordleIdxRafRunning = false;
 function stopWordleIdxTimer() {
-  if (wordleIdxTickInterval) {
-    clearInterval(wordleIdxTickInterval);
-    wordleIdxTickInterval = null;
-  }
+  wordleIdxRafRunning = false;
 }
 onValue(wordleTurnEndEpochRef_idx, snap => {
   if (!wordleIdxTimerBar || !wordleIdxTimerFill) return;
@@ -2216,18 +2215,22 @@ onValue(wordleTurnEndEpochRef_idx, snap => {
   const startMs = Date.now();
   const totalMs = Math.max(1, epoch - startMs);
   wordleIdxTimerBar.classList.add("show");
+  wordleIdxRafRunning = true;
+
   function tick() {
+    if (!wordleIdxRafRunning) return;
     const remaining = Math.max(0, epoch - Date.now());
     const pct = (remaining / totalMs) * 100;
     wordleIdxTimerFill.style.width = pct + "%";
-    wordleIdxTimerFill.style.background = remaining <= 5000 ? "#ff647c" : "white";
-    if (remaining <= 0) {
-      stopWordleIdxTimer();
+    wordleIdxTimerFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
+    if (remaining > 0) {
+      requestAnimationFrame(tick);
+    } else {
+      wordleIdxRafRunning = false;
       setTimeout(() => wordleIdxTimerBar.classList.remove("show"), 600);
     }
   }
-  tick();
-  wordleIdxTickInterval = setInterval(tick, 250);
+  requestAnimationFrame(tick);
 });
 
 /* ─── PHASE 4: results panel content — paint the winner / no-winner reveal ─── */

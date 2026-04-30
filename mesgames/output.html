@@ -2453,49 +2453,46 @@ onValue(drawSubRef, snap => { drawSubs = snap.val() || {}; });
  */
 const drawTimerOverlay     = document.getElementById("drawTimerOverlay");
 const drawTimerOverlayFill = document.getElementById("drawTimerOverlayFill");
-let outputDrawTimerInterval = null;
+let outputDrawTimerRafRunning = false;
 let outputDrawTimerDurationMs = 60000;
 function startOutputDrawTimer(timeEnd) {
-  if (outputDrawTimerInterval) clearInterval(outputDrawTimerInterval);
   outputDrawTimerDurationMs = Math.max(1, timeEnd - Date.now());
   drawTimerOverlay.classList.add("show");
-  // Game-mode mirror — show the timer bar pinned to drawing eyebrow
   if (gmDrawingTimerBar) gmDrawingTimerBar.classList.add("show");
   let lastTickedSec = null;
+  outputDrawTimerRafRunning = true;
+
   function tick() {
+    if (!outputDrawTimerRafRunning) return;
     const remaining = Math.max(0, timeEnd - Date.now());
     const secs = Math.ceil(remaining / 1000);
     const pct = (remaining / outputDrawTimerDurationMs) * 100;
     drawTimerOverlayFill.style.width = pct + "%";
     drawTimerOverlayFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
-    // Game-mode timer bar — drain width + turn red in last 10s
     if (gmDrawingTimerFill) {
       gmDrawingTimerFill.style.width = pct + "%";
       gmDrawingTimerFill.style.background = remaining <= 10000 ? "#ff4d4d" : "white";
     }
-    // Tick sound during final 10s — fire once per integer-second crossing
     if (secs > 0 && secs <= 10 && secs !== lastTickedSec) {
       lastTickedSec = secs;
       playSnd(sndTick);
     }
-    if (remaining <= 0) {
-      clearInterval(outputDrawTimerInterval);
-      outputDrawTimerInterval = null;
-      // Hide a moment after zero so viewers see the empty bar briefly
+    if (remaining > 0) {
+      requestAnimationFrame(tick);
+    } else {
+      outputDrawTimerRafRunning = false;
       setTimeout(() => drawTimerOverlay.classList.remove("show"), 800);
       if (gmDrawingTimerBar) {
         setTimeout(() => gmDrawingTimerBar.classList.remove("show"), 800);
       }
     }
   }
-  tick();
-  outputDrawTimerInterval = setInterval(tick, 500);
+  requestAnimationFrame(tick);
 }
 function stopOutputDrawTimer() {
-  if (outputDrawTimerInterval) { clearInterval(outputDrawTimerInterval); outputDrawTimerInterval = null; }
+  outputDrawTimerRafRunning = false;
   drawTimerOverlay.classList.remove("show");
   drawTimerOverlayFill.style.width = "100%";
-  // Game-mode mirror — hide bar, reset fill
   if (gmDrawingTimerBar) gmDrawingTimerBar.classList.remove("show");
   if (gmDrawingTimerFill) {
     gmDrawingTimerFill.style.width = "100%";
@@ -2747,7 +2744,7 @@ function paintGmSkribblPlayingEyebrow() {
   gmSkribblEyebrowText.textContent = drawerName ? `${drawerName} IS DRAWING` : "";
 }
 
-let skribblTimerInterval = null;
+let skribblTimerRafRunning = false;
 let skribblRoundDuration = 60000;
 
 const MEDALS = ["🥇","🥈","🥉"];
@@ -2792,45 +2789,42 @@ function hideLbPanel() {
 
 /* ── TIMER IN DRAW PANEL EYEBROW ── */
 function startOutputTimer(timeEnd) {
-  if (skribblTimerInterval) clearInterval(skribblTimerInterval);
   skribblRoundDuration = Math.max(1, timeEnd - Date.now());
   drawPanelTimer.classList.add("show");
-  // Game-mode mirror — show the timer bar pinned to the eyebrow
   if (gmSkribblTimerBar) gmSkribblTimerBar.classList.add("show");
   let lastTickedSec = null;
+  skribblTimerRafRunning = true;
 
   function tick() {
+    if (!skribblTimerRafRunning) return;
     const remaining = Math.max(0, timeEnd - Date.now());
     const secs = Math.ceil(remaining / 1000);
     drawPanelTimer.textContent = secs + "s";
     drawPanelTimer.classList.toggle("urgent", remaining <= 10000);
-    // Game-mode timer bar — drain width + turn red in last 10s
     if (gmSkribblTimerFill) {
       const pct = Math.max(0, Math.min(100, (remaining / skribblRoundDuration) * 100));
       gmSkribblTimerFill.style.width = pct + "%";
       gmSkribblTimerFill.style.background = remaining <= 10000 ? "#ff4d4d" : "white";
     }
-    // Tick sound during the final 10s — fire once per integer-second crossing
     if (secs > 0 && secs <= 10 && secs !== lastTickedSec) {
       lastTickedSec = secs;
       playSnd(sndTick);
     }
-    if (remaining <= 0) {
-      clearInterval(skribblTimerInterval);
-      skribblTimerInterval = null;
+    if (remaining > 0) {
+      requestAnimationFrame(tick);
+    } else {
+      skribblTimerRafRunning = false;
       drawPanelTimer.textContent = "0s";
       if (gmSkribblTimerFill) gmSkribblTimerFill.style.width = "0%";
     }
   }
-  tick();
-  skribblTimerInterval = setInterval(tick, 500);
+  requestAnimationFrame(tick);
 }
 
 function stopOutputTimer() {
-  if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
+  skribblTimerRafRunning = false;
   drawPanelTimer.classList.remove("show", "urgent");
   drawPanelTimer.textContent = "";
-  // Game-mode mirror — hide the bar, reset fill
   if (gmSkribblTimerBar) gmSkribblTimerBar.classList.remove("show");
   if (gmSkribblTimerFill) {
     gmSkribblTimerFill.style.width = "100%";
@@ -3389,7 +3383,7 @@ onValue(wordleModeRef, snap => {
     wordleWord = "";
     wordleGuesses = [];
     wordleKbState = {};
-    if (wordleTickInterval) { clearInterval(wordleTickInterval); wordleTickInterval = null; }
+    wordleTimerRafRunning = false;
   }
 });
 
@@ -3435,7 +3429,7 @@ onValue(wordleKeyboardStateRef, snap => {
  * vertically when the round ends.
  */
 let wordlePhaseLocal = null;
-let wordleTickInterval = null;
+let wordleTimerRafRunning = false;
 let wordleCurrentGuesserName = "";
 let wordleWinnerLocal = null;
 
@@ -3524,7 +3518,7 @@ onValue(wordlePhaseRef, snap => {
   if (wordlePhaseLocal !== "playing") {
     if (wordleTurnTimerBar)   wordleTurnTimerBar.classList.remove("show");
     if (gmWordleTurnTimerBar) gmWordleTurnTimerBar.classList.remove("show");
-    if (wordleTickInterval) { clearInterval(wordleTickInterval); wordleTickInterval = null; }
+    wordleTimerRafRunning = false;
   }
   paintWordleEyebrow();
   // Existing behavior: hide whole panel if everything is cleared
@@ -3543,7 +3537,7 @@ onValue(wordleCurrentGuesserNameRef, snap => {
 onValue(wordleTurnEndEpochRef, snap => {
   if (!wordleTurnTimerBar || !wordleTurnTimerFill) return;
   const epoch = snap.val();
-  if (wordleTickInterval) { clearInterval(wordleTickInterval); wordleTickInterval = null; }
+  wordleTimerRafRunning = false; // stop any running loop
   if (!epoch || wordlePhaseLocal !== "playing") {
     wordleTurnTimerBar.classList.remove("show");
     wordleTurnTimerFill.style.width = "100%";
@@ -3555,28 +3549,30 @@ onValue(wordleTurnEndEpochRef, snap => {
   const totalMs = Math.max(1, epoch - startMs);
   wordleTurnTimerBar.classList.add("show");
   if (gmWordleTurnTimerBar) gmWordleTurnTimerBar.classList.add("show");
+  wordleTimerRafRunning = true;
+
   function tick() {
+    if (!wordleTimerRafRunning) return;
     const remaining = Math.max(0, epoch - Date.now());
     const pct = (remaining / totalMs) * 100;
-    const bg  = remaining <= 5000 ? "#ff647c" : "white";
+    const bg  = remaining <= 10000 ? "#ff647c" : "white";
     wordleTurnTimerFill.style.width = pct + "%";
     wordleTurnTimerFill.style.background = bg;
     if (gmWordleTurnTimerFill) {
       gmWordleTurnTimerFill.style.width = pct + "%";
       gmWordleTurnTimerFill.style.background = bg;
     }
-    if (remaining <= 0) {
-      clearInterval(wordleTickInterval);
-      wordleTickInterval = null;
-      // Hide the bars shortly after zero
+    if (remaining > 0) {
+      requestAnimationFrame(tick);
+    } else {
+      wordleTimerRafRunning = false;
       setTimeout(() => {
         wordleTurnTimerBar.classList.remove("show");
         if (gmWordleTurnTimerBar) gmWordleTurnTimerBar.classList.remove("show");
       }, 600);
     }
   }
-  tick();
-  wordleTickInterval = setInterval(tick, 250);
+  requestAnimationFrame(tick);
 });
 
 // Winner record — feeds into the eyebrow text during results phase
