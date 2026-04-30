@@ -1347,30 +1347,39 @@ function ensureCard(uid) {
     // between students with a single click instead of hide-then-show.
     // Cam mode keeps the original toggle-only behavior (no hijacking of
     // other reveals — the user might be intentionally showing multiple).
+    //
+    // Use a SINGLE atomic multi-path update so output sees all changes in
+    // one listener fire — never an intermediate state where no key has
+    // show:true. This avoids any "card collapse and reappear" flash on
+    // output during the flip.
     if (!revealed && gameMode && state.revealModeEnabled) {
-      const ops = [];
+      const updates = {};
       for (const otherUid of Object.keys(state.reveals || {})) {
         if (otherUid !== uid && state.reveals[otherUid]?.show === true) {
-          ops.push(update(ref(db, `trivia/reveal/${otherUid}`), { show: false }));
+          updates[`trivia/reveal/${otherUid}/show`] = false;
         }
       }
-      await Promise.all(ops);
+      updates[`trivia/reveal/${uid}/show`] = !revealed;
+      await update(ref(db), updates);
+      return;
     }
     update(ref(db, `trivia/reveal/${uid}`), { show: !revealed });
   };
   c.toggleDrawBtn.onclick = async () => {
     const drawRevealed = state.drawReveals[uid]?.show === true;
-    // Same single-click flip behavior for drawings: in game mode + reveal mode,
-    // showing a new student auto-clears the previously revealed one. Output
-    // will see the clear → set sequence and crossfade between submissions.
+    // Same single-click flip behavior for drawings — single atomic write
+    // means output never sees an intermediate "no reveal active" state and
+    // can crossfade smoothly between submissions.
     if (!drawRevealed && gameMode && state.revealModeEnabled) {
-      const ops = [];
+      const updates = {};
       for (const otherUid of Object.keys(state.drawReveals || {})) {
         if (otherUid !== uid && state.drawReveals[otherUid]?.show === true) {
-          ops.push(set(ref(db, `drawing/reveal/${otherUid}`), { show: false }));
+          updates[`drawing/reveal/${otherUid}/show`] = false;
         }
       }
-      await Promise.all(ops);
+      updates[`drawing/reveal/${uid}/show`] = !drawRevealed;
+      await update(ref(db), updates);
+      return;
     }
     set(ref(db, `drawing/reveal/${uid}`), { show: !drawRevealed });
   };

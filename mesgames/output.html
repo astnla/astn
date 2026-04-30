@@ -150,6 +150,15 @@ html, body {
       opacity: 1;
       pointer-events: auto;
     }
+    /* Trivia uses a FIXED container width so the container shape is stable
+       regardless of answer length — short answers don't shrink it, long
+       answers don't widen it. Only height changes as text wraps to more or
+       fewer lines. ◄── tune this clamp to taste */
+    body.activity-game-trivia #gamesActivityContainer {
+      width: clamp(360px, 42vw, 600px);
+      min-width: clamp(360px, 42vw, 600px);
+      max-width: clamp(360px, 42vw, 600px);
+    }
     #gamesActivityInner {
       padding: clamp(22px, 3.4vh, 40px);
       display: flex;
@@ -200,6 +209,7 @@ html, body {
       letter-spacing: 0.18em;
       text-transform: uppercase;
       color: rgba(255, 255, 255, 0.55);
+      transition: opacity 0.22s ease;
     }
     .gm-body {
       font-family: "Barlow Condensed", sans-serif;
@@ -208,6 +218,13 @@ html, body {
       font-size: clamp(22px, 3.6vh, 42px);
       line-height: 1.25;
       letter-spacing: 0.02em;
+      transition: opacity 0.22s ease;
+      /* Long single tokens (URLs, no-space text) should wrap rather than
+         overflow horizontally. Width is capped per-game-mode via card-scoped
+         rules below — trivia is the main case where long answers need to
+         wrap to keep the container readable. */
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
     .gm-divider {
       height: 1px;
@@ -1609,7 +1626,7 @@ html, body {
         <div class="gm-card" id="gmTriviaClass">
           <div class="gm-card-inner">
             <div class="gm-divider"></div>
-            <div class="gm-eyebrow">CLASS ANSWER</div>
+            <div class="gm-eyebrow" id="gmTriviaClassEyebrow">ANSWER</div>
             <div class="gm-body" id="gmTriviaClassText"></div>
           </div>
         </div>
@@ -1762,7 +1779,7 @@ html, body {
         <div class="card-body" id="answerText"></div>
       </div>
       <div class="info-card" id="classCard">
-        <div class="card-eyebrow">CLASS ANSWER</div>
+        <div class="card-eyebrow" id="classEyebrow">ANSWER</div>
         <div class="card-body" id="classText"></div>
       </div>
       <!-- Skribbl leaderboard card (infoPanel version — kept for non-skribbl modes) -->
@@ -1842,6 +1859,8 @@ const answerCard     = document.getElementById("answerCard");
 const answerText     = document.getElementById("answerText");
 const classCard        = document.getElementById("classCard");
 const classText        = document.getElementById("classText");
+const classEyebrow     = document.getElementById("classEyebrow");
+const gmTriviaClassEyebrow = document.getElementById("gmTriviaClassEyebrow");
 const stage              = document.getElementById("stage");
 const drawPanel          = document.getElementById("drawPanel");
 const drawPanelEyebrow   = document.getElementById("drawPanelEyebrow");
@@ -1906,6 +1925,20 @@ function gmHide(el, key) {
 function refreshActivityOpen() {
   const open = gameModeOn && gmActiveCards.size > 0;
   document.body.classList.toggle("activity-open", open);
+  // Tag the body with the active game family so CSS can scope per-game
+  // styling (e.g. trivia uses a narrower container so long answers wrap
+  // instead of stretching wide). Keys like "trivia-question" / "polls-bars"
+  // share a prefix per game; we strip after the dash.
+  const families = new Set();
+  for (const key of gmActiveCards) {
+    families.add(key.split("-")[0]);
+  }
+  for (const cls of Array.from(document.body.classList)) {
+    if (cls.startsWith("activity-game-")) document.body.classList.remove(cls);
+  }
+  for (const fam of families) {
+    document.body.classList.add(`activity-game-${fam}`);
+  }
 }
 
 // gm-* template element refs (used by per-game listeners below)
@@ -2084,8 +2117,8 @@ function startTrivia() {
       questionEyebrow.textContent = "QUESTION";
       questionText.textContent = d.text;
       showCard(questionCard, "question");
-      // Game mode mirror
-      if (gmTriviaQuestionText) gmTriviaQuestionText.textContent = d.text;
+      // Game mode mirror — crossfade if updating an existing question
+      if (gmTriviaQuestionText) crossfadeGmBody(gmTriviaQuestionText, d.text, true);
       gmShow(gmTriviaQuestion, "trivia-question");
     } else {
       hideCard(questionCard, "question");
@@ -2097,27 +2130,127 @@ function startTrivia() {
     if (d.show && d.text) {
       answerText.textContent = d.text;
       showCard(answerCard, "answer");
-      if (gmTriviaAnswerText) gmTriviaAnswerText.textContent = d.text;
+      if (gmTriviaAnswerText) crossfadeGmBody(gmTriviaAnswerText, d.text, true);
       gmShow(gmTriviaAnswer, "trivia-answer");
     } else {
       hideCard(answerCard, "answer");
       gmHide(gmTriviaAnswer, "trivia-answer");
     }
   });
+/* Crossfade text content of any .gm-body element. If the new text is the same
+ * as the old, no-op (so we don't flicker on idempotent updates). If the element
+ * was empty, just set the text directly — the card's own grow animation handles
+ * the entry. Otherwise: fade to 0 → swap text → fade back to 1. */
+/* Crossfade text content of a .gm-body element.
+ *
+ * Default mode (opacity-only): fade to 0 → swap text → fade back. The container
+ * height changes naturally with content (instant, no animation).
+ *
+ * Animated-height mode (animateHeight=true): also animates the body's height
+ * smoothly between old and new content heights. Use this ONLY when the parent
+ * container has a STABLE width (e.g. trivia's fixed-width container). For
+ * auto-width containers, locking the body's height while the container is
+ * also reacting to content can cause jitter — opacity-only is safer there.
+ *
+ * Strategy in animated-height mode:
+ *   1. Measure current height + width
+ *   2. Measure new text's height via off-screen clone at matched width
+ *   3. Lock current height inline + fade opacity to 0
+ *   4. Swap text while invisible
+ *   5. Animate height to new value + fade opacity back in
+ *   6. Clear inline styles after transition
+ *
+ * If new height equals old (same line count), only opacity changes. */
+function crossfadeGmBody(target, newText, animateHeight = false) {
+  if (!target) return;
+  const incoming = String(newText ?? "");
+  if (target.textContent === incoming) return; // no-op
+  if (target.textContent === "") {
+    // First paint — let the card's own enter animation handle it
+    target.textContent = incoming;
+    return;
+  }
+
+  if (!animateHeight) {
+    // Simple opacity-only fade — height changes happen instantly
+    target.style.opacity = "0";
+    setTimeout(() => {
+      target.textContent = incoming;
+      requestAnimationFrame(() => {
+        target.style.opacity = "";
+      });
+    }, 220);
+    return;
+  }
+
+  // Animated-height mode
+  const startHeight = target.offsetHeight;
+  const liveWidth   = target.offsetWidth;
+
+  // Off-screen clone at matched width to measure new text height
+  const clone = target.cloneNode(false);
+  clone.textContent = incoming;
+  clone.style.position = "absolute";
+  clone.style.visibility = "hidden";
+  clone.style.pointerEvents = "none";
+  clone.style.left = "-9999px";
+  clone.style.top = "0";
+  clone.style.width = liveWidth + "px";
+  clone.style.height = "auto";
+  clone.style.maxHeight = "none";
+  clone.style.opacity = "0";
+  clone.style.transition = "none";
+  document.body.appendChild(clone);
+  const endHeight = clone.offsetHeight;
+  clone.remove();
+
+  target.style.height = startHeight + "px";
+  target.style.overflow = "hidden";
+  target.style.transition = "opacity 0.22s ease, height 0.32s cubic-bezier(0.22, 1, 0.36, 1)";
+  target.style.opacity = "0";
+
+  setTimeout(() => {
+    target.textContent = incoming;
+    requestAnimationFrame(() => {
+      target.style.height = endHeight + "px";
+      target.style.opacity = "";
+    });
+    setTimeout(() => {
+      target.style.height = "";
+      target.style.overflow = "";
+      target.style.transition = "";
+    }, 360);
+  }, 220);
+}
+
   // Debounce reveal hides — when the operator switches between students in
   // game-mode + reveal-mode, control writes a clear-then-set sequence that
   // briefly leaves no key with show:true. Without a small delay before hiding,
   // the class-answer card flickers off → on between students. 600ms is enough
   // to bridge any reasonable round-trip while still hiding promptly when the
   // operator genuinely toggles a reveal off with no follow-up.
-  let triviaRevealHideTimer = null;
+  // (timer var is module-scoped so stopTrivia can clear it on reset)
   onValue(revealRef, snap => {
     const r = snap.val() || {};
     const key = Object.keys(r).find(k => r[k]?.show === true);
     if (!key) {
-      // Wait briefly in case a new reveal is being set in the same tick (the
-      // game-mode auto-flip pattern from control). If a key shows up, the next
-      // listener fire will cancel this hide before it runs.
+      // Two cases for "no visible reveal":
+      // (1) Explicit reset — control writes {__reset: timestamp} when the
+      //     operator hits reset. This sentinel means hide NOW, not after a
+      //     debounce delay. Detect by checking for the __reset key.
+      // (2) Auto-flip intermediate state — control wrote {show:false} on the
+      //     previous user but hasn't yet set the new user. Debounce 600ms;
+      //     the next listener fire will cancel before the timer runs.
+      const isExplicitClear = "__reset" in r ||
+        Object.keys(r).every(k => k === "__reset");
+      if (isExplicitClear) {
+        if (triviaRevealHideTimer) { clearTimeout(triviaRevealHideTimer); triviaRevealHideTimer = null; }
+        hideCard(classCard, "class");
+        gmHide(gmTriviaClass, "trivia-class");
+        return;
+      }
+      // Auto-flip — debounce briefly. If a key shows up, the next listener
+      // fire will cancel this hide before it runs.
       if (triviaRevealHideTimer) clearTimeout(triviaRevealHideTimer);
       triviaRevealHideTimer = setTimeout(() => {
         triviaRevealHideTimer = null;
@@ -2131,9 +2264,29 @@ function startTrivia() {
     onValue(ref(db, `trivia/answers/${key}`), aSnap => {
       const d = aSnap.val() || {};
       if (d.answer) {
+        // Resolve username from participants cache for the eyebrow text
+        const userName = participantsCache[key]?.name;
+        const eyebrowText = userName ? `${userName.toUpperCase()}'S ANSWER` : "ANSWER";
+        // Detect whether this is a fresh open vs flipping while already shown.
+        // If the gm card is hidden right now, the upcoming gmShow will play
+        // the grow-from-zero animation — we need to swap text BEFORE the
+        // grow starts, otherwise the previous student's text briefly shows
+        // through during the card's entry animation. Only crossfade when
+        // the card is already visible (true student-to-student flip).
+        const gmCardWasShown = gmTriviaClass && gmTriviaClass.classList.contains("show");
+        if (classEyebrow) classEyebrow.textContent = eyebrowText;
         classText.textContent = d.answer;
         showCard(classCard, "class");
-        if (gmTriviaClassText) gmTriviaClassText.textContent = d.answer;
+        if (gmCardWasShown) {
+          // Card already visible — crossfade between students
+          if (gmTriviaClassEyebrow) crossfadeGmBody(gmTriviaClassEyebrow, eyebrowText);
+          if (gmTriviaClassText)    crossfadeGmBody(gmTriviaClassText, d.answer, true);
+        } else {
+          // Card was hidden — set text directly so the grow-in animation
+          // shows the correct content from the start
+          if (gmTriviaClassEyebrow) gmTriviaClassEyebrow.textContent = eyebrowText;
+          if (gmTriviaClassText)    gmTriviaClassText.textContent = d.answer;
+        }
         gmShow(gmTriviaClass, "trivia-class");
       } else {
         hideCard(classCard, "class");
@@ -2142,10 +2295,14 @@ function startTrivia() {
     }, { onlyOnce: true });
   });
 }
+let triviaRevealHideTimer = null;
 function stopTrivia() {
   if (!triviaOn) return;
   triviaOn = false;
   off(triviaQRef); off(triviaCRef); off(revealRef);
+  // Cancel any pending debounced hide so the class-answer card doesn't linger
+  // for the full 600ms after a reset.
+  if (triviaRevealHideTimer) { clearTimeout(triviaRevealHideTimer); triviaRevealHideTimer = null; }
   hideCard(questionCard, "question");
   hideCard(answerCard, "answer");
   hideCard(classCard, "class");
