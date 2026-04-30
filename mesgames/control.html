@@ -1340,12 +1340,38 @@ function ensureCard(uid) {
     if (!state.participants[uid]?.cameraActive) return;
     await update(ref(db, "live"), { activeUser: uid });
   };
-  c.toggleRevealBtn.onclick = () => {
+  c.toggleRevealBtn.onclick = async () => {
     const revealed = state.reveals[uid]?.show === true;
+    // In game mode + reveal mode, "show answer" on a different user should
+    // auto-hide whoever was previously revealed, so operators can flip
+    // between students with a single click instead of hide-then-show.
+    // Cam mode keeps the original toggle-only behavior (no hijacking of
+    // other reveals — the user might be intentionally showing multiple).
+    if (!revealed && gameMode && state.revealModeEnabled) {
+      const ops = [];
+      for (const otherUid of Object.keys(state.reveals || {})) {
+        if (otherUid !== uid && state.reveals[otherUid]?.show === true) {
+          ops.push(update(ref(db, `trivia/reveal/${otherUid}`), { show: false }));
+        }
+      }
+      await Promise.all(ops);
+    }
     update(ref(db, `trivia/reveal/${uid}`), { show: !revealed });
   };
-  c.toggleDrawBtn.onclick = () => {
+  c.toggleDrawBtn.onclick = async () => {
     const drawRevealed = state.drawReveals[uid]?.show === true;
+    // Same single-click flip behavior for drawings: in game mode + reveal mode,
+    // showing a new student auto-clears the previously revealed one. Output
+    // will see the clear → set sequence and crossfade between submissions.
+    if (!drawRevealed && gameMode && state.revealModeEnabled) {
+      const ops = [];
+      for (const otherUid of Object.keys(state.drawReveals || {})) {
+        if (otherUid !== uid && state.drawReveals[otherUid]?.show === true) {
+          ops.push(set(ref(db, `drawing/reveal/${otherUid}`), { show: false }));
+        }
+      }
+      await Promise.all(ops);
+    }
     set(ref(db, `drawing/reveal/${uid}`), { show: !drawRevealed });
   };
   c.kickBtn.onclick   = async () => {

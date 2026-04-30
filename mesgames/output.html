@@ -2104,14 +2104,30 @@ function startTrivia() {
       gmHide(gmTriviaAnswer, "trivia-answer");
     }
   });
+  // Debounce reveal hides — when the operator switches between students in
+  // game-mode + reveal-mode, control writes a clear-then-set sequence that
+  // briefly leaves no key with show:true. Without a small delay before hiding,
+  // the class-answer card flickers off → on between students. 600ms is enough
+  // to bridge any reasonable round-trip while still hiding promptly when the
+  // operator genuinely toggles a reveal off with no follow-up.
+  let triviaRevealHideTimer = null;
   onValue(revealRef, snap => {
     const r = snap.val() || {};
     const key = Object.keys(r).find(k => r[k]?.show === true);
     if (!key) {
-      hideCard(classCard, "class");
-      gmHide(gmTriviaClass, "trivia-class");
+      // Wait briefly in case a new reveal is being set in the same tick (the
+      // game-mode auto-flip pattern from control). If a key shows up, the next
+      // listener fire will cancel this hide before it runs.
+      if (triviaRevealHideTimer) clearTimeout(triviaRevealHideTimer);
+      triviaRevealHideTimer = setTimeout(() => {
+        triviaRevealHideTimer = null;
+        hideCard(classCard, "class");
+        gmHide(gmTriviaClass, "trivia-class");
+      }, 600);
       return;
     }
+    // A reveal arrived — cancel any pending hide
+    if (triviaRevealHideTimer) { clearTimeout(triviaRevealHideTimer); triviaRevealHideTimer = null; }
     onValue(ref(db, `trivia/answers/${key}`), aSnap => {
       const d = aSnap.val() || {};
       if (d.answer) {
