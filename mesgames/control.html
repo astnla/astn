@@ -711,7 +711,7 @@ turnOffFanCamBtn.addEventListener("click", async () => {
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null, timeEnd:null, timesUp:null }),
     set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null, phase:null }),
-    set(ref(db,"wordle"), { mode:false, phase:null, word:null, wordLength:null, attempts:6, turnDurationSec:30, guesses:null, keyboardState:null, currentGuesser:null, currentGuesserName:null, pendingGuess:null, confidence:null, timer:null, winner:null }),
+    set(ref(db,"wordle"), { mode:false, phase:null, word:null, wordLength:null, attempts:6, turnDurationSec:30, guesses:null, keyboardState:null, currentGuesser:null, currentGuesserName:null, pendingGuess:null, confidence:null, turnEndEpoch:null, winner:null }),
     set(ref(db,"meta/resetFlag"), Date.now()),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
@@ -1122,7 +1122,7 @@ async function fullWipeWordle() {
       set(ref(db,"wordle/currentGuesserName"), null),
       set(ref(db,"wordle/pendingGuess"),       null),
       set(ref(db,"wordle/confidence"),         null),
-      set(ref(db,"wordle/timer"), null),
+      set(ref(db,"wordle/turnEndEpoch"),       null),
       set(ref(db,"wordle/winner"),             null),
     ]);
   } catch (e) {
@@ -1186,7 +1186,7 @@ async function activateSkribbl() {
     set(ref(db,"skribbl/guesses"),     null),
     set(ref(db,"skribbl/hint"),        null),
     set(ref(db,"skribbl/close"),       null),
-    set(ref(db,"skribbl/timer"), null),
+    set(ref(db,"skribbl/timeEnd"),     null),
     set(ref(db,"skribbl/liveCanvas"),  null),
     set(ref(db,"skribbl/phase"),       null),
     set(ref(db,"skribbl/prompt"),      { text:"", show:false }),
@@ -1217,7 +1217,7 @@ async function activateWordle() {
     set(ref(db,"wordle/currentGuesserName"),  null),
     set(ref(db,"wordle/pendingGuess"),        null),
     set(ref(db,"wordle/confidence"),          null),
-    set(ref(db,"wordle/timer"), null),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
     set(ref(db,"wordle/winner"),              null),
     // Persist current slider values as the configured defaults for this session
     set(ref(db,"wordle/attempts"),        parseInt(els.wordleAttemptsSlider.value, 10)),
@@ -1713,7 +1713,7 @@ els.endSessionBtn.onclick = async () => {
     set(ref(db,"meta/resetFlag"), Date.now()),
     set(ref(db,"drawing"), { mode:false, prompt:{text:"",show:false}, submissions:null, reveal:null, timeEnd:null, timesUp:null }),
     set(ref(db,"skribbl"), { mode:false, drawer:null, prompt:{text:"",show:false}, guesses:null, winner:null, liveCanvas:null, word:null, hint:null, close:null, timeEnd:null, leaderboard:null, phase:null }),
-    set(ref(db,"wordle"), { mode:false, phase:null, word:null, wordLength:null, attempts:6, turnDurationSec:30, guesses:null, keyboardState:null, currentGuesser:null, currentGuesserName:null, pendingGuess:null, confidence:null, timer:null, winner:null }),
+    set(ref(db,"wordle"), { mode:false, phase:null, word:null, wordLength:null, attempts:6, turnDurationSec:30, guesses:null, keyboardState:null, currentGuesser:null, currentGuesserName:null, pendingGuess:null, confidence:null, turnEndEpoch:null, winner:null }),
   ]);
   state.participants = {}; state.selfies = {}; state.answers = {};
   state.pollVotes = {}; state.currentLiveUser = null; state.cardRefs = {};
@@ -1872,13 +1872,11 @@ els.sendDrawBtn.onclick = async () => {
     update(ref(db,"drawing"), { prompt: { text, show: true } }),
   ];
   if (durationSec > 0) {
-    // Single atomic object — phones read both values together, no ordering race
-    writes.push(set(ref(db,"drawing/timer"), {
-      endEpoch:   startEpoch + durationSec * 1000,
-      durationMs: durationSec * 1000,
-    }));
+    // Phones use this to render their own countdown bar
+    writes.push(set(ref(db,"drawing/timeEnd"), startEpoch + durationSec * 1000));
   } else {
-    writes.push(set(ref(db,"drawing/timer"), null));
+    // Make sure stale timeEnd from a previous round doesn't linger
+    writes.push(set(ref(db,"drawing/timeEnd"), null));
   }
   await Promise.all(writes);
   flashSent(els.sendDrawBtn);
@@ -1893,7 +1891,7 @@ els.timesUpBtn.onclick = async () => {
   els.timesUpBtn.classList.add("disabled");
   els.timesUpBtn.textContent = "WAITING…";
   stopDrawCountdown();
-  await set(ref(db,"drawing/timer"), null);
+  await set(ref(db,"drawing/timeEnd"), null);
 
   const ts = Date.now();
 
@@ -2312,7 +2310,7 @@ async function enterResultsPhase() {
 
   const ops = [
     set(ref(db,"skribbl/phase"),      "results"),
-    set(ref(db,"skribbl/timer"), null),
+    set(ref(db,"skribbl/timeEnd"),    null),
     // Keep liveCanvas — the final drawing frame stays visible during results
     set(ref(db,"skribbl/leaderboard"), lb.length ? lb : null),
     set(ref(db,"skribbl/prompt"),     { text:"", show:false }),
@@ -2361,7 +2359,7 @@ async function resetSkribblRound() {
     set(ref(db,"skribbl/word"),       null),
     set(ref(db,"skribbl/hint"),       null),
     set(ref(db,"skribbl/close"),      null),
-    set(ref(db,"skribbl/timer"), null),
+    set(ref(db,"skribbl/timeEnd"),    null),
     set(ref(db,"skribbl/leaderboard"),null),
     // Keep skribbl/mode = true so the panel still shows on phones
   ]);
@@ -2404,11 +2402,11 @@ els.startSkribblBtn.onclick = async () => {
   const timeEnd    = startEpoch + duration * 1000;
 
   await Promise.all([
-    set(ref(db,"skribbl/mode"),   true),
-    set(ref(db,"skribbl/drawer"), drawerKey),
-    set(ref(db,"skribbl/word"),   word),
-    set(ref(db,"skribbl/prompt"), { text: word, show: true }),
-    set(ref(db,"skribbl/timer"),  { endEpoch: timeEnd, durationMs: duration * 1000 }),
+    set(ref(db,"skribbl/mode"),    true),
+    set(ref(db,"skribbl/drawer"),  drawerKey),
+    set(ref(db,"skribbl/word"),    word),
+    set(ref(db,"skribbl/prompt"),  { text: word, show: true }),
+    set(ref(db,"skribbl/timeEnd"), timeEnd),
   ]);
 
   startHintTimers(word);
@@ -2482,7 +2480,7 @@ els.startWordleBtn.onclick = async () => {
     set(ref(db,"wordle/keyboardState"),       null),
     set(ref(db,"wordle/pendingGuess"),        null),
     set(ref(db,"wordle/confidence"),          null),
-    set(ref(db,"wordle/timer"), null),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
     set(ref(db,"wordle/winner"),              null),
     // Phase 3: don't auto-pick. Operator picks via PICK FIRST GUESSER button
     // (highest-confidence) or by clicking a name in the queue panel.
@@ -2520,7 +2518,7 @@ els.resetWordleBtn.onclick = async () => {
     set(ref(db,"wordle/currentGuesserName"),  null),
     set(ref(db,"wordle/pendingGuess"),        null),
     set(ref(db,"wordle/confidence"),          null),
-    set(ref(db,"wordle/timer"), null),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
     set(ref(db,"wordle/winner"),              null),
     // Mode stays TRUE so the panel still shows on phones (in idle/waiting state)
   ]);
@@ -2673,7 +2671,7 @@ onValue(ref(db, "wordle/pendingGuess"), async snap => {
       await Promise.all([
         set(ref(db,"wordle/currentGuesser"),     null),
         set(ref(db,"wordle/currentGuesserName"), null),
-        set(ref(db,"wordle/timer"), null),
+        set(ref(db,"wordle/turnEndEpoch"),       null),
       ]);
       if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
     }
@@ -2683,7 +2681,7 @@ onValue(ref(db, "wordle/pendingGuess"), async snap => {
     await Promise.all([
       set(ref(db,"wordle/currentGuesser"),     null),
       set(ref(db,"wordle/currentGuesserName"), null),
-      set(ref(db,"wordle/timer"), null),
+      set(ref(db,"wordle/turnEndEpoch"),       null),
     ]);
     if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
   }
@@ -2758,10 +2756,11 @@ async function pickWordleGuesser(userKey, name) {
   ];
   if (turnDurationSec > 0) {
     const turnEndEpoch = Date.now() + turnDurationSec * 1000;
-    writes.push(set(ref(db,"wordle/timer"), { endEpoch: turnEndEpoch, durationMs: turnDurationSec * 1000 }));
+    writes.push(set(ref(db,"wordle/turnEndEpoch"), turnEndEpoch));
     startWordleTurnTimer(turnDurationSec, Date.now());
   } else {
-    writes.push(set(ref(db,"wordle/timer"), null));
+    // Manual mode — explicitly clear any leftover turnEndEpoch
+    writes.push(set(ref(db,"wordle/turnEndEpoch"), null));
     stopWordleTurnTimer();
   }
   await Promise.all(writes);
@@ -2823,7 +2822,7 @@ async function handleWordleTurnTimeout() {
     await Promise.all([
       set(ref(db,"wordle/currentGuesser"),     null),
       set(ref(db,"wordle/currentGuesserName"), null),
-      set(ref(db,"wordle/timer"), null),
+      set(ref(db,"wordle/turnEndEpoch"),       null),
     ]);
     if (els.wordleCurrentGuesserName) els.wordleCurrentGuesserName.textContent = "— nobody yet —";
     stopWordleTurnTimer();
@@ -2860,7 +2859,7 @@ async function enterWordleResultsPhase(winnerKey, winnerName, won) {
   const ops = [
     set(ref(db,"wordle/phase"),               "results"),
     set(ref(db,"wordle/winner"),              won ? { userKey: winnerKey, name: winnerName, word } : { word, won: false }),
-    set(ref(db,"wordle/timer"), null),
+    set(ref(db,"wordle/turnEndEpoch"),        null),
     set(ref(db,"wordle/currentGuesser"),      null),
     set(ref(db,"wordle/currentGuesserName"),  null),
     set(ref(db,"wordle/pendingGuess"),        null),
@@ -3045,18 +3044,22 @@ onValue(ref(db,"wordle/phase"), snap => {
 // but our local timer isn't running, resume it. Same firstSnap guard as
 // elsewhere so we only react to actual changes / page-load reads.
 let wordleTurnEndFirstSnap = true;
-onValue(ref(db,"wordle/timer"), snap => {
-  const t = snap.val();
+onValue(ref(db,"wordle/turnEndEpoch"), snap => {
+  const epoch = snap.val();
   if (wordleTurnEndFirstSnap) {
     wordleTurnEndFirstSnap = false;
     // On initial load, if there's a future epoch, resume the timer
-    if (t?.endEpoch && t.endEpoch > Date.now() && state.wordlePhase === "playing") {
-      const durationSec = Math.ceil((t.endEpoch - Date.now()) / 1000);
+    if (epoch && epoch > Date.now() && state.wordlePhase === "playing") {
+      const durationSec = Math.ceil((epoch - Date.now()) / 1000);
       startWordleTurnTimer(durationSec, Date.now());
     }
     return;
   }
-  if (!t) stopWordleTurnTimer();
+  // Subsequent updates: if epoch is cleared, stop the timer; if it's set to
+  // a future time, start a fresh timer (e.g., when picking a new guesser).
+  if (!epoch) {
+    stopWordleTurnTimer();
+  }
 });
 
 onValue(ref(db,"drawing/mode"), snap => {

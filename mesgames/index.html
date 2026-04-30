@@ -1414,37 +1414,38 @@ onValue(ref(db, "drawing/timesUp"), snap => {
  * Optional: control may set drawing/timeEnd if a duration is configured.
  * If absent, the bar stays hidden and nothing changes (manual times-up only).
  */
-let drawTimerRafRunning = false;
+let drawTimerInterval = null;
 let drawRoundDurationMs = 60000;
-function startDrawTimer(timeEnd, durationMs) {
-  drawRoundDurationMs = durationMs > 0 ? durationMs : Math.max(1, timeEnd - Date.now());
+function startDrawTimer(timeEnd) {
+  if (drawTimerInterval) clearInterval(drawTimerInterval);
+  drawRoundDurationMs = Math.max(1, timeEnd - Date.now());
   drawTimerBar.classList.add("show");
-  drawTimerRafRunning = true;
-
   function tick() {
-    if (!drawTimerRafRunning) return;
     const remaining = Math.max(0, timeEnd - Date.now());
     const pct = (remaining / drawRoundDurationMs) * 100;
     drawTimerFill.style.width = pct + "%";
     drawTimerFill.style.background = remaining <= 10000 ? "#cc0000" : "#00031F";
-    if (remaining > 0) {
-      requestAnimationFrame(tick);
-    } else {
-      drawTimerRafRunning = false;
+    if (remaining <= 0) {
+      clearInterval(drawTimerInterval);
+      drawTimerInterval = null;
+      // Explicitly snap to empty — guarantees the user sees a fully drained bar
+      // instead of whatever the last tick happened to compute (which could be
+      // 1-3% if the interval fired right before the deadline).
+      drawTimerFill.style.width = "0%";
     }
   }
-  requestAnimationFrame(tick);
+  tick();
+  drawTimerInterval = setInterval(tick, 100);
 }
 function stopDrawTimer() {
-  drawTimerRafRunning = false;
+  if (drawTimerInterval) { clearInterval(drawTimerInterval); drawTimerInterval = null; }
   drawTimerBar.classList.remove("show");
   drawTimerFill.style.width = "100%";
 }
-let drawDurationMs = 0;
-onValue(ref(db, "drawing/timer"), snap => {
-  const t = snap.val();
-  if (!drawActive || !t?.endEpoch) { stopDrawTimer(); return; }
-  startDrawTimer(t.endEpoch, t.durationMs || 0);
+onValue(ref(db, "drawing/timeEnd"), snap => {
+  const timeEnd = snap.val();
+  if (!drawActive || !timeEnd) { stopDrawTimer(); return; }
+  startDrawTimer(timeEnd);
 });
 
 /* ── SKRIBBL ── */
@@ -1463,10 +1464,9 @@ const skribblPromptRef = ref(db, "skribbl/prompt");
 const skribblLiveRef   = ref(db, "skribbl/liveCanvas");
 const skribblHintRef   = ref(db, "skribbl/hint");
 const skribblCloseRef  = ref(db, `skribbl/close/${userKey}`);
+const skribblTimeEndRef    = ref(db, "skribbl/timeEnd");
 const skribblLeaderboardRef= ref(db, "skribbl/leaderboard");
 const skribblPhaseRef      = ref(db, "skribbl/phase");
-
-let skribblDurationMs = 0;
 
 let skribblActive   = false;
 let skribblAmDrawer = false;
@@ -1597,23 +1597,25 @@ function showCloseToast() {
 }
 
 /* ── COUNTDOWN TIMER ── */
-function startSkribblTimer(timeEnd, durationMs) {
-  skribblTimerInterval = true;
-  skribblRoundDuration = durationMs > 0 ? durationMs : Math.max(1, timeEnd - Date.now());
+function startSkribblTimer(timeEnd) {
+  if (skribblTimerInterval) clearInterval(skribblTimerInterval);
+  const total = timeEnd - Date.now();
+  skribblRoundDuration = total > 0 ? total : 60000;
 
   function tick() {
-    if (!skribblTimerInterval) return;
     const remaining = Math.max(0, timeEnd - Date.now());
     const pct = (remaining / skribblRoundDuration) * 100;
     skribblTimerFill.style.width = pct + "%";
     skribblTimerFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
-    if (remaining > 0) {
-      requestAnimationFrame(tick);
-    } else {
+    if (remaining <= 0) {
+      clearInterval(skribblTimerInterval);
       skribblTimerInterval = null;
+      // Snap to empty so users see a fully drained bar
+      skribblTimerFill.style.width = "0%";
     }
   }
-  requestAnimationFrame(tick);
+  tick();
+  skribblTimerInterval = setInterval(tick, 100);
 }
 
 /* ── LEADERBOARD RENDER ── */
@@ -1671,7 +1673,7 @@ onValue(skribblModeRef, snap => {
     skribblAmDrawer = false;
     skribblPhase = null;
     skribblLatestEntries = [];
-    skribblTimerInterval = null; // stops the RAF loop
+    if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
     skribblTimerFill.style.width = "100%";
     stopSkribblStream();
     drawOverlay.classList.remove("show");
@@ -1687,7 +1689,7 @@ onValue(skribblPhaseRef, snap => {
   if (!skribblActive) return;
   if (skribblPhase === "results") {
     // Stop the timer visual (drain to 0 and freeze)
-    skribblTimerInterval = null;
+    if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
     skribblTimerFill.style.width = "0%";
     // Hide the guess box — round is over, no more submitting
     hidePanel(skribblBox);
@@ -1769,14 +1771,11 @@ onValue(skribblPromptRef, snap => {
   }
 });
 
-// Cache durationMs so the timeEnd listener always has it
-onValue(skribblDurationMsRef, snap => { skribblDurationMs = snap.val() || 0; });
-
-// Timer — sync from Firebase timer object (endEpoch + durationMs arrive atomically)
-onValue(ref(db, "skribbl/timer"), snap => {
-  const t = snap.val();
-  if (!skribblActive || !t?.endEpoch) return;
-  startSkribblTimer(t.endEpoch, t.durationMs || 0);
+// Timer — sync from Firebase timeEnd
+onValue(skribblTimeEndRef, snap => {
+  const timeEnd = snap.val();
+  if (!skribblActive || !timeEnd) return;
+  startSkribblTimer(timeEnd);
 });
 
 // Hint updates
@@ -1892,8 +1891,7 @@ const wordleGuessesRef       = ref(db, "wordle/guesses");
 const wordleKbStateRef       = ref(db, "wordle/keyboardState");
 const wordleCurrentGuesserRef= ref(db, "wordle/currentGuesser");
 const wordlePendingGuessRef  = ref(db, "wordle/pendingGuess");
-const wordleTurnTimerRef_idx = ref(db, "wordle/timer");
-let wordleTurnDurationMs = 0;
+const wordleTurnEndEpochRef_idx  = ref(db, "wordle/turnEndEpoch");
 const wordleWinnerRef_idx        = ref(db, "wordle/winner");
 
 let wordleActive       = false;
@@ -2203,39 +2201,41 @@ onValue(wordleCurrentGuesserNameRef, snap => {
   }
 });
 
-/* ─── PHASE 4: turn timer bar ─── */
-let wordleIdxRafRunning = false;
+/* ─── PHASE 4: turn timer bar (visible to everyone — guesser sees their countdown,
+ * spectators see how much time remains for current guesser) ─── */
+let wordleIdxTickInterval = null;
 function stopWordleIdxTimer() {
-  wordleIdxRafRunning = false;
+  if (wordleIdxTickInterval) {
+    clearInterval(wordleIdxTickInterval);
+    wordleIdxTickInterval = null;
+  }
 }
-onValue(wordleTurnTimerRef_idx, snap => {
+onValue(wordleTurnEndEpochRef_idx, snap => {
   if (!wordleIdxTimerBar || !wordleIdxTimerFill) return;
-  const t = snap.val();
+  const epoch = snap.val();
   stopWordleIdxTimer();
-  if (!t?.endEpoch || wordlePhase_idx !== "playing" || !wordleActive) {
+  if (!epoch || wordlePhase_idx !== "playing" || !wordleActive) {
     wordleIdxTimerBar.classList.remove("show");
     wordleIdxTimerFill.style.width = "100%";
     return;
   }
-  const epoch   = t.endEpoch;
-  const totalMs = t.durationMs > 0 ? t.durationMs : Math.max(1, epoch - Date.now());
+  const startMs = Date.now();
+  const totalMs = Math.max(1, epoch - startMs);
   wordleIdxTimerBar.classList.add("show");
-  wordleIdxRafRunning = true;
-
   function tick() {
-    if (!wordleIdxRafRunning) return;
     const remaining = Math.max(0, epoch - Date.now());
     const pct = (remaining / totalMs) * 100;
     wordleIdxTimerFill.style.width = pct + "%";
     wordleIdxTimerFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
-    if (remaining > 0) {
-      requestAnimationFrame(tick);
-    } else {
-      wordleIdxRafRunning = false;
+    if (remaining <= 0) {
+      stopWordleIdxTimer();
+      // Snap to empty before the bar hides
+      wordleIdxTimerFill.style.width = "0%";
       setTimeout(() => wordleIdxTimerBar.classList.remove("show"), 600);
     }
   }
-  requestAnimationFrame(tick);
+  tick();
+  wordleIdxTickInterval = setInterval(tick, 250);
 });
 
 /* ─── PHASE 4: results panel content — paint the winner / no-winner reveal ─── */
