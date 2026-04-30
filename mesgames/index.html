@@ -121,7 +121,7 @@
 
     /* Countdown timer bar */
     #skribblTimerBar{width:100%;height:5px;border-radius:99px;background:rgba(255,255,255,0.12);overflow:hidden;}
-    #skribblTimerFill{height:100%;border-radius:99px;background:white;transition:width 1s linear;}
+    #skribblTimerFill{height:100%;border-radius:99px;background:white;transition:width 0.15s linear, background 0.4s ease;}
 
     /* Live leaderboard on index */
     #skribblLeaderboardBox{display:flex;flex-direction:column;gap:8px;width:min(82vw,320px);}
@@ -213,7 +213,7 @@
       height:100%;border-radius:99px;
       background:white;
       width:100%;
-      transition:width 1s linear, background 0.4s ease;
+      transition:width 0.3s linear, background 0.4s ease;
     }
 
     /* On-screen keyboard (panel below the cam — this is what wordleBox holds) */
@@ -416,7 +416,7 @@
       display:none;
     }
     #drawTimerBar.show{display:block;}
-    #drawTimerFill{height:100%;border-radius:99px;background:#00031F;transition:width 1s linear;}
+    #drawTimerFill{height:100%;border-radius:99px;background:#00031F;transition:width 0.15s linear;}
     #drawSubmitted{
       position:absolute;inset:0;z-index:21;
       background:white;border-radius:12px;
@@ -1428,10 +1428,11 @@ function startDrawTimer(timeEnd) {
     if (remaining <= 0) {
       clearInterval(drawTimerInterval);
       drawTimerInterval = null;
-      // Explicitly snap to empty — guarantees the user sees a fully drained bar
-      // instead of whatever the last tick happened to compute (which could be
-      // 1-3% if the interval fired right before the deadline).
+      // Snap to empty instantly (no transition) so the bar lands on 0 cleanly
+      drawTimerFill.style.transition = "none";
       drawTimerFill.style.width = "0%";
+      // Restore transition next frame so future rounds animate normally
+      requestAnimationFrame(() => { drawTimerFill.style.transition = ""; });
     }
   }
   tick();
@@ -1610,8 +1611,10 @@ function startSkribblTimer(timeEnd) {
     if (remaining <= 0) {
       clearInterval(skribblTimerInterval);
       skribblTimerInterval = null;
-      // Snap to empty so users see a fully drained bar
+      // Snap to empty instantly (no transition)
+      skribblTimerFill.style.transition = "none";
       skribblTimerFill.style.width = "0%";
+      requestAnimationFrame(() => { skribblTimerFill.style.transition = ""; });
     }
   }
   tick();
@@ -2229,8 +2232,10 @@ onValue(wordleTurnEndEpochRef_idx, snap => {
     wordleIdxTimerFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
     if (remaining <= 0) {
       stopWordleIdxTimer();
-      // Snap to empty before the bar hides
+      // Snap to empty instantly (no transition)
+      wordleIdxTimerFill.style.transition = "none";
       wordleIdxTimerFill.style.width = "0%";
+      requestAnimationFrame(() => { wordleIdxTimerFill.style.transition = ""; });
       setTimeout(() => wordleIdxTimerBar.classList.remove("show"), 600);
     }
   }

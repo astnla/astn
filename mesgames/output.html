@@ -310,7 +310,7 @@ html, body {
       width: 100%;
       background: white;
       border-radius: 99px;
-      transition: width 1s linear, background 0.4s ease;
+      transition: width 0.3s linear, background 0.4s ease;
     }
     /* The keyboard text is centered by .gm-card-inner's text-align — but we
        want letters in keys to be normally centered (already are via flexbox)
@@ -390,7 +390,7 @@ html, body {
       width: 100%;
       background: white;
       border-radius: 99px;
-      transition: width 1s linear, background 0.4s ease;
+      transition: width 0.3s linear, background 0.4s ease;
     }
 
     /* Canvas wrap — 3:4 aspect locked. Width scales with viewport min so the
@@ -564,7 +564,7 @@ html, body {
       width: 100%;
       background: white;
       border-radius: 99px;
-      transition: width 1s linear, background 0.4s ease;
+      transition: width 0.3s linear, background 0.4s ease;
     }
 
     /* Prompt text — only visible during active round */
@@ -871,7 +871,7 @@ html, body {
       width: 100%;
       background: white;
       border-radius: 99px;
-      transition: width 1s linear, background 0.4s ease;
+      transition: width 0.3s linear, background 0.4s ease;
     }
     /* Eyebrow result text — uses the existing #wordlePanelGuesser slot during
        results phase to announce winner / no-winner, replacing the banner. */
@@ -1236,7 +1236,7 @@ html, body {
       height: 100%;
       background: white;
       width: 100%;
-      transition: width 1s linear, background 0.4s ease;
+      transition: width 0.3s linear, background 0.4s ease;
     }
 
     /* LIVE pip */
@@ -2481,9 +2481,15 @@ function startOutputDrawTimer(timeEnd) {
     if (remaining <= 0) {
       clearInterval(outputDrawTimerInterval);
       outputDrawTimerInterval = null;
-      // Snap both bars to empty so viewers see a fully drained bar
+      // Snap both bars to empty instantly (no transition)
+      drawTimerOverlayFill.style.transition = "none";
       drawTimerOverlayFill.style.width = "0%";
-      if (gmDrawingTimerFill) gmDrawingTimerFill.style.width = "0%";
+      requestAnimationFrame(() => { drawTimerOverlayFill.style.transition = ""; });
+      if (gmDrawingTimerFill) {
+        gmDrawingTimerFill.style.transition = "none";
+        gmDrawingTimerFill.style.width = "0%";
+        requestAnimationFrame(() => { gmDrawingTimerFill.style.transition = ""; });
+      }
       // Hide a moment after zero so viewers see the empty bar briefly
       setTimeout(() => drawTimerOverlay.classList.remove("show"), 800);
       if (gmDrawingTimerBar) {
@@ -2822,7 +2828,11 @@ function startOutputTimer(timeEnd) {
       clearInterval(skribblTimerInterval);
       skribblTimerInterval = null;
       drawPanelTimer.textContent = "0s";
-      if (gmSkribblTimerFill) gmSkribblTimerFill.style.width = "0%";
+      if (gmSkribblTimerFill) {
+        gmSkribblTimerFill.style.transition = "none";
+        gmSkribblTimerFill.style.width = "0%";
+        requestAnimationFrame(() => { gmSkribblTimerFill.style.transition = ""; });
+      }
     }
   }
   tick();
@@ -3571,9 +3581,15 @@ onValue(wordleTurnEndEpochRef, snap => {
     if (remaining <= 0) {
       clearInterval(wordleTickInterval);
       wordleTickInterval = null;
-      // Snap both bars to empty before they hide
+      // Snap both bars to empty instantly (no transition)
+      wordleTurnTimerFill.style.transition = "none";
       wordleTurnTimerFill.style.width = "0%";
-      if (gmWordleTurnTimerFill) gmWordleTurnTimerFill.style.width = "0%";
+      requestAnimationFrame(() => { wordleTurnTimerFill.style.transition = ""; });
+      if (gmWordleTurnTimerFill) {
+        gmWordleTurnTimerFill.style.transition = "none";
+        gmWordleTurnTimerFill.style.width = "0%";
+        requestAnimationFrame(() => { gmWordleTurnTimerFill.style.transition = ""; });
+      }
       // Hide the bars shortly after zero
       setTimeout(() => {
         wordleTurnTimerBar.classList.remove("show");
