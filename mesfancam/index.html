@@ -121,7 +121,7 @@
 
     /* Countdown timer bar */
     #skribblTimerBar{width:100%;height:5px;border-radius:99px;background:rgba(255,255,255,0.12);overflow:hidden;}
-    #skribblTimerFill{height:100%;border-radius:99px;background:white;transition:width 1s linear;}
+    #skribblTimerFill{height:100%;border-radius:99px;background:white;transition:width 0.25s linear, background 0.4s ease;}
 
     /* Live leaderboard on index */
     #skribblLeaderboardBox{display:flex;flex-direction:column;gap:8px;width:min(82vw,320px);}
@@ -213,7 +213,7 @@
       height:100%;border-radius:99px;
       background:white;
       width:100%;
-      transition:width 1s linear, background 0.4s ease;
+      transition:width 0.25s linear, background 0.4s ease;
     }
 
     /* On-screen keyboard (panel below the cam — this is what wordleBox holds) */
@@ -323,12 +323,21 @@
     #skribblLetterGrid{
       display:flex;flex-wrap:wrap;justify-content:center;
       gap:6px;padding:4px 0;
+      width:100%;
     }
     .letter-word {
       display:flex;gap:4px;align-items:flex-end;
+      max-width:100%;
     }
     .letter-cell {
-      width:30px;height:36px;
+      /* Cells default to 30px but shrink if a word doesn't fit. flex-basis:30px
+         is the preferred width; min-width:0 lets them shrink below that when
+         the parent's max-width forces it. Long words (e.g. "microphone")
+         scale cells down instead of overflowing the container. */
+      flex:1 1 30px;
+      min-width:0;
+      max-width:30px;
+      height:36px;
       background:rgba(255,255,255,0.10);
       border:none;border-bottom:2.5px solid rgba(255,255,255,0.55);
       /* border-radius:4px 4px 0 0;*/
@@ -338,6 +347,7 @@
       outline:none;caret-color:transparent;
       transition:border-color 0.15s,background 0.15s;
       -webkit-user-select:auto;user-select:auto;
+      padding:0;
     }
     .letter-cell:focus {
       background:rgba(255,255,255,0.18);
@@ -416,7 +426,7 @@
       display:none;
     }
     #drawTimerBar.show{display:block;}
-    #drawTimerFill{height:100%;border-radius:99px;background:#00031F;transition:width 1s linear;}
+    #drawTimerFill{height:100%;border-radius:99px;background:#00031F;transition:width 0.25s linear;}
     #drawSubmitted{
       position:absolute;inset:0;z-index:21;
       background:white;border-radius:12px;
@@ -526,6 +536,73 @@
       border: 2px solid rgba(255,255,255,0.12);
       justify-content: center;
     }
+
+    /* ─── GAME MODE ───
+     * When meta/gameMode is true:
+     *   - The camera UI inside the viewfinder hides (preview, badge, flip,
+     *     tap-to-enable overlay).
+     *   - The viewfinder itself hides UNLESS an activity needs it as a stage —
+     *     drawing canvas, wordle grid, or drawing-submitted confirmation. We
+     *     detect "needs the stage" via :has() — if the viewfinder contains a
+     *     visible overlay child, it stays on screen.
+     *   - A standalone "WAITING FOR ACTIVITY" hint sits on the page (NOT inside
+     *     the viewfinder) and shows when nothing else is active. Trivia/polls/
+     *     skribbl have their own panels below — those don't need the viewfinder.
+     *   - Wordmark text is updated to MANATEE GAMES (handled in JS to avoid a
+     *     flash on initial load before the listener fires). */
+    body.game-mode #preview,
+    body.game-mode #liveBadge,
+    body.game-mode #flipBtn,
+    body.game-mode #camOverlay {
+      display: none !important;
+    }
+    /* Hide the viewfinder by default in game mode. It only re-appears when
+       it contains a visible overlay (drawing canvas, wordle grid, submitted
+       confirmation). The :has() selector handles this declaratively. */
+    body.game-mode .viewfinder { display: none; }
+    body.game-mode .viewfinder:has(#drawOverlay.show),
+    body.game-mode .viewfinder:has(#wordleGridOverlay.show),
+    body.game-mode .viewfinder:has(#drawSubmitted.show) {
+      display: block;
+      background: rgba(0,0,0,0.32);
+    }
+
+    /* "WAITING FOR ACTIVITY" hint — page-level (sibling of viewfinder), not
+       inside it. Visible only when game mode is on AND no panel/overlay has
+       claimed the screen. We hide it when ANY .ui-panel is visible OR any
+       viewfinder overlay is showing. */
+    #gameModeIdleHint {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 32px 16px;
+      text-align: center;
+      animation: fadeUp 0.5s 0.1s ease both;
+    }
+    body.game-mode #gameModeIdleHint { display: flex; }
+    /* Hide the hint when any activity panel or overlay is up. The :has()
+       selector lets us check the whole .page subtree without per-panel JS. */
+    body.game-mode .page:has(.ui-panel.visible) #gameModeIdleHint,
+    body.game-mode .page:has(#drawOverlay.show) #gameModeIdleHint,
+    body.game-mode .page:has(#wordleGridOverlay.show) #gameModeIdleHint,
+    body.game-mode .page:has(#drawSubmitted.show) #gameModeIdleHint {
+      display: none;
+    }
+    #gameModeIdleHint .gm-idle-icon {
+      width: 38px;
+      height: 38px;
+      opacity: 0.5;
+    }
+    #gameModeIdleHint .gm-idle-text {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      color: rgba(255,255,255,0.45);
+      text-transform: uppercase;
+    }
   </style>
 </head>
 <body>
@@ -578,6 +655,17 @@
     <div id="drawSubmitted">
       <div>DRAWING SENT</div>
     </div>
+  </div>
+
+  <!-- "WAITING FOR ACTIVITY" hint — page-level placeholder shown only in game
+       mode when no activity panel/overlay is active. Sits between the viewfinder
+       (which is hidden in game mode unless a drawing/wordle overlay is up) and
+       the activity panels below. -->
+  <div id="gameModeIdleHint">
+    <svg class="gm-idle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(255,255,255,0.45);">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    </svg>
+    <div class="gm-idle-text">WAITING FOR ACTIVITY</div>
   </div>
 
   <!-- Trivia -->
@@ -724,6 +812,50 @@ const triviaQRef    = ref(db, "trivia/question");
 const pollsModeRef  = ref(db, "polls/mode");
 const pollsQRef     = ref(db, "polls/question");
 const pollsOptsRef  = ref(db, "polls/options");
+const gameModeRef   = ref(db, "meta/gameMode");
+
+/* ── GAME MODE ──
+ * When meta/gameMode is true, this phone goes camera-less:
+ *   - Existing stream is stopped + cameraActive cleared
+ *   - body.game-mode class hides the cam UI inside the viewfinder
+ *   - enableCamera() refuses to run while game mode is on
+ *   - Wordmark text swaps to MANATEE GAMES
+ * The viewfinder DIV stays visible because drawing / wordle / skribbl overlays
+ * sit inside it — those still work in game mode.
+ *
+ * Mid-session toggling: if game mode flips OFF mid-session, the user has to
+ * manually tap to re-enable the camera (no auto-reacquire). Document this in
+ * the operator UX. */
+let gameModeOn = false;
+onValue(gameModeRef, snap => {
+  const next = snap.val() === true;
+  const prev = gameModeOn;
+  gameModeOn = next;
+  document.body.classList.toggle("game-mode", gameModeOn);
+  // Update wordmark text
+  const wm = document.querySelector(".wordmark-text");
+  if (wm) wm.textContent = gameModeOn ? "MANATEE GAMES" : "MANATEE CAM";
+
+  if (gameModeOn) {
+    // Stop any in-flight stream + signal not-streaming to control
+    if (currentStream) {
+      currentStream.getTracks().forEach(t => t.stop());
+      currentStream = null;
+    }
+    streamingEnabled = false;
+    preview.srcObject = null;
+    preview.style.opacity = "0";
+    update(ref(db, `participants/${userKey}`), { cameraActive: false }).catch(() => {});
+  } else if (prev) {
+    // game mode flipped OFF mid-session — show the cam-tap overlay again so
+    // user can manually re-enable. We don't auto-reacquire (mobile permission
+    // policies often require user gesture).
+    if (camOverlay) {
+      camOverlay.style.display = "";
+      camLabel.textContent = "TAP TO ENABLE CAMERA";
+    }
+  }
+});
 
 /* ── PIXEL DIFF ── */
 const diffCanvas = document.createElement("canvas");
@@ -747,6 +879,9 @@ function hasSignificantChange(sourceCanvas) {
 
 /* ── CAMERA ── */
 async function enableCamera() {
+  // Game mode disables cameras entirely — refuse to acquire one even if the
+  // tap-to-enable overlay is somehow tapped (it should be hidden but defensive).
+  if (gameModeOn) return;
   if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
   camLabel.textContent = "ENABLING…";
   try {

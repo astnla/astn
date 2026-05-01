@@ -52,6 +52,575 @@ html, body {
       max-height: 100vh;
     }
 
+    /* ─── MANATEE GAMES MODE — Phase 1 ─── */
+    /* Empty state: centered wordmark replaces the cam UI when game mode is on.
+       The activity container is sketched out but currently unused — Phase 2
+       will move activity panels into it. */
+    #gamesStage {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: clamp(10px, 1.5vh, 20px); /* matches cam header→feed gap */
+      padding: clamp(20px, 4vh, 48px);
+      pointer-events: none;
+    }
+    body.game-mode #gamesStage {
+      display: flex;
+      pointer-events: auto;
+    }
+
+    /* Hide all Manatee Cam UI when in game mode */
+    body.game-mode .header,
+    body.game-mode #feedWrap,
+    body.game-mode .column,
+    body.game-mode #lbPanel,
+    body.game-mode #drawPanel,
+    body.game-mode #wordlePanel,
+    body.game-mode #infoPanel {
+      display: none !important;
+    }
+
+    /* Wordmark: matches the cam header's sizing exactly so it feels like the
+       same brand mark, just centered when no activity is up and slides into a
+       header-row position above the activity container when one opens. */
+    #gamesWordmark {
+      display: flex;
+      align-items: center;
+      gap: clamp(8px, 1vh, 14px);
+      flex-shrink: 0;
+    }
+    #gamesWordmark .header-accent {
+      width: 3px;
+      height: clamp(22px, 3vh, 36px);
+      background: var(--red);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    #gamesWordmark img {
+      width: clamp(30px, 4vh, 48px);
+      height: clamp(30px, 4vh, 48px);
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    #gamesWordmark .header-title {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 800;
+      font-size: clamp(18px, 2.4vh, 32px);
+      color: white;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    /* Activity container — Phase 2: grows from center when an activity opens.
+       Width is content-driven (auto) with sensible min/max bounds. The container
+       fits its content rather than forcing content into a fixed shape. */
+    #gamesActivityContainer {
+      width: auto;
+      min-width: clamp(320px, 40vw, 600px);
+      max-width: calc(100vw - 80px);
+      /* Reservation accounts for wordmark + page padding above/below, NOT for
+         what's inside the container (eyebrow + grid + keyboard count toward the
+         container's natural height, not its cap). Smaller values = container
+         can grow taller. ◄── tune this clamp if container is too tall/short */
+      max-height: calc(100vh - clamp(80px, 12vh, 160px));
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: clamp(10px, 1.2vh, 16px);
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+      transform: scaleY(0);
+      transform-origin: center center;
+      opacity: 0;
+      transition:
+        transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity   0.4s ease,
+        width     0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      overflow: hidden;
+      pointer-events: none;
+      flex-shrink: 0;
+    }
+    body.game-mode.activity-open #gamesActivityContainer {
+      transform: scaleY(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    /* Trivia uses a FIXED container width so the container shape is stable
+       regardless of answer length — short answers don't shrink it, long
+       answers don't widen it. Only height changes as text wraps to more or
+       fewer lines. ◄── tune this clamp to taste */
+    body.activity-game-trivia #gamesActivityContainer {
+      width: clamp(360px, 42vw, 600px);
+      min-width: clamp(360px, 42vw, 600px);
+      max-width: clamp(360px, 42vw, 600px);
+    }
+    /* Polls: same fixed-width treatment so long questions wrap to additional
+       lines (taller container) instead of stretching wider and pushing the
+       option bars across the screen. */
+    body.activity-game-polls #gamesActivityContainer {
+      width: clamp(360px, 42vw, 600px);
+      min-width: clamp(360px, 42vw, 600px);
+      max-width: clamp(360px, 42vw, 600px);
+    }
+    /* Drawing PROMPT mode only: same fixed-width treatment so long prompts
+       wrap onto more lines instead of stretching the container wide. The
+       :has() check scopes this to prompt mode only — reveal mode (showing the
+       student's drawing image) keeps its natural sizing so the 3:4 image card
+       isn't constrained. */
+    body.activity-game-drawing #gamesActivityContainer:has(#gmDrawing.mode-prompt) {
+      width: clamp(360px, 42vw, 600px);
+      min-width: clamp(360px, 42vw, 600px);
+      max-width: clamp(360px, 42vw, 600px);
+    }
+    #gamesActivityInner {
+      padding: clamp(22px, 3.4vh, 40px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      /* No max-height / overflow on inner — let it size naturally to its content.
+         The container's max-height is the only height cap; if content somehow
+         exceeds it, the cell-sizing algorithm should have shrunk cells first. */
+    }
+
+    /* ─── Per-game content templates inside the games container ───
+       These are uniform "card" surfaces — no per-game chrome. The outer
+       container is the only frame; content inside just describes its game.
+
+       Each card uses the grid-template-rows trick: a 1-row grid that
+       animates from 0fr to 1fr lets the card smoothly grow/shrink to its
+       natural content height. Without this, cards appearing/disappearing
+       would cause the parent container to snap-resize when content changes. */
+    .gm-card {
+      width: 100%;
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition:
+        grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity            0.35s ease,
+        margin             0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      margin: 0;
+    }
+    .gm-card.show {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+    .gm-card-inner {
+      min-height: 0; /* required for grid-template-rows: 0fr to actually collapse */
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      text-align: center;
+      gap: clamp(8px, 1.2vh, 16px);
+    }
+    .gm-eyebrow {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(11px, 1.3vh, 16px);
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.55);
+      transition: opacity 0.22s ease;
+    }
+    .gm-body {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      color: white;
+      font-size: clamp(22px, 3.6vh, 42px);
+      line-height: 1.25;
+      text-transform: uppercase;
+      transition: opacity 0.22s ease;
+      /* Long single tokens (URLs, no-space text) should wrap rather than
+         overflow horizontally. Width is capped per-game-mode via card-scoped
+         rules below — trivia is the main case where long answers need to
+         wrap to keep the container readable. */
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+    .gm-divider {
+      height: 1px;
+      width: 60%;
+      background: rgba(255, 255, 255, 0.15);
+      margin: clamp(10px, 1.6vh, 20px) 0;
+      align-self: center;
+    }
+    /* Polls bars inside the games container — same .bar-* classes are reused
+       from cam mode; we just add some vertical rhythm between rows here */
+    #gmPollsBarsContainer {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(10px, 1.4vh, 18px);
+      width: 100%;
+      padding-top: clamp(8px, 1.2vh, 14px);
+    }
+    /* The gm-card-inner has text-align: center which bleeds into the .bar-label's
+       flex:1 span, making it look centered. Force left/right inside gm context. */
+    #gmPollsBarsContainer .bar-label { text-align: left; }
+    #gmPollsBarsContainer .bar-pct   { text-align: right; }
+
+    /* ─── WORDLE in game mode ───
+       The gm-wordle card is a single .gm-card-inner that holds the eyebrow,
+       grid, and keyboard together. The eyebrow doubles as turn-name during
+       playing phase and as win/loss reveal during results phase, with a thin
+       timer bar pinned to its bottom edge so opacity-only show/hide doesn't
+       reflow the grid below. */
+    #gmWordleEyebrow {
+      position: relative;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(11px, 1.3vh, 15px);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: clamp(6px, 0.8vh, 10px);
+      min-height: clamp(16px, 2vh, 22px);
+      width: 100%;
+    }
+    #gmWordleEyebrowLabel { letter-spacing: 0.18em; transition: opacity 0.3s ease; }
+    #gmWordleEyebrowGuesser {
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: rgba(255, 255, 255, 0.85);
+      text-transform: none;
+      font-size: clamp(10px, 1.2vh, 14px);
+      transition: opacity 0.3s ease;
+    }
+    /* Results phase — message takes the whole row */
+    #gmWordleEyebrow.results #gmWordleEyebrowLabel { display: none; }
+    #gmWordleEyebrow.results #gmWordleEyebrowGuesser {
+      position: absolute;
+      left: 0; right: 0; top: 50%;
+      transform: translateY(-50%);
+      text-align: center;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #gmWordleEyebrowGuesser.win  { color: #b9e6a3; font-weight: 900; letter-spacing: 0.04em; }
+    #gmWordleEyebrowGuesser.lose { color: #ff9eaa; font-weight: 900; letter-spacing: 0.04em; }
+    /* Timer bar pinned to the bottom of the eyebrow */
+    #gmWordleTurnTimerBar {
+      position: absolute;
+      left: 0; right: 0; bottom: -6px;
+      height: 3px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #gmWordleTurnTimerBar.show { opacity: 1; }
+    #gmWordleTurnTimerFill {
+      height: 100%;
+      width: 100%;
+      background: white;
+      border-radius: 99px;
+      transition: width 0.25s linear, background 0.4s ease;
+    }
+    /* The keyboard text is centered by .gm-card-inner's text-align — but we
+       want letters in keys to be normally centered (already are via flexbox)
+       and not affected. No override needed since key contents are flex-centered. */
+    @keyframes gmFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ─── SKRIBBL in game mode ───
+       Single card: eyebrow + canvas (3:4) + hint + leaderboard. Same eyebrow
+       pattern as wordle (label + dynamic text + pinned timer bar). The canvas
+       scales with viewport min so 3:4 fits comfortably without forcing tall
+       containers. Leaderboard is a compact list below. */
+    #gmSkribblEyebrow {
+      position: relative;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(11px, 1.3vh, 15px);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: clamp(6px, 0.8vh, 10px);
+      min-height: clamp(16px, 2vh, 22px);
+      width: 100%;
+    }
+    #gmSkribblEyebrowLabel { letter-spacing: 0.18em; transition: opacity 0.3s ease; }
+    #gmSkribblEyebrowText {
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: rgba(255, 255, 255, 0.85);
+      text-transform: none;
+      font-size: clamp(10px, 1.2vh, 14px);
+      transition: opacity 0.3s ease;
+    }
+    /* Win state — the message takes the whole row, label hides */
+    #gmSkribblEyebrow.win #gmSkribblEyebrowLabel,
+    #gmSkribblEyebrow.results #gmSkribblEyebrowLabel { display: none; }
+    #gmSkribblEyebrow.win #gmSkribblEyebrowText,
+    #gmSkribblEyebrow.results #gmSkribblEyebrowText {
+      position: absolute;
+      left: 0; right: 0; top: 50%;
+      transform: translateY(-50%);
+      text-align: center;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #gmSkribblEyebrow.win #gmSkribblEyebrowText {
+      color: #b9e6a3;
+      font-weight: 900;
+    }
+    #gmSkribblEyebrow.results #gmSkribblEyebrowText {
+      color: rgba(255, 255, 255, 0.95);
+      font-weight: 900;
+    }
+    /* Timer bar — same pattern as wordle, pinned to eyebrow bottom */
+    #gmSkribblTimerBar {
+      position: absolute;
+      left: 0; right: 0; bottom: -6px;
+      height: 3px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #gmSkribblTimerBar.show { opacity: 1; }
+    #gmSkribblTimerFill {
+      height: 100%;
+      width: 100%;
+      background: white;
+      border-radius: 99px;
+      transition: width 0.25s linear, background 0.4s ease;
+    }
+
+    /* Canvas wrap — 3:4 aspect locked. Width scales with viewport min so the
+       canvas fits naturally on 1080p AND 4K without forcing a giant container.
+       Background white because the drawing canvas itself uses white BG. */
+    #gmSkribblCanvasWrap {
+      width: clamp(220px, 38vmin, 460px);
+      aspect-ratio: 3 / 4;
+      background: white;
+      border-radius: clamp(8px, 1vh, 14px);
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
+      align-self: center; /* override parent's align-items:stretch */
+    }
+    #gmSkribblLiveImg {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Hint — masked word as a row of letter cells (matches cam-mode hint look) */
+    #gmSkribblHint {
+      display: flex;
+      flex-wrap: wrap;
+      gap: clamp(8px, 1.2vh, 16px);
+      justify-content: center;
+      width: 100%;
+      min-height: 0;
+    }
+    /* Inner .hint-word + .hint-letter classes are reused from cam mode (the
+       renderHint() function creates them). Keep them styled consistently. */
+
+    /* Leaderboard — compact list of correct guessers in order */
+    #gmSkribblLb {
+      width: 100%;
+      max-width: clamp(280px, 45vmin, 480px);
+      align-self: center;
+    }
+    #gmSkribblLbRows {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(5px, 0.8vh, 9px);
+    }
+    #gmSkribblLb .lb-row {
+      display: flex;
+      align-items: center;
+      gap: clamp(8px, 1vh, 14px);
+      padding: clamp(6px, 0.9vh, 10px) clamp(10px, 1.4vh, 14px);
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      font-family: "Barlow Condensed", sans-serif;
+      animation: fadeUp 0.4s ease both;
+    }
+    #gmSkribblLb .lb-medal {
+      font-size: clamp(14px, 1.8vh, 20px);
+      font-weight: 900;
+      flex-shrink: 0;
+      min-width: clamp(20px, 2.4vh, 28px);
+    }
+    #gmSkribblLb .lb-name {
+      font-weight: 700;
+      font-size: clamp(13px, 1.7vh, 19px);
+      color: white;
+      letter-spacing: 0.02em;
+      text-align: left;
+      flex: 1;
+    }
+    #gmSkribblLb-empty {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: clamp(11px, 1.3vh, 15px);
+      color: rgba(255, 255, 255, 0.35);
+      text-align: center;
+      padding: clamp(8px, 1.2vh, 14px) 0;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* Vertical rhythm in skribbl card — same gap as wordle */
+    #gmSkribbl .gm-card-inner {
+      gap: clamp(14px, 2vh, 22px);
+    }
+    /* Make gmSkribbl a positioning context for the floating guess layer */
+    #gmSkribbl {
+      position: relative;
+    }
+    /* Floating guess layer for game mode — same behavior as cam-mode
+       #skribblGuessLayer but anchored to the gm card. Position:absolute over
+       the entire card so guesses rise from bottom across the canvas. */
+    #gmSkribblGuessLayer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    /* ─── DRAWING in game mode ───
+       Single card with two content modes:
+       - .mode-prompt: shows the prompt text + timer (active round)
+       - .mode-reveal: shows a 3:4 white card with a submission image
+       Both modes share the eyebrow. Only one content block visible at a time. */
+    #gmDrawingEyebrow {
+      position: relative;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 900;
+      font-size: clamp(11px, 1.3vh, 18px);
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: clamp(6px, 0.8vh, 10px);
+      min-height: clamp(16px, 2vh, 22px);
+      width: 100%;
+    }
+    #gmDrawingEyebrowLabel { transition: opacity 0.3s ease; }
+    #gmDrawingEyebrowText {
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.85);
+      text-transform: none;
+      font-size: clamp(10px, 1.2vh, 14px);
+      transition: opacity 0.3s ease;
+    }
+    /* Reveal state — the artist's name takes the full row, "DRAWING" hides */
+    #gmDrawing.mode-reveal #gmDrawingEyebrowLabel { display: none; }
+    #gmDrawing.mode-reveal #gmDrawingEyebrowText {
+      position: absolute;
+      left: 0; right: 0; top: 50%;
+      transform: translateY(-50%);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: rgba(255, 255, 255, 0.95);
+      font-weight: 900;
+      text-transform: uppercase;
+      font-size: clamp(11px, 1.3vh, 15px);
+    }
+    /* Prompt state — eyebrow becomes a single centered label (matches trivia
+       look). Drop the flex layout, hide the empty text span, just center "DRAW". */
+    #gmDrawing.mode-prompt #gmDrawingEyebrow {
+      display: block;
+      text-align: center;
+    }
+    #gmDrawing.mode-prompt #gmDrawingEyebrowText { display: none; }
+    #gmDrawing.mode-prompt #gmDrawingEyebrowLabel {
+      color: rgba(255, 255, 255, 0.55);
+    }
+    /* Timer bar — same pattern as wordle/skribbl, pinned to eyebrow bottom */
+    #gmDrawingTimerBar {
+      position: absolute;
+      left: 0; right: 0; bottom: -6px;
+      height: 3px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #gmDrawingTimerBar.show { opacity: 1; }
+    #gmDrawingTimerFill {
+      height: 100%;
+      width: 100%;
+      background: white;
+      border-radius: 99px;
+      transition: width 0.25s linear, background 0.4s ease;
+    }
+
+    /* Prompt text — only visible during active round */
+    #gmDrawingPromptText {
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 700;
+      font-size: clamp(22px, 3.6vh, 42px);
+      line-height: 1.25;
+      text-transform: uppercase;
+      color: white;
+      text-align: center;
+      width: 100%;
+      padding: clamp(10px, 1.6vh, 20px) clamp(14px, 2vh, 24px);
+      display: none;
+    }
+    #gmDrawing.mode-prompt #gmDrawingPromptText { display: block; }
+
+    /* Image wrap — only visible during reveal phase. 3:4 aspect, white bg,
+       submission image fits via object-fit:contain (drawings can be any aspect). */
+    #gmDrawingImageWrap {
+      width: clamp(220px, 38vmin, 460px);
+      aspect-ratio: 3 / 4;
+      background: white;
+      border-radius: clamp(8px, 1vh, 14px);
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
+      align-self: center;
+      display: none;
+    }
+    #gmDrawing.mode-reveal #gmDrawingImageWrap { display: block; }
+    #gmDrawingImage {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      transition: opacity 0.35s ease;
+    }
+
+    /* Vertical rhythm in drawing card */
+    #gmDrawing .gm-card-inner {
+      gap: clamp(14px, 2vh, 22px);
+    }
+
     /* ── COLUMN — feed side ── */
     .column {
       display: flex;
@@ -314,7 +883,7 @@ html, body {
       width: 100%;
       background: white;
       border-radius: 99px;
-      transition: width 1s linear, background 0.4s ease;
+      transition: width 0.25s linear, background 0.4s ease;
     }
     /* Eyebrow result text — uses the existing #wordlePanelGuesser slot during
        results phase to announce winner / no-winner, replacing the banner. */
@@ -329,7 +898,8 @@ html, body {
       letter-spacing: 0.04em;
     }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-    #wordleGrid {
+    #wordleGrid,
+    #gmWordleGrid {
       display: flex;
       flex-direction: column;
       gap: clamp(4px, 0.6vh, 8px);
@@ -339,6 +909,23 @@ html, body {
       align-items: center;
       justify-content: center;
     }
+    /* Game-mode grid: keeps the same flex column layout as cam mode. No
+       min-height — let the natural cell-size × row-count math drive the grid's
+       height, which in turn drives the container's height. Horizontal/vertical
+       padding gives the grid breathing room from the eyebrow + keyboard. */
+    #gmWordleGrid {
+      padding: clamp(8px, 1.2vh, 14px) clamp(12px, 1.8vh, 22px);
+      box-sizing: border-box;
+      /* Content-driven height — overrides the flex:1 1 0 from cam mode so the
+         grid's height = rows × cellSize + gaps + padding. The container then
+         shrinkwraps around that. Without this, the grid would either stretch
+         to fill or collapse to 0 in the auto-sized container. */
+      flex: 0 0 auto;
+    }
+    /* Vertical rhythm between eyebrow → grid → keyboard inside gm-wordle */
+    #gmWordle .gm-card-inner {
+      gap: clamp(14px, 2vh, 22px);
+    }
     .wordle-row {
       display: grid;
       gap: clamp(4px, 0.6vh, 8px);
@@ -346,6 +933,7 @@ html, body {
       /* Row height equals the cell size — JS computes this on render based on
          actual container dimensions so it adapts to any (rows × cols) config */
       height: var(--wordle-out-cell, 48px);
+      transition: height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .wordle-cell {
       width:  var(--wordle-out-cell, 48px);
@@ -362,7 +950,13 @@ html, body {
       border-radius: 4px;
       background: transparent;
       text-transform: uppercase;
-      transition: background 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+      transition:
+        background 0.3s ease,
+        border-color 0.3s ease,
+        transform 0.2s ease,
+        width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+        height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+        font-size 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     }
     /* Cell states — used in Phase 2 onward */
     .wordle-cell.filled  { border-color: rgba(255, 255, 255, 0.5); }
@@ -378,7 +972,8 @@ html, body {
     .wordle-cell.flipping { animation: wordleFlip 0.5s ease-in-out; }
 
     /* On-screen keyboard — visual only on output, reflects accumulated letter states */
-    #wordleKeyboard {
+    #wordleKeyboard,
+    #gmWordleKeyboard {
       display: flex;
       flex-direction: column;
       gap: clamp(3px, 0.5vh, 6px);
@@ -410,6 +1005,8 @@ html, body {
     .wordle-key.correct { background: #538d4e; }
     .wordle-key.present { background: #b59f3b; }
     .wordle-key.absent  { background: #3a3a3c; }
+    /* Game mode reuses the same keyboard sizing as cam mode — small enough
+       that it doesn't dominate the focal grid above it. */
 
     /* Drawing panel card */
     #drawPanelCard {
@@ -651,7 +1248,7 @@ html, body {
       height: 100%;
       background: white;
       width: 100%;
-      transition: width 1s linear, background 0.4s ease;
+      transition: width 0.25s linear, background 0.4s ease;
     }
 
     /* LIVE pip */
@@ -821,6 +1418,7 @@ html, body {
     .card-body {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 900;
+      text-transform: uppercase;
       font-size: clamp(16px, 2.2vh, 30px);
       line-height: 1.15;
     }
@@ -837,6 +1435,7 @@ html, body {
     .bar-label {
       font-family: "Barlow Condensed", sans-serif;
       font-weight: 700;
+      text-transform: uppercase;
       font-size: clamp(13px, 1.8vh, 22px);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       flex: 1;
@@ -1008,6 +1607,121 @@ html, body {
 <audio id="sndTime"    src="assets/time.mp3"    preload="auto"></audio>
 <div class="scene">
   <div class="stage" id="stage">
+  <!-- ─── MANATEE GAMES STAGE ─── shown only when body.game-mode is set.
+       Empty state: just the centered wordmark.
+       Active state: wordmark slides up to make room for the activity container,
+       which grows from a center horizontal line outward in both directions. -->
+  <div id="gamesStage">
+    <!-- The MANATEE GAMES wordmark — same visual treatment as the MANATEE CAM
+         header, just bigger and centered. Slides up when an activity opens. -->
+    <div id="gamesWordmark">
+      <div class="header-accent"></div>
+      <img src="assets/mestv.png" alt="MES TV">
+      <div class="header-title">MANATEE GAMES</div>
+    </div>
+    <!-- Unified activity container. Sized to fit content. Grows from center
+         (scaleY 0 → 1 with origin center) when an activity becomes active. -->
+    <div id="gamesActivityContainer">
+      <div id="gamesActivityInner">
+        <!-- TRIVIA template — shown when trivia is active in game mode -->
+        <div class="gm-card" id="gmTriviaQuestion">
+          <div class="gm-card-inner">
+            <div class="gm-eyebrow">QUESTION</div>
+            <div class="gm-body" id="gmTriviaQuestionText"></div>
+          </div>
+        </div>
+        <div class="gm-card" id="gmTriviaAnswer">
+          <div class="gm-card-inner">
+            <div class="gm-divider"></div>
+            <div class="gm-eyebrow">ANSWER</div>
+            <div class="gm-body" id="gmTriviaAnswerText"></div>
+          </div>
+        </div>
+        <div class="gm-card" id="gmTriviaClass">
+          <div class="gm-card-inner">
+            <div class="gm-divider"></div>
+            <div class="gm-eyebrow" id="gmTriviaClassEyebrow">ANSWER</div>
+            <div class="gm-body" id="gmTriviaClassText"></div>
+          </div>
+        </div>
+        <!-- POLLS template — same question pattern + horizontal vote bars -->
+        <div class="gm-card" id="gmPollsQuestion">
+          <div class="gm-card-inner">
+            <div class="gm-eyebrow">POLL</div>
+            <div class="gm-body" id="gmPollsQuestionText"></div>
+          </div>
+        </div>
+        <div class="gm-card" id="gmPollsBars">
+          <div class="gm-card-inner">
+            <div class="gm-divider"></div>
+            <div class="gm-eyebrow">LIVE RESULTS</div>
+            <div id="gmPollsBarsContainer"></div>
+          </div>
+        </div>
+        <!-- WORDLE template — eyebrow + grid + keyboard, all together as one card.
+             Mirrors the cam-mode wordle panel content so the same listeners
+             update both. The eyebrow doubles as turn-name / win-loss reveal,
+             with a thin timer bar pinned to its bottom edge. -->
+        <div class="gm-card" id="gmWordle">
+          <div class="gm-card-inner">
+            <div id="gmWordleEyebrow">
+              <span id="gmWordleEyebrowLabel">WORDLE</span>
+              <span id="gmWordleEyebrowGuesser"></span>
+              <div id="gmWordleTurnTimerBar"><div id="gmWordleTurnTimerFill"></div></div>
+            </div>
+            <div id="gmWordleGrid"></div>
+            <div id="gmWordleKeyboard"></div>
+          </div>
+        </div>
+        <!-- SKRIBBL template — eyebrow + canvas + hint + leaderboard.
+             The eyebrow holds the round timer and morphs through phases:
+             playing → "ALICE IS DRAWING" + word hint
+             win    → "🎉 ALICE GOT IT FIRST!"
+             results→ "IT WAS [WORD]" with the full word revealed in the hint -->
+        <div class="gm-card" id="gmSkribbl">
+          <div class="gm-card-inner">
+            <div id="gmSkribblEyebrow">
+              <span id="gmSkribblEyebrowLabel">SKRIBBL</span>
+              <span id="gmSkribblEyebrowText"></span>
+              <div id="gmSkribblTimerBar"><div id="gmSkribblTimerFill"></div></div>
+            </div>
+            <div id="gmSkribblCanvasWrap">
+              <img id="gmSkribblLiveImg" alt="live drawing" />
+            </div>
+            <div id="gmSkribblHint"></div>
+            <div id="gmSkribblLb">
+              <div id="gmSkribblLbRows"></div>
+            </div>
+          </div>
+          <!-- Floating wrong-guesses bubble layer. Position:absolute over the
+               whole gm-card so guesses rise across the canvas + leaderboard,
+               same as cam mode rises across the drawing panel. -->
+          <div id="gmSkribblGuessLayer"></div>
+        </div>
+        <!-- DRAWING template — eyebrow + prompt-or-image stack.
+             Two content modes inside the same card:
+             1. Active round: shows the prompt text + drawing timer bar
+             2. Reveal phase: shows a single submission image with artist name
+             The card transitions between modes via the .mode-prompt / .mode-reveal
+             classes; only one inner content block is visible at a time. -->
+        <div class="gm-card" id="gmDrawing">
+          <div class="gm-card-inner">
+            <div id="gmDrawingEyebrow">
+              <span id="gmDrawingEyebrowLabel">DRAW</span>
+              <span id="gmDrawingEyebrowText"></span>
+              <div id="gmDrawingTimerBar"><div id="gmDrawingTimerFill"></div></div>
+            </div>
+            <!-- Active-round content: prompt text -->
+            <div id="gmDrawingPromptText"></div>
+            <!-- Reveal-phase content: white card with submission image -->
+            <div id="gmDrawingImageWrap">
+              <img id="gmDrawingImage" alt="student drawing" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Leaderboard panel — slides in from LEFT during skribbl -->
   <div id="lbPanel">
@@ -1079,7 +1793,7 @@ html, body {
         <div class="card-body" id="answerText"></div>
       </div>
       <div class="info-card" id="classCard">
-        <div class="card-eyebrow">CLASS ANSWER</div>
+        <div class="card-eyebrow" id="classEyebrow">ANSWER</div>
         <div class="card-body" id="classText"></div>
       </div>
       <!-- Skribbl leaderboard card (infoPanel version — kept for non-skribbl modes) -->
@@ -1159,6 +1873,8 @@ const answerCard     = document.getElementById("answerCard");
 const answerText     = document.getElementById("answerText");
 const classCard        = document.getElementById("classCard");
 const classText        = document.getElementById("classText");
+const classEyebrow     = document.getElementById("classEyebrow");
+const gmTriviaClassEyebrow = document.getElementById("gmTriviaClassEyebrow");
 const stage              = document.getElementById("stage");
 const drawPanel          = document.getElementById("drawPanel");
 const drawPanelEyebrow   = document.getElementById("drawPanelEyebrow");
@@ -1187,6 +1903,119 @@ const activeUserRef  = ref(db, "live/activeUser");
 const frameRef       = ref(db, "live/frame");
 const heartbeatRef   = ref(db, "live/heartbeat");
 const fanCamOnRef    = ref(db, "meta/fanCamOn");
+const gameModeRef    = ref(db, "meta/gameMode");
+
+/* ─── MANATEE GAMES MODE — Phase 1 ───
+ * When meta/gameMode is true, we hide all the cam UI (.header, #feedWrap,
+ * .column, side panels) and show #gamesStage with a centered wordmark.
+ * Activity panels still render in their original DOM locations — they may
+ * appear off-center while game mode is on. Phase 2 will move them into the
+ * centered container. For now this lets us verify the empty state + the
+ * cam-UI hide work cleanly.
+ */
+let gameModeOn = false;
+onValue(gameModeRef, snap => {
+  gameModeOn = snap.val() === true;
+  document.body.classList.toggle("game-mode", gameModeOn);
+  // Re-evaluate activity-open in case any game's content was active when mode flipped
+  refreshActivityOpen();
+});
+
+/* Track which gm-* cards are currently shown so we can toggle body.activity-open
+   to drive the wordmark slide-up + container grow animations together. */
+const gmActiveCards = new Set();
+function gmShow(el, key) {
+  if (!el) return;
+  el.classList.add("show");
+  gmActiveCards.add(key);
+  refreshActivityOpen();
+}
+function gmHide(el, key) {
+  if (!el) return;
+  el.classList.remove("show");
+  gmActiveCards.delete(key);
+  refreshActivityOpen();
+}
+// Track the family class we're currently displaying. We DON'T remove the
+// activity-game-* class the moment cards hide — instead we defer it until the
+// container's close animation finishes. Otherwise the per-family width clamp
+// (e.g. polls/trivia clamp at 42vw) is dropped mid-collapse, the container
+// reverts to width:auto which computes wider content width, and you see the
+// container briefly grow wider before shrinking. The defer keeps the clamp
+// applied throughout the close, so the bar shrinks straight down.
+let gmFamilyClearTimer = null;
+function refreshActivityOpen() {
+  const open = gameModeOn && gmActiveCards.size > 0;
+  document.body.classList.toggle("activity-open", open);
+
+  const families = new Set();
+  for (const key of gmActiveCards) {
+    families.add(key.split("-")[0]);
+  }
+
+  if (families.size > 0) {
+    // Something is showing — clear any pending defer, apply the new family classes immediately
+    if (gmFamilyClearTimer) { clearTimeout(gmFamilyClearTimer); gmFamilyClearTimer = null; }
+    for (const cls of Array.from(document.body.classList)) {
+      if (cls.startsWith("activity-game-")) document.body.classList.remove(cls);
+    }
+    for (const fam of families) {
+      document.body.classList.add(`activity-game-${fam}`);
+    }
+  } else {
+    // Nothing is showing — defer family-class removal until the container's
+    // close animation completes (~600ms covers the 0.55s scaleY transition).
+    if (gmFamilyClearTimer) clearTimeout(gmFamilyClearTimer);
+    gmFamilyClearTimer = setTimeout(() => {
+      gmFamilyClearTimer = null;
+      // Only clear if still nothing is showing (a new activity may have opened)
+      if (gmActiveCards.size === 0) {
+        for (const cls of Array.from(document.body.classList)) {
+          if (cls.startsWith("activity-game-")) document.body.classList.remove(cls);
+        }
+      }
+    }, 600);
+  }
+}
+
+// gm-* template element refs (used by per-game listeners below)
+const gmTriviaQuestion     = document.getElementById("gmTriviaQuestion");
+const gmTriviaQuestionText = document.getElementById("gmTriviaQuestionText");
+const gmTriviaAnswer       = document.getElementById("gmTriviaAnswer");
+const gmTriviaAnswerText   = document.getElementById("gmTriviaAnswerText");
+const gmTriviaClass        = document.getElementById("gmTriviaClass");
+const gmTriviaClassText    = document.getElementById("gmTriviaClassText");
+const gmPollsQuestion      = document.getElementById("gmPollsQuestion");
+const gmPollsQuestionText  = document.getElementById("gmPollsQuestionText");
+const gmPollsBars          = document.getElementById("gmPollsBars");
+const gmPollsBarsContainer = document.getElementById("gmPollsBarsContainer");
+const gmWordle             = document.getElementById("gmWordle");
+const gmWordleEyebrow      = document.getElementById("gmWordleEyebrow");
+const gmWordleEyebrowLabel = document.getElementById("gmWordleEyebrowLabel");
+const gmWordleEyebrowGuesser = document.getElementById("gmWordleEyebrowGuesser");
+const gmWordleTurnTimerBar = document.getElementById("gmWordleTurnTimerBar");
+const gmWordleTurnTimerFill= document.getElementById("gmWordleTurnTimerFill");
+const gmWordleGrid         = document.getElementById("gmWordleGrid");
+const gmWordleKeyboard     = document.getElementById("gmWordleKeyboard");
+const gmSkribbl            = document.getElementById("gmSkribbl");
+const gmSkribblEyebrow     = document.getElementById("gmSkribblEyebrow");
+const gmSkribblEyebrowLabel= document.getElementById("gmSkribblEyebrowLabel");
+const gmSkribblEyebrowText = document.getElementById("gmSkribblEyebrowText");
+const gmSkribblTimerBar    = document.getElementById("gmSkribblTimerBar");
+const gmSkribblTimerFill   = document.getElementById("gmSkribblTimerFill");
+const gmSkribblLiveImg     = document.getElementById("gmSkribblLiveImg");
+const gmSkribblHint        = document.getElementById("gmSkribblHint");
+const gmSkribblLbRows      = document.getElementById("gmSkribblLbRows");
+const gmSkribblGuessLayer  = document.getElementById("gmSkribblGuessLayer");
+const gmDrawing            = document.getElementById("gmDrawing");
+const gmDrawingEyebrow     = document.getElementById("gmDrawingEyebrow");
+const gmDrawingEyebrowLabel= document.getElementById("gmDrawingEyebrowLabel");
+const gmDrawingEyebrowText = document.getElementById("gmDrawingEyebrowText");
+const gmDrawingTimerBar    = document.getElementById("gmDrawingTimerBar");
+const gmDrawingTimerFill   = document.getElementById("gmDrawingTimerFill");
+const gmDrawingPromptText  = document.getElementById("gmDrawingPromptText");
+const gmDrawingImageWrap   = document.getElementById("gmDrawingImageWrap");
+const gmDrawingImage       = document.getElementById("gmDrawingImage");
 
 /* ── FAN CAM ON/OFF ── */
 const qrImage     = document.getElementById("qrImage"); // kept for layout
@@ -1325,8 +2154,12 @@ function startTrivia() {
       questionEyebrow.textContent = "QUESTION";
       questionText.textContent = d.text;
       showCard(questionCard, "question");
+      // Game mode mirror — crossfade if updating an existing question
+      if (gmTriviaQuestionText) crossfadeGmBody(gmTriviaQuestionText, d.text, true);
+      gmShow(gmTriviaQuestion, "trivia-question");
     } else {
       hideCard(questionCard, "question");
+      gmHide(gmTriviaQuestion, "trivia-question");
     }
   });
   onValue(triviaCRef, snap => {
@@ -1334,36 +2167,200 @@ function startTrivia() {
     if (d.show && d.text) {
       answerText.textContent = d.text;
       showCard(answerCard, "answer");
+      if (gmTriviaAnswerText) crossfadeGmBody(gmTriviaAnswerText, d.text, true);
+      gmShow(gmTriviaAnswer, "trivia-answer");
     } else {
       hideCard(answerCard, "answer");
+      gmHide(gmTriviaAnswer, "trivia-answer");
     }
   });
+/* Crossfade text content of any .gm-body element. If the new text is the same
+ * as the old, no-op (so we don't flicker on idempotent updates). If the element
+ * was empty, just set the text directly — the card's own grow animation handles
+ * the entry. Otherwise: fade to 0 → swap text → fade back to 1. */
+/* Crossfade text content of a .gm-body element.
+ *
+ * Default mode (opacity-only): fade to 0 → swap text → fade back. The container
+ * height changes naturally with content (instant, no animation).
+ *
+ * Animated-height mode (animateHeight=true): also animates the body's height
+ * smoothly between old and new content heights. Use this ONLY when the parent
+ * container has a STABLE width (e.g. trivia's fixed-width container). For
+ * auto-width containers, locking the body's height while the container is
+ * also reacting to content can cause jitter — opacity-only is safer there.
+ *
+ * Strategy in animated-height mode:
+ *   1. Measure current height + width
+ *   2. Measure new text's height via off-screen clone at matched width
+ *   3. Lock current height inline + fade opacity to 0
+ *   4. Swap text while invisible
+ *   5. Animate height to new value + fade opacity back in
+ *   6. Clear inline styles after transition
+ *
+ * If new height equals old (same line count), only opacity changes. */
+function crossfadeGmBody(target, newText, animateHeight = false) {
+  if (!target) return;
+  const incoming = String(newText ?? "");
+  if (target.textContent === incoming) return; // no-op
+  if (target.textContent === "") {
+    // First paint — let the card's own enter animation handle it
+    target.textContent = incoming;
+    return;
+  }
+
+  if (!animateHeight) {
+    // Simple opacity-only fade — height changes happen instantly
+    target.style.opacity = "0";
+    setTimeout(() => {
+      target.textContent = incoming;
+      requestAnimationFrame(() => {
+        target.style.opacity = "";
+      });
+    }, 220);
+    return;
+  }
+
+  // Animated-height mode
+  const startHeight = target.offsetHeight;
+  const liveWidth   = target.offsetWidth;
+
+  // Off-screen clone at matched width to measure new text height
+  const clone = target.cloneNode(false);
+  clone.textContent = incoming;
+  clone.style.position = "absolute";
+  clone.style.visibility = "hidden";
+  clone.style.pointerEvents = "none";
+  clone.style.left = "-9999px";
+  clone.style.top = "0";
+  clone.style.width = liveWidth + "px";
+  clone.style.height = "auto";
+  clone.style.maxHeight = "none";
+  clone.style.opacity = "0";
+  clone.style.transition = "none";
+  document.body.appendChild(clone);
+  const endHeight = clone.offsetHeight;
+  clone.remove();
+
+  target.style.height = startHeight + "px";
+  target.style.overflow = "hidden";
+  target.style.transition = "opacity 0.22s ease, height 0.32s cubic-bezier(0.22, 1, 0.36, 1)";
+  target.style.opacity = "0";
+
+  setTimeout(() => {
+    target.textContent = incoming;
+    requestAnimationFrame(() => {
+      target.style.height = endHeight + "px";
+      target.style.opacity = "";
+    });
+    setTimeout(() => {
+      target.style.height = "";
+      target.style.overflow = "";
+      target.style.transition = "";
+    }, 360);
+  }, 220);
+}
+
+  // Debounce reveal hides — when the operator switches between students in
+  // game-mode + reveal-mode, control writes a clear-then-set sequence that
+  // briefly leaves no key with show:true. Without a small delay before hiding,
+  // the class-answer card flickers off → on between students. 600ms is enough
+  // to bridge any reasonable round-trip while still hiding promptly when the
+  // operator genuinely toggles a reveal off with no follow-up.
+  // (timer var is module-scoped so stopTrivia can clear it on reset)
   onValue(revealRef, snap => {
     const r = snap.val() || {};
     const key = Object.keys(r).find(k => r[k]?.show === true);
-    if (!key) { hideCard(classCard, "class"); return; }
+    if (!key) {
+      // Two cases for "no visible reveal":
+      // (1) Explicit reset — control writes {__reset: timestamp} when the
+      //     operator hits reset. This sentinel means hide NOW, not after a
+      //     debounce delay. Detect by checking for the __reset key.
+      // (2) Auto-flip intermediate state — control wrote {show:false} on the
+      //     previous user but hasn't yet set the new user. Debounce 600ms;
+      //     the next listener fire will cancel before the timer runs.
+      const isExplicitClear = "__reset" in r ||
+        Object.keys(r).every(k => k === "__reset");
+      if (isExplicitClear) {
+        if (triviaRevealHideTimer) { clearTimeout(triviaRevealHideTimer); triviaRevealHideTimer = null; }
+        hideCard(classCard, "class");
+        gmHide(gmTriviaClass, "trivia-class");
+        return;
+      }
+      // Auto-flip — debounce briefly. If a key shows up, the next listener
+      // fire will cancel this hide before it runs.
+      if (triviaRevealHideTimer) clearTimeout(triviaRevealHideTimer);
+      triviaRevealHideTimer = setTimeout(() => {
+        triviaRevealHideTimer = null;
+        hideCard(classCard, "class");
+        gmHide(gmTriviaClass, "trivia-class");
+      }, 600);
+      return;
+    }
+    // A reveal arrived — cancel any pending hide
+    if (triviaRevealHideTimer) { clearTimeout(triviaRevealHideTimer); triviaRevealHideTimer = null; }
     onValue(ref(db, `trivia/answers/${key}`), aSnap => {
       const d = aSnap.val() || {};
-      if (d.answer) { classText.textContent = d.answer; showCard(classCard, "class"); }
-      else hideCard(classCard, "class");
+      if (d.answer) {
+        // Resolve username from participants cache for the eyebrow text
+        const userName = participantsCache[key]?.name;
+        const eyebrowText = userName ? `${userName.toUpperCase()}'S ANSWER` : "ANSWER";
+        // Detect whether this is a fresh open vs flipping while already shown.
+        // If the gm card is hidden right now, the upcoming gmShow will play
+        // the grow-from-zero animation — we need to swap text BEFORE the
+        // grow starts, otherwise the previous student's text briefly shows
+        // through during the card's entry animation. Only crossfade when
+        // the card is already visible (true student-to-student flip).
+        const gmCardWasShown = gmTriviaClass && gmTriviaClass.classList.contains("show");
+        if (classEyebrow) classEyebrow.textContent = eyebrowText;
+        classText.textContent = d.answer;
+        showCard(classCard, "class");
+        if (gmCardWasShown) {
+          // Card already visible — crossfade between students
+          if (gmTriviaClassEyebrow) crossfadeGmBody(gmTriviaClassEyebrow, eyebrowText);
+          if (gmTriviaClassText)    crossfadeGmBody(gmTriviaClassText, d.answer, true);
+        } else {
+          // Card was hidden — set text directly so the grow-in animation
+          // shows the correct content from the start
+          if (gmTriviaClassEyebrow) gmTriviaClassEyebrow.textContent = eyebrowText;
+          if (gmTriviaClassText)    gmTriviaClassText.textContent = d.answer;
+        }
+        gmShow(gmTriviaClass, "trivia-class");
+      } else {
+        hideCard(classCard, "class");
+        gmHide(gmTriviaClass, "trivia-class");
+      }
     }, { onlyOnce: true });
   });
 }
+let triviaRevealHideTimer = null;
 function stopTrivia() {
   if (!triviaOn) return;
   triviaOn = false;
   off(triviaQRef); off(triviaCRef); off(revealRef);
+  // Cancel any pending debounced hide so the class-answer card doesn't linger
+  // for the full 600ms after a reset.
+  if (triviaRevealHideTimer) { clearTimeout(triviaRevealHideTimer); triviaRevealHideTimer = null; }
   hideCard(questionCard, "question");
   hideCard(answerCard, "answer");
   hideCard(classCard, "class");
+  // Game mode mirrors
+  gmHide(gmTriviaQuestion, "trivia-question");
+  gmHide(gmTriviaAnswer, "trivia-answer");
+  gmHide(gmTriviaClass, "trivia-class");
 }
 
 /* ── POLLS ── */
 function renderBars(totals) {
+  // Render into both the cam-mode bars container AND the game-mode mirror.
+  // Both targets are kept in sync so flipping game-mode mid-poll is seamless.
+  renderBarsInto(pollBars, totals);
+  if (gmPollsBarsContainer) renderBarsInto(gmPollsBarsContainer, totals);
+}
+function renderBarsInto(container, totals) {
   const keys = Object.keys(pollOptions);
   if (!keys.length) return;
   const total = keys.reduce((s, k) => s + (totals[k] || 0), 0);
-  pollBars.innerHTML = "";
+  container.innerHTML = "";
   const sorted = [...keys].sort((a,b) => (pollOptions[a]?.order??0) - (pollOptions[b]?.order??0));
   for (const key of sorted) {
     const label = pollOptions[key]?.label || key;
@@ -1377,7 +2374,7 @@ function renderBars(totals) {
         <span class="bar-pct">${pct}%</span>
       </div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>`;
-    pollBars.appendChild(row);
+    container.appendChild(row);
   }
 }
 function startPolls() {
@@ -1414,10 +2411,17 @@ function startPolls() {
       showCard(pollCard, "poll");
       // Render bars right away using whatever totals we already have
       renderBars(latestTotals);
+      // Game mode mirrors
+      if (gmPollsQuestionText) gmPollsQuestionText.textContent = d.text;
+      gmShow(gmPollsQuestion, "polls-question");
+      gmShow(gmPollsBars, "polls-bars");
     } else {
       hideCard(questionCard, "question");
       hideCard(pollCard, "poll");
       pollBars.innerHTML = "";
+      gmHide(gmPollsQuestion, "polls-question");
+      gmHide(gmPollsBars, "polls-bars");
+      if (gmPollsBarsContainer) gmPollsBarsContainer.innerHTML = "";
     }
   });
 }
@@ -1429,6 +2433,10 @@ function stopPolls() {
   hideCard(pollCard, "poll");
   pollBars.innerHTML = "";
   pollOptions = {};
+  // Game mode mirrors
+  gmHide(gmPollsQuestion, "polls-question");
+  gmHide(gmPollsBars, "polls-bars");
+  if (gmPollsBarsContainer) gmPollsBarsContainer.innerHTML = "";
 }
 
 /* ── DRAWING SIDE PANEL ── */
@@ -1470,6 +2478,8 @@ onValue(drawModeRef, snap => {
     hideDrawPanel();
     drawSubs = {};
     stopOutputDrawTimer(); // tear down the bar when leaving drawing mode entirely
+    // Game-mode mirror — hide drawing card and reset state
+    hideGmDrawing();
   }
 });
 onValue(drawSubRef, snap => { drawSubs = snap.val() || {}; });
@@ -1486,6 +2496,8 @@ function startOutputDrawTimer(timeEnd) {
   if (outputDrawTimerInterval) clearInterval(outputDrawTimerInterval);
   outputDrawTimerDurationMs = Math.max(1, timeEnd - Date.now());
   drawTimerOverlay.classList.add("show");
+  // Game-mode mirror — show the timer bar pinned to drawing eyebrow
+  if (gmDrawingTimerBar) gmDrawingTimerBar.classList.add("show");
   let lastTickedSec = null;
   function tick() {
     const remaining = Math.max(0, timeEnd - Date.now());
@@ -1493,6 +2505,11 @@ function startOutputDrawTimer(timeEnd) {
     const pct = (remaining / outputDrawTimerDurationMs) * 100;
     drawTimerOverlayFill.style.width = pct + "%";
     drawTimerOverlayFill.style.background = remaining <= 10000 ? "#ff647c" : "white";
+    // Game-mode timer bar — drain width + turn red in last 10s
+    if (gmDrawingTimerFill) {
+      gmDrawingTimerFill.style.width = pct + "%";
+      gmDrawingTimerFill.style.background = remaining <= 10000 ? "#ff4d4d" : "white";
+    }
     // Tick sound during final 10s — fire once per integer-second crossing
     if (secs > 0 && secs <= 10 && secs !== lastTickedSec) {
       lastTickedSec = secs;
@@ -1503,6 +2520,9 @@ function startOutputDrawTimer(timeEnd) {
       outputDrawTimerInterval = null;
       // Hide a moment after zero so viewers see the empty bar briefly
       setTimeout(() => drawTimerOverlay.classList.remove("show"), 800);
+      if (gmDrawingTimerBar) {
+        setTimeout(() => gmDrawingTimerBar.classList.remove("show"), 800);
+      }
     }
   }
   tick();
@@ -1512,6 +2532,12 @@ function stopOutputDrawTimer() {
   if (outputDrawTimerInterval) { clearInterval(outputDrawTimerInterval); outputDrawTimerInterval = null; }
   drawTimerOverlay.classList.remove("show");
   drawTimerOverlayFill.style.width = "100%";
+  // Game-mode mirror — hide bar, reset fill
+  if (gmDrawingTimerBar) gmDrawingTimerBar.classList.remove("show");
+  if (gmDrawingTimerFill) {
+    gmDrawingTimerFill.style.width = "100%";
+    gmDrawingTimerFill.style.background = "white";
+  }
 }
 onValue(ref(db, "drawing/timeEnd"), snap => {
   const timeEnd = snap.val();
@@ -1532,21 +2558,164 @@ onValue(ref(db, "drawing/timesUp"), snap => {
 });
 
 // Drawing prompt listener — purely for the sent.mp3 cue.
-// Output doesn't display the drawing prompt itself (that's only on phones), but we still
-// want to ring the sent sound on the speakers when teacher pushes a new drawing prompt.
+// Output doesn't display the drawing prompt itself in cam mode (that's only on
+// phones), but in GAME MODE we DO display the prompt as the centerpiece during
+// the active round. We still want to ring sent.mp3 on the speakers either way.
 let drawPromptWasShown = false;
 let drawPromptFirstSnap = true; // skip the first snap so sent.mp3 doesn't replay on output refresh
+let drawPromptText = "";
+let drawPromptShown = false;
 onValue(ref(db, "drawing/prompt"), snap => {
   const d = snap.val() || {};
   const isShown = !!(d.show && d.text);
   if (!drawPromptFirstSnap && isShown && !drawPromptWasShown) playSnd(sndSent);
   drawPromptFirstSnap = false;
   drawPromptWasShown = isShown;
+  // Game-mode: track the prompt and update the card. We only show the prompt
+  // card when no reveal is active (reveals take precedence).
+  drawPromptText  = d.text || "";
+  drawPromptShown = isShown;
+  refreshGmDrawingState();
 });
 
 // Debounce hide so that when reveal mode swaps reveals (clear → set new),
 // the brief null state doesn't collapse the panel before the new image arrives.
 let drawHideTimer = null;
+let drawCurrentRevealKey = null; // track which key is currently being revealed in gm
+
+/* ── GAME-MODE drawing helpers ──
+ * Drives the centered drawing card with two states:
+ *   1. mode-prompt: shows the prompt text + drawing timer (active round)
+ *   2. mode-reveal: shows a 3:4 image card + artist name (reveal phase)
+ * Reveal takes precedence over prompt — if a submission is being shown, the
+ * eyebrow + image take over the card even if prompt.show is still true.
+ *
+ * IMPORTANT — switching modes while the card is open causes the content shape
+ * to change drastically (small prompt text vs 3:4 image card). To keep the
+ * resize from snapping, we use a hide-then-show pattern on mode switches:
+ * collapse the card via gmHide, wait for the grid-template-rows transition,
+ * then re-show in the new mode. The animation is the same as the initial
+ * card-open animation, so it feels consistent. */
+let gmDrawingModeSwitchTimer = null;
+function refreshGmDrawingState() {
+  if (!gmDrawing) return;
+  // Reveal takes priority — if a submission is currently being shown, stay in
+  // reveal mode regardless of prompt.show
+  if (drawCurrentRevealKey) {
+    setGmDrawingMode("reveal");
+    return;
+  }
+  // No reveal — if prompt is shown AND drawing mode is on, show the prompt
+  if (drawingModeOn && drawPromptShown && drawPromptText) {
+    if (gmDrawingPromptText) gmDrawingPromptText.textContent = drawPromptText;
+    if (gmDrawingEyebrowText) gmDrawingEyebrowText.textContent = "";
+    setGmDrawingMode("prompt");
+    return;
+  }
+  // Otherwise hide the card entirely (e.g. drawing mode off, or prompt cleared
+  // with no reveals active)
+  hideGmDrawing();
+}
+/* Switch to a new mode with smooth animation:
+ * - If card is hidden → just open in the new mode (fast path)
+ * - If card is showing in same mode → no-op
+ * - If card is showing in different mode → collapse, wait, switch, re-show */
+function setGmDrawingMode(newMode) {
+  if (!gmDrawing) return;
+  const isShowing = gmDrawing.classList.contains("show");
+  const currentMode = gmDrawing.classList.contains("mode-reveal") ? "reveal"
+                    : gmDrawing.classList.contains("mode-prompt") ? "prompt"
+                    : null;
+
+  if (gmDrawingModeSwitchTimer) {
+    clearTimeout(gmDrawingModeSwitchTimer);
+    gmDrawingModeSwitchTimer = null;
+  }
+
+  // Fast path — card hidden, just open in new mode
+  if (!isShowing) {
+    applyGmDrawingMode(newMode);
+    gmShow(gmDrawing, "drawing");
+    return;
+  }
+  // Same mode already showing — nothing to do
+  if (currentMode === newMode) return;
+  // Card showing in different mode — collapse, swap, re-show
+  gmHide(gmDrawing, "drawing");
+  gmDrawingModeSwitchTimer = setTimeout(() => {
+    gmDrawingModeSwitchTimer = null;
+    applyGmDrawingMode(newMode);
+    gmShow(gmDrawing, "drawing");
+  }, 480); // match grid-template-rows transition (0.45s) + small buffer
+}
+function applyGmDrawingMode(mode) {
+  if (!gmDrawing) return;
+  gmDrawing.classList.remove("mode-reveal", "mode-prompt");
+  if (mode === "reveal") gmDrawing.classList.add("mode-reveal");
+  else if (mode === "prompt") gmDrawing.classList.add("mode-prompt");
+}
+function showGmDrawingReveal(key) {
+  if (!gmDrawing || !gmDrawingImage) return;
+  const sub = drawSubs[key];
+  if (!sub || !sub.data) return;
+  const isAlreadyReveal = drawCurrentRevealKey && gmDrawing.classList.contains("mode-reveal");
+  const isCrossfade = isAlreadyReveal && drawCurrentRevealKey !== key;
+  drawCurrentRevealKey = key;
+
+  // Resolve artist name from participants cache (falls back to fallback string)
+  const artistName = participantsCache[key]?.name || "ANONYMOUS";
+
+  if (isCrossfade) {
+    // Already showing a reveal — fade image out, swap, fade in (no card resize
+    // because both submissions go in the same 3:4 white card)
+    gmDrawingImage.style.opacity = "0";
+    setTimeout(() => {
+      gmDrawingImage.src = sub.data;
+      if (gmDrawingEyebrowText) gmDrawingEyebrowText.textContent = artistName.toUpperCase();
+      gmDrawingImage.style.opacity = "1";
+    }, 200);
+  } else if (isAlreadyReveal) {
+    // Same reveal still showing (no key change) — just sync the data
+    gmDrawingImage.src = sub.data;
+    if (gmDrawingEyebrowText) gmDrawingEyebrowText.textContent = artistName.toUpperCase();
+    gmDrawingImage.style.opacity = "1";
+  } else {
+    // Coming from prompt mode (or hidden) — animate via setGmDrawingMode.
+    // Pre-populate the image data so it's ready when the card re-shows.
+    gmDrawingImage.src = sub.data;
+    gmDrawingImage.style.opacity = "1";
+    if (gmDrawingEyebrowText) gmDrawingEyebrowText.textContent = artistName.toUpperCase();
+    setGmDrawingMode("reveal");
+  }
+}
+function hideGmDrawing() {
+  if (!gmDrawing) return;
+  if (gmDrawingModeSwitchTimer) {
+    clearTimeout(gmDrawingModeSwitchTimer);
+    gmDrawingModeSwitchTimer = null;
+  }
+  drawCurrentRevealKey = null;
+  gmHide(gmDrawing, "drawing");
+  // Defer cleanup so the card collapses smoothly first, then we strip mode
+  // classes + image src after the transition completes (avoids the "snap back
+  // to prompt" flash during collapse animation).
+  setTimeout(() => {
+    if (!gmDrawing.classList.contains("show")) {
+      gmDrawing.classList.remove("mode-reveal", "mode-prompt");
+      if (gmDrawingImage) {
+        gmDrawingImage.src = "";
+        gmDrawingImage.style.opacity = "1";
+      }
+      if (gmDrawingPromptText) gmDrawingPromptText.textContent = "";
+      if (gmDrawingEyebrowText) gmDrawingEyebrowText.textContent = "";
+    }
+    if (gmDrawingTimerBar) gmDrawingTimerBar.classList.remove("show");
+    if (gmDrawingTimerFill) {
+      gmDrawingTimerFill.style.width = "100%";
+      gmDrawingTimerFill.style.background = "white";
+    }
+  }, 500);
+}
 
 onValue(drawRevealRef, snap => {
   const r = snap.val() || {};
@@ -1556,6 +2725,9 @@ onValue(drawRevealRef, snap => {
     // A reveal is active — cancel any pending hide and show the image
     if (drawHideTimer) { clearTimeout(drawHideTimer); drawHideTimer = null; }
     showDrawPanel(drawSubs[key].data, "DRAWING", revealModeOn);
+    // Game-mode mirror — show the image in the gm card with crossfade if
+    // already in reveal mode (advancing through submissions)
+    showGmDrawingReveal(key);
   } else {
     // No reveal — if reveal mode is on, wait briefly in case a new one is coming
     // (control clears then immediately sets new reveal when switching person)
@@ -1563,9 +2735,15 @@ onValue(drawRevealRef, snap => {
       drawHideTimer = setTimeout(() => {
         drawHideTimer = null;
         hideDrawPanel();
+        // Game-mode: drop reveal state — fall back to prompt mode if prompt
+        // is still visible, otherwise hide the card entirely
+        drawCurrentRevealKey = null;
+        refreshGmDrawingState();
       }, 600);
     } else {
       hideDrawPanel();
+      drawCurrentRevealKey = null;
+      refreshGmDrawingState();
     }
   }
 });
@@ -1578,6 +2756,33 @@ const skribblLbRows      = document.getElementById("skribblLbRows");
 const skribblLeaderboardRef = ref(db, "skribbl/leaderboard");
 const skribblTimeEndRef     = ref(db, "skribbl/timeEnd");
 const skribblPhaseRef       = ref(db, "skribbl/phase");
+const skribblDrawerRef      = ref(db, "skribbl/drawer"); // userKey of drawer
+const participantsRefForDrawer = ref(db, "participants");
+
+let skribblDrawerKey  = null;
+let participantsCache = {};
+// Fetch drawer name for the gm-mode eyebrow ("ALICE IS DRAWING").
+onValue(participantsRefForDrawer, snap => {
+  participantsCache = snap.val() || {};
+  paintGmSkribblPlayingEyebrow();
+});
+onValue(skribblDrawerRef, snap => {
+  skribblDrawerKey = snap.val() || null;
+  paintGmSkribblPlayingEyebrow();
+});
+function paintGmSkribblPlayingEyebrow() {
+  // Only update the playing-state text — don't touch results / win state, those
+  // are driven by their own listeners.
+  if (!gmSkribblEyebrow || !gmSkribblEyebrowText) return;
+  if (gmSkribblEyebrow.classList.contains("results")) return;
+  if (gmSkribblEyebrow.classList.contains("win")) return;
+  if (!skribblOn || skribblPhase !== "playing") {
+    gmSkribblEyebrowText.textContent = "";
+    return;
+  }
+  const drawerName = skribblDrawerKey && participantsCache[skribblDrawerKey]?.name;
+  gmSkribblEyebrowText.textContent = drawerName ? `${drawerName} IS DRAWING` : "";
+}
 
 let skribblTimerInterval = null;
 let skribblRoundDuration = 60000;
@@ -1597,6 +2802,22 @@ function renderLbPanel(entries) {
     </div>`).join("");
 }
 
+/* ── GAME-MODE leaderboard renderer ── 
+ * Renders into the gm skribbl card. Same data, different DOM target + classes.
+ * Empty state shows "WAITING FOR GUESSES…" instead of an empty list. */
+function renderGmSkribblLb(entries) {
+  if (!gmSkribblLbRows) return;
+  if (!entries || !entries.length) {
+    gmSkribblLbRows.innerHTML = `<div id="gmSkribblLb-empty">WAITING FOR GUESSES…</div>`;
+    return;
+  }
+  gmSkribblLbRows.innerHTML = entries.map((e, i) => `
+    <div class="lb-row" style="animation-delay:${i * 0.06}s">
+      <span class="lb-medal">${MEDALS[i] || (i+1)}</span>
+      <span class="lb-name">${e.name}</span>
+    </div>`).join("");
+}
+
 function showLbPanel() {
   lbPanel.classList.add("show");
   stage.classList.add("lb-open");
@@ -1611,6 +2832,8 @@ function startOutputTimer(timeEnd) {
   if (skribblTimerInterval) clearInterval(skribblTimerInterval);
   skribblRoundDuration = Math.max(1, timeEnd - Date.now());
   drawPanelTimer.classList.add("show");
+  // Game-mode mirror — show the timer bar pinned to the eyebrow
+  if (gmSkribblTimerBar) gmSkribblTimerBar.classList.add("show");
   let lastTickedSec = null;
 
   function tick() {
@@ -1618,6 +2841,12 @@ function startOutputTimer(timeEnd) {
     const secs = Math.ceil(remaining / 1000);
     drawPanelTimer.textContent = secs + "s";
     drawPanelTimer.classList.toggle("urgent", remaining <= 10000);
+    // Game-mode timer bar — drain width + turn red in last 10s
+    if (gmSkribblTimerFill) {
+      const pct = Math.max(0, Math.min(100, (remaining / skribblRoundDuration) * 100));
+      gmSkribblTimerFill.style.width = pct + "%";
+      gmSkribblTimerFill.style.background = remaining <= 10000 ? "#ff4d4d" : "white";
+    }
     // Tick sound during the final 10s — fire once per integer-second crossing
     if (secs > 0 && secs <= 10 && secs !== lastTickedSec) {
       lastTickedSec = secs;
@@ -1627,6 +2856,7 @@ function startOutputTimer(timeEnd) {
       clearInterval(skribblTimerInterval);
       skribblTimerInterval = null;
       drawPanelTimer.textContent = "0s";
+      if (gmSkribblTimerFill) gmSkribblTimerFill.style.width = "0%";
     }
   }
   tick();
@@ -1637,6 +2867,12 @@ function stopOutputTimer() {
   if (skribblTimerInterval) { clearInterval(skribblTimerInterval); skribblTimerInterval = null; }
   drawPanelTimer.classList.remove("show", "urgent");
   drawPanelTimer.textContent = "";
+  // Game-mode mirror — hide the bar, reset fill
+  if (gmSkribblTimerBar) gmSkribblTimerBar.classList.remove("show");
+  if (gmSkribblTimerFill) {
+    gmSkribblTimerFill.style.width = "100%";
+    gmSkribblTimerFill.style.background = "white";
+  }
 }
 
 /* ── RENDER INLINE LB CARD (infoPanel) — kept for reference ── */
@@ -1653,20 +2889,24 @@ function renderOutputLeaderboard(entries) {
 }
 
 function spawnFloatingGuess(text, correct) {
-  const el = document.createElement("div");
-  el.className = "floating-guess" + (correct ? " correct" : "");
-
-  // Split "NAME: TEXT" into separate spans so the styling can dim the name
-  const colonIdx = text.indexOf(":");
-  if (colonIdx > 0 && !correct) {
-    const name  = text.slice(0, colonIdx).trim();
-    const guess = text.slice(colonIdx + 1).trim();
-    el.innerHTML =
-      `<span class="guess-name">${name}</span>` +
-      `<span class="guess-text">${guess}</span>`;
-  } else {
-    // Fallback / correct path — just plain text
-    el.textContent = (correct ? "✓ " : "") + text;
+  // Build the guess element once; we'll clone it for the gm mirror so both
+  // layers (cam + gm) get an independent animated copy. Random trajectory
+  // is shared between cam + gm so they look like the "same" guess but each
+  // is anchored to its own layer.
+  function makeEl() {
+    const el = document.createElement("div");
+    el.className = "floating-guess" + (correct ? " correct" : "");
+    const colonIdx = text.indexOf(":");
+    if (colonIdx > 0 && !correct) {
+      const name  = text.slice(0, colonIdx).trim();
+      const guess = text.slice(colonIdx + 1).trim();
+      el.innerHTML =
+        `<span class="guess-name">${name}</span>` +
+        `<span class="guess-text">${guess}</span>`;
+    } else {
+      el.textContent = (correct ? "✓ " : "") + text;
+    }
+    return el;
   }
 
   // Random horizontal start (10%–90%) and end (drift across by ±25%)
@@ -1678,14 +2918,26 @@ function spawnFloatingGuess(text, correct) {
   // Subtle rotation tilt — tighter range than before so it feels intentional
   const tilt     = (Math.random() - 0.5) * 10;
 
-  el.style.setProperty("--start-x", startPct + "%");
-  el.style.setProperty("--end-x",   endPct   + "%");
-  el.style.setProperty("--rise",    rise     + "vh");
-  el.style.setProperty("--tilt",    tilt     + "deg");
+  function place(el) {
+    el.style.setProperty("--start-x", startPct + "%");
+    el.style.setProperty("--end-x",   endPct   + "%");
+    el.style.setProperty("--rise",    rise     + "vh");
+    el.style.setProperty("--tilt",    tilt     + "deg");
+  }
 
-  skribblGuessLayer.appendChild(el);
-  // Remove after animation completes (0.45 + 5 + 0.7 = ~6.15s — give buffer)
-  setTimeout(() => el.remove(), 6500);
+  // Cam-mode layer
+  const camEl = makeEl();
+  place(camEl);
+  skribblGuessLayer.appendChild(camEl);
+  setTimeout(() => camEl.remove(), 6500);
+
+  // Game-mode mirror layer — independent element with same trajectory
+  if (gmSkribblGuessLayer) {
+    const gmEl = makeEl();
+    place(gmEl);
+    gmSkribblGuessLayer.appendChild(gmEl);
+    setTimeout(() => gmEl.remove(), 6500);
+  }
 }
 
 let skribblPhase = null; // "playing" | "results" | null
@@ -1725,6 +2977,15 @@ onValue(skribblModeRef, snap => {
     prevLbCount = 0;
     const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
     if (!drawRevealVisible) hideDrawPanel();
+    // Game-mode mirror cleanup
+    gmHide(gmSkribbl, "skribbl");
+    if (gmSkribblLiveImg) gmSkribblLiveImg.src = "";
+    if (gmSkribblHint) gmSkribblHint.innerHTML = "";
+    if (gmSkribblLbRows) gmSkribblLbRows.innerHTML = "";
+    if (gmSkribblTimerBar) gmSkribblTimerBar.classList.remove("show");
+    if (gmSkribblEyebrow) gmSkribblEyebrow.classList.remove("win", "results");
+    if (gmSkribblEyebrowText) gmSkribblEyebrowText.textContent = "";
+    if (gmSkribblGuessLayer) gmSkribblGuessLayer.innerHTML = "";
   }
   // Do NOT show lb panel on mode start — it slides in only when first correct guess arrives
 });
@@ -1753,12 +3014,23 @@ onValue(skribblPhaseRef, snap => {
     drawPanelLabel.textContent = "🎨 IT WAS...";
     // Reveal every letter of the word in the hint display below the drawing
     revealFullWord(skribblCurrentWord);
+    // Game-mode mirror — eyebrow shows "IT WAS [WORD]" in white
+    if (gmSkribblEyebrow) gmSkribblEyebrow.classList.add("results");
+    if (gmSkribblEyebrow) gmSkribblEyebrow.classList.remove("win");
+    if (gmSkribblEyebrowText) {
+      gmSkribblEyebrowText.textContent = `IT WAS "${(skribblCurrentWord || "").toUpperCase()}"`;
+    }
+    if (gmSkribblTimerBar) gmSkribblTimerBar.classList.remove("show");
     // Drawing stays visible — drawer's last frame is still up via skribblLiveImg
     // Play end-of-round cue (only on the actual transition into results)
     if (prevPhase !== "results") playSnd(sndEnd);
   } else if (skribblPhase === "playing") {
     // New round started — restore live drawing label + play start cue
     drawPanelLabel.textContent = "🎨 LIVE DRAWING";
+    // Game-mode: clear results/win state on eyebrow
+    if (gmSkribblEyebrow) gmSkribblEyebrow.classList.remove("results", "win");
+    if (gmSkribblEyebrowText) gmSkribblEyebrowText.textContent = "";
+    paintGmSkribblPlayingEyebrow();
     if (prevPhase !== "playing") playSnd(sndStart);
   } else if (skribblPhase === null && prevPhase === "results") {
     // Reset — clear the frozen drawing and tear down the panel
@@ -1769,6 +3041,15 @@ onValue(skribblPhaseRef, snap => {
     drawPanelLabel.textContent = "DRAWING";
     const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
     if (!drawRevealVisible) hideDrawPanel();
+    // Game-mode reset — also hide the card and clear leaderboard, otherwise the
+    // empty canvas + "WAITING FOR GUESSES…" hangs around after the round ends
+    if (gmSkribblLiveImg) gmSkribblLiveImg.src = "";
+    if (gmSkribblHint) gmSkribblHint.innerHTML = "";
+    if (gmSkribblEyebrow) gmSkribblEyebrow.classList.remove("results", "win");
+    if (gmSkribblEyebrowText) gmSkribblEyebrowText.textContent = "";
+    if (gmSkribblLbRows) gmSkribblLbRows.innerHTML = "";
+    if (gmSkribblTimerBar) gmSkribblTimerBar.classList.remove("show");
+    gmHide(gmSkribbl, "skribbl");
   }
 });
 
@@ -1792,13 +3073,19 @@ onValue(skribblLiveRef, snap => {
     drawPanelLabel.textContent = "🎨 LIVE DRAWING";
     stage.classList.add("draw-open");
     drawPanel.classList.add("show");
+    // Game-mode mirror
+    if (gmSkribblLiveImg) gmSkribblLiveImg.src = val;
+    gmShow(gmSkribbl, "skribbl");
   } else if (val === null) {
     // Reset — clear the drawing
     skribblLiveImg.style.display = "none";
     skribblLiveImg.src = "";
+    if (gmSkribblLiveImg) gmSkribblLiveImg.src = "";
     // Hide the drawing panel unless a static draw-mode reveal is in it
     const drawRevealVisible = drawPanelImg.style.display !== "none" && drawPanelImg.src;
     if (!drawRevealVisible) hideDrawPanel();
+    // Game-mode mirror — hide the card too
+    gmHide(gmSkribbl, "skribbl");
   }
 });
 
@@ -1813,6 +3100,7 @@ onValue(skribblLeaderboardRef, snap => {
   if (entries.length === 0) {
     if (lbPanel.classList.contains("show")) hideLbPanel();
     renderLbPanel([]);
+    renderGmSkribblLb([]);
     prevLbCount = 0;
     return;
   }
@@ -1827,6 +3115,7 @@ onValue(skribblLeaderboardRef, snap => {
   if (!lbPanel.classList.contains("show")) showLbPanel();
 
   renderLbPanel(entries);
+  renderGmSkribblLb(entries);
 
   // Flash winner overlay briefly for the very first correct guess
   if (entries.length === 1) {
@@ -1835,6 +3124,21 @@ onValue(skribblLeaderboardRef, snap => {
       skribblWinName.textContent = `${first.name} GOT IT FIRST!`;
       skribblWinnerOverlay.classList.add("show");
       setTimeout(() => skribblWinnerOverlay.classList.remove("show"), 2500);
+    }
+    // Game-mode mirror — the gm eyebrow flashes "🎉 NAME GOT IT FIRST!" briefly,
+    // then reverts to the normal playing-state label. We only do this if we're
+    // still in playing phase (don't override the results-state eyebrow).
+    if (gmSkribblEyebrow && skribblPhase === "playing") {
+      gmSkribblEyebrow.classList.add("win");
+      gmSkribblEyebrow.classList.remove("results");
+      if (gmSkribblEyebrowText) gmSkribblEyebrowText.textContent = `🎉 ${first.name} GOT IT FIRST!`;
+      setTimeout(() => {
+        // Only revert if still in playing phase (not if results triggered meanwhile)
+        if (skribblPhase === "playing" && gmSkribblEyebrow.classList.contains("win")) {
+          gmSkribblEyebrow.classList.remove("win");
+          if (gmSkribblEyebrowText) gmSkribblEyebrowText.textContent = "";
+        }
+      }, 2500);
     }
   }
 });
@@ -1878,73 +3182,173 @@ const KB_ROWS = [
 ];
 
 function renderWordleGrid() {
-  if (!wordleGrid) return;
-  wordleGrid.innerHTML = "";
+  // Render into BOTH cam-mode and game-mode targets so flipping meta/gameMode
+  // mid-round is seamless. Both grids stay continuously in sync.
+  renderWordleGridInto(wordleGrid);
+  renderWordleGridInto(gmWordleGrid);
+}
+function renderWordleGridInto(target) {
+  if (!target) return;
   const cols = wordleWord.length;
-  if (cols === 0 || wordleAttempts <= 0) return;
+  if (cols === 0 || wordleAttempts <= 0) {
+    target.innerHTML = "";
+    return;
+  }
+
+  // Helper: get rows that aren't currently animating out
+  const liveRows = () => Array.from(target.querySelectorAll(".wordle-row"))
+    .filter(r => !r.dataset.removing);
+
+  // Diff-based render: keep existing rows when only the row count changes
+  // (e.g. operator slides attempts slider). Append new rows / remove excess.
+  // This lets each new row fade-in independently instead of the whole grid
+  // popping back into existence.
+  const existing = liveRows();
+  // If column count changed (new word), wipe completely — old rows have
+  // wrong cell counts and can't be diffed cleanly
+  const colMismatch = existing[0] && existing[0].children.length !== cols;
+  if (colMismatch) {
+    target.innerHTML = "";
+  }
 
   for (let r = 0; r < wordleAttempts; r++) {
-    const row = document.createElement("div");
-    row.className = "wordle-row";
-    row.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    const guess = wordleGuesses[r]; // may be undefined if not yet guessed
+    let row = liveRows()[r];
+    const isNew = !row;
+    if (isNew) {
+      row = document.createElement("div");
+      row.className = "wordle-row";
+      row.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      // Fade-in animation via inline style so it only runs on new rows.
+      // Existing rows during a re-render don't replay the animation.
+      row.style.animation = "fadeUp 0.4s ease both";
+      for (let c = 0; c < cols; c++) {
+        const cell = document.createElement("div");
+        cell.className = "wordle-cell";
+        row.appendChild(cell);
+      }
+      target.appendChild(row);
+    }
+    // Sync cell content + state for this row
+    const guess = wordleGuesses[r];
+    const cellNodes = row.children;
     for (let c = 0; c < cols; c++) {
-      const cell = document.createElement("div");
-      cell.className = "wordle-cell";
+      const cell = cellNodes[c];
+      cell.className = "wordle-cell"; // reset state classes
+      cell.textContent = "";
       if (guess) {
         const letter = (guess.text || "")[c] || "";
         const evalState = guess.evaluation?.[c] || "";
         if (letter) cell.textContent = letter.toUpperCase();
-        if (evalState) cell.classList.add(evalState); // "correct" | "present" | "absent"
+        if (evalState) cell.classList.add(evalState);
       }
-      row.appendChild(cell);
     }
-    wordleGrid.appendChild(row);
   }
-  // Compute the largest square cell that fits both width AND height constraints
-  // of the actual #wordleGrid container. Same pattern as the index overlay so
-  // the panel stays put regardless of (rows × cols) and viewport size.
-  sizeWordleOutputCells();
+
+  // Remove excess LIVE rows when attempts shrinks (e.g. slider 10 → 6).
+  // Fade them out before removing so the shrink animates instead of snapping.
+  const allLive = liveRows();
+  const excessRows = allLive.slice(wordleAttempts);
+  for (const row of excessRows) {
+    row.dataset.removing = "1";
+    row.style.transition = "opacity 0.3s ease, height 0.4s cubic-bezier(0.22, 1, 0.36, 1)";
+    row.style.opacity = "0";
+    row.style.height = "0";
+    row.style.overflow = "hidden";
+    setTimeout(() => {
+      if (row.parentNode) row.parentNode.removeChild(row);
+    }, 420);
+  }
+
+  // Recompute cell sizing based on the new row count
+  sizeWordleCellsFor(target);
 }
 
-function sizeWordleOutputCells() {
-  if (!wordleGrid) return;
+function sizeWordleCellsFor(target) {
+  if (!target) return;
   const cols = wordleWord.length;
   const rows = wordleAttempts;
   if (!cols || !rows) return;
-  const containerW = wordleGrid.clientWidth;
-  const containerH = wordleGrid.clientHeight;
-  if (containerW <= 0 || containerH <= 0) return; // not yet laid out
-  // Match the CSS gap: clamp(4px, 0.6vh, 8px). Approximate at runtime as 6px,
-  // which is correct enough for the size math (off-by-2px doesn't visibly matter).
-  const gap = 6;
-  const maxByWidth  = (containerW - (cols - 1) * gap) / cols;
-  const maxByHeight = (containerH - (rows - 1) * gap) / rows;
-  // Cap at 60px (the original max) so a small grid like 5×3 still looks chunky
-  const cellSize = Math.max(20, Math.min(maxByWidth, maxByHeight, 60));
-  wordleGrid.style.setProperty("--wordle-out-cell", cellSize + "px");
+
+  let cellSize;
+
+  if (target === gmWordleGrid) {
+    // Game mode sizing model:
+    //   1. Compute a TARGET cell size that scales with viewport (so 1080p gets
+    //      smaller cells than 4K — both fit cleanly without scrollbars).
+    //   2. Constrain by viewport WIDTH (cols × cell + gaps must fit horizontally).
+    //   3. Constrain by viewport HEIGHT (rows × cell + gaps must fit vertically,
+    //      reserving space for wordmark + eyebrow + keyboard + padding).
+    //   4. Take the smallest of the three. No container measuring (avoids the
+    //      chicken-and-egg of measuring an auto-sized container that depends on
+    //      the cell size).
+    const gap = 6;
+    // Target scales with viewport min-dimension. 1080p (min 1080) → ~54px.
+    // 4K (min 2160) → ~108px capped at 96px.
+    // ◄── tune: change 0.05 for chunkier (higher) or smaller (lower) cells
+    const vmin = Math.min(window.innerWidth, window.innerHeight);
+    const targetCell = Math.max(40, Math.min(96, vmin * 0.05));
+    // Reserved chrome: wordmark + page padding above/below + container padding
+    // + eyebrow + keyboard + gap between sections. ~400px is a safe budget
+    // that ensures the grid always fits within the container's max-height.
+    const reservedV = 400;
+    const reservedH = 120;
+    const maxHorizCell = (window.innerWidth  - reservedH - (cols - 1) * gap) / cols;
+    const maxVertCell  = (window.innerHeight - reservedV - (rows - 1) * gap) / rows;
+    cellSize = Math.max(20, Math.min(targetCell, maxHorizCell, maxVertCell));
+  } else {
+    // Cam mode: original algorithm — fit to side panel container's measured
+    // dimensions, capped at 60px.
+    const cs = window.getComputedStyle(target);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const padY = parseFloat(cs.paddingTop)  + parseFloat(cs.paddingBottom);
+    const containerW = target.clientWidth  - padX;
+    const containerH = target.clientHeight - padY;
+    if (containerW <= 0 || containerH <= 0) return;
+    const gap = 6;
+    const maxByWidth  = (containerW - (cols - 1) * gap) / cols;
+    const maxByHeight = (containerH - (rows - 1) * gap) / rows;
+    cellSize = Math.max(20, Math.min(maxByWidth, maxByHeight, 60));
+  }
+
+  target.style.setProperty("--wordle-out-cell", cellSize + "px");
+}
+
+// Back-compat alias for any external callers
+function sizeWordleOutputCells() {
+  sizeWordleCellsFor(wordleGrid);
+  sizeWordleCellsFor(gmWordleGrid);
 }
 
 // Recompute on container resize (handles viewport size changes, panel show/hide,
-// 1080p vs 4K browser)
-if (typeof ResizeObserver !== "undefined" && wordleGrid) {
-  const wordleGridRO = new ResizeObserver(() => sizeWordleOutputCells());
-  wordleGridRO.observe(wordleGrid);
+// 1080p vs 4K browser, game-mode flip)
+if (typeof ResizeObserver !== "undefined") {
+  if (wordleGrid) {
+    new ResizeObserver(() => sizeWordleCellsFor(wordleGrid)).observe(wordleGrid);
+  }
+  if (gmWordleGrid) {
+    new ResizeObserver(() => sizeWordleCellsFor(gmWordleGrid)).observe(gmWordleGrid);
+  }
 }
 window.addEventListener("resize", () => sizeWordleOutputCells());
 
-// Cache of letter → key element so we can update colors in place rather than
+// Caches of letter → key element so we can update colors in place rather than
 // rebuilding the whole keyboard on every state change. Rebuilding destroys
 // the DOM nodes, which means CSS transitions never get a chance to fire —
 // the browser only animates property changes on EXISTING elements.
-const wordleKeyEls = {};
+// Separate caches per target (cam vs game-mode) so they don't conflict.
+const wordleKeyEls   = {};
+const gmWordleKeyEls = {};
 
 function renderWordleKeyboard() {
-  if (!wordleKeyboard) return;
+  renderWordleKeyboardInto(wordleKeyboard,   wordleKeyEls);
+  renderWordleKeyboardInto(gmWordleKeyboard, gmWordleKeyEls);
+}
+function renderWordleKeyboardInto(target, cache) {
+  if (!target) return;
   // Build the keyboard once if it's empty; otherwise just refresh state classes.
-  if (wordleKeyboard.children.length === 0) {
-    wordleKeyboard.innerHTML = "";
-    for (const k in wordleKeyEls) delete wordleKeyEls[k];
+  if (target.children.length === 0) {
+    target.innerHTML = "";
+    for (const k in cache) delete cache[k];
     for (const row of KB_ROWS) {
       const rowEl = document.createElement("div");
       rowEl.className = "wordle-kb-row";
@@ -1952,20 +3356,18 @@ function renderWordleKeyboard() {
         const k = document.createElement("div");
         k.className = "wordle-key";
         k.textContent = letter;
-        wordleKeyEls[letter] = k;
+        cache[letter] = k;
         rowEl.appendChild(k);
       }
-      wordleKeyboard.appendChild(rowEl);
+      target.appendChild(rowEl);
     }
   }
   // Sync state classes on the existing key elements. Setting a class that's
   // already there is a no-op; switching from one state to another triggers
   // the CSS background transition for a smooth color fade.
-  for (const letter in wordleKeyEls) {
-    const k = wordleKeyEls[letter];
+  for (const letter in cache) {
+    const k = cache[letter];
     const state = wordleKbState[letter];
-    // Use a single declarative className update — keeps "correct"/"present"/
-    // "absent" mutually exclusive and lets the browser diff cleanly.
     k.className = state ? `wordle-key ${state}` : "wordle-key";
   }
 }
@@ -1975,11 +3377,15 @@ function showWordlePanel() {
   // Cancel any pending post-hide content cleanup since we're showing again
   if (wordlePanelHideTimeout) { clearTimeout(wordlePanelHideTimeout); wordlePanelHideTimeout = null; }
   wordlePanel.classList.add("show");
+  // Game-mode mirror — show the gm wordle card so the container grows to fit it
+  gmShow(gmWordle, "wordle");
 }
 let wordlePanelHideTimeout = null;
 function hideWordlePanel() {
   if (!wordlePanel) return;
   wordlePanel.classList.remove("show");
+  // Game-mode mirror — hide the gm wordle card so the container shrinks back
+  gmHide(gmWordle, "wordle");
   // Defer content cleanup until the slide-out finishes (same pattern as drawPanel).
   // Without this delay, the grid + keyboard empty mid-transition and you see a
   // blank panel slide away instead of a populated one.
@@ -1990,7 +3396,6 @@ function hideWordlePanel() {
     if (wordleGrid)     wordleGrid.innerHTML = "";
     if (wordleKeyboard) {
       wordleKeyboard.innerHTML = "";
-      // Clear the cached key references so next round rebuilds fresh
       for (const k in wordleKeyEls) delete wordleKeyEls[k];
     }
     if (wordleTurnTimerBar) wordleTurnTimerBar.classList.remove("show");
@@ -1998,6 +3403,18 @@ function hideWordlePanel() {
     if (wordlePanelGuesser) {
       wordlePanelGuesser.textContent = "";
       wordlePanelGuesser.classList.remove("win", "lose");
+    }
+    // Game-mode mirror cleanup
+    if (gmWordleGrid)     gmWordleGrid.innerHTML = "";
+    if (gmWordleKeyboard) {
+      gmWordleKeyboard.innerHTML = "";
+      for (const k in gmWordleKeyEls) delete gmWordleKeyEls[k];
+    }
+    if (gmWordleTurnTimerBar) gmWordleTurnTimerBar.classList.remove("show");
+    if (gmWordleEyebrow) gmWordleEyebrow.classList.remove("results");
+    if (gmWordleEyebrowGuesser) {
+      gmWordleEyebrowGuesser.textContent = "";
+      gmWordleEyebrowGuesser.classList.remove("win", "lose");
     }
   }, 520); // slightly longer than 0.5s transition for a clean handoff
 }
@@ -2100,23 +3517,41 @@ function paintWordleEyebrow() {
     if (wordlePhaseLocal === "results" && wordleWinnerLocal) {
       const w = wordleWinnerLocal;
       wordlePanelEyebrow.classList.add("results");
+      if (gmWordleEyebrow) gmWordleEyebrow.classList.add("results");
       if (w.userKey && w.name) {
         wordlePanelGuesser.classList.add("win");
         wordlePanelGuesser.classList.remove("lose");
         wordlePanelGuesser.textContent = `${w.name} GOT IT!`;
+        if (gmWordleEyebrowGuesser) {
+          gmWordleEyebrowGuesser.classList.add("win");
+          gmWordleEyebrowGuesser.classList.remove("lose");
+          gmWordleEyebrowGuesser.textContent = `${w.name} GOT IT!`;
+        }
       } else {
         wordlePanelGuesser.classList.add("lose");
         wordlePanelGuesser.classList.remove("win");
         wordlePanelGuesser.textContent = `IT WAS "${w.word || ""}"😔`;
+        if (gmWordleEyebrowGuesser) {
+          gmWordleEyebrowGuesser.classList.add("lose");
+          gmWordleEyebrowGuesser.classList.remove("win");
+          gmWordleEyebrowGuesser.textContent = `IT WAS "${w.word || ""}"😔`;
+        }
       }
       return;
     }
     // Not results — turn-name mode (or empty)
     wordlePanelEyebrow.classList.remove("results");
     wordlePanelGuesser.classList.remove("win", "lose");
-    wordlePanelGuesser.textContent = wordleCurrentGuesserName && wordlePhaseLocal === "playing"
+    const txt = wordleCurrentGuesserName && wordlePhaseLocal === "playing"
       ? `${wordleCurrentGuesserName} IS GUESSING`
       : "";
+    wordlePanelGuesser.textContent = txt;
+    // Game mode mirror
+    if (gmWordleEyebrow) gmWordleEyebrow.classList.remove("results");
+    if (gmWordleEyebrowGuesser) {
+      gmWordleEyebrowGuesser.classList.remove("win", "lose");
+      gmWordleEyebrowGuesser.textContent = txt;
+    }
   });
 }
 
@@ -2124,7 +3559,8 @@ onValue(wordlePhaseRef, snap => {
   wordlePhaseLocal = snap.val();
   // Hide timer bar when leaving playing state
   if (wordlePhaseLocal !== "playing") {
-    if (wordleTurnTimerBar) wordleTurnTimerBar.classList.remove("show");
+    if (wordleTurnTimerBar)   wordleTurnTimerBar.classList.remove("show");
+    if (gmWordleTurnTimerBar) gmWordleTurnTimerBar.classList.remove("show");
     if (wordleTickInterval) { clearInterval(wordleTickInterval); wordleTickInterval = null; }
   }
   paintWordleEyebrow();
@@ -2148,21 +3584,32 @@ onValue(wordleTurnEndEpochRef, snap => {
   if (!epoch || wordlePhaseLocal !== "playing") {
     wordleTurnTimerBar.classList.remove("show");
     wordleTurnTimerFill.style.width = "100%";
+    if (gmWordleTurnTimerBar)  gmWordleTurnTimerBar.classList.remove("show");
+    if (gmWordleTurnTimerFill) gmWordleTurnTimerFill.style.width = "100%";
     return;
   }
   const startMs = Date.now();
   const totalMs = Math.max(1, epoch - startMs);
   wordleTurnTimerBar.classList.add("show");
+  if (gmWordleTurnTimerBar) gmWordleTurnTimerBar.classList.add("show");
   function tick() {
     const remaining = Math.max(0, epoch - Date.now());
     const pct = (remaining / totalMs) * 100;
+    const bg  = remaining <= 5000 ? "#ff647c" : "white";
     wordleTurnTimerFill.style.width = pct + "%";
-    wordleTurnTimerFill.style.background = remaining <= 5000 ? "#ff647c" : "white";
+    wordleTurnTimerFill.style.background = bg;
+    if (gmWordleTurnTimerFill) {
+      gmWordleTurnTimerFill.style.width = pct + "%";
+      gmWordleTurnTimerFill.style.background = bg;
+    }
     if (remaining <= 0) {
       clearInterval(wordleTickInterval);
       wordleTickInterval = null;
-      // Hide the bar shortly after zero
-      setTimeout(() => wordleTurnTimerBar.classList.remove("show"), 600);
+      // Hide the bars shortly after zero
+      setTimeout(() => {
+        wordleTurnTimerBar.classList.remove("show");
+        if (gmWordleTurnTimerBar) gmWordleTurnTimerBar.classList.remove("show");
+      }, 600);
     }
   }
   tick();
@@ -2181,8 +3628,18 @@ onValue(pollsModeRef,  snap => { snap.val()===true ? startPolls()  : stopPolls()
 
 /* ── SKRIBBL HINT DISPLAY ── */
 function renderHint(hint) {
-  skribblHintDisplay.innerHTML = "";
-  if (!hint || !Array.isArray(hint)) { skribblHintDisplay.classList.remove("show"); return; }
+  renderHintInto(skribblHintDisplay, hint);
+  renderHintInto(gmSkribblHint, hint);
+  // Keep the cam-mode .show class behavior (reveals the underline display)
+  if (skribblHintDisplay) {
+    if (!hint || !Array.isArray(hint)) skribblHintDisplay.classList.remove("show");
+    else skribblHintDisplay.classList.add("show");
+  }
+}
+function renderHintInto(target, hint) {
+  if (!target) return;
+  target.innerHTML = "";
+  if (!hint || !Array.isArray(hint)) return;
 
   // Split into word groups by space entries
   let groups = [], current = [];
@@ -2202,16 +3659,14 @@ function renderHint(hint) {
       cell.textContent = revealed && letter ? letter.toUpperCase() : "";
       wordDiv.appendChild(cell);
     });
-    skribblHintDisplay.appendChild(wordDiv);
+    target.appendChild(wordDiv);
     // Add spacer between words
     if (gi < groups.length - 1) {
       const spacer = document.createElement("div");
       spacer.className = "hint-word-spacer";
-      skribblHintDisplay.appendChild(spacer);
+      target.appendChild(spacer);
     }
   });
-
-  skribblHintDisplay.classList.add("show");
 }
 
 onValue(skribblHintRef, snap => {

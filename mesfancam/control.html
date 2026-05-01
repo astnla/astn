@@ -361,6 +361,14 @@
       <input class="switch" type="checkbox" id="logToggle" checked>
       SAVE EXPORT
     </label>
+    <!-- Game mode: hard-disables cameras across all surfaces (output shows
+         centered MANATEE GAMES wordmark + activity cards instead of cam grid).
+         Set BEFORE participants join for the cleanest experience (mid-session
+         ON→OFF requires phones to manually re-enable cam access). -->
+    <label class="auto-pill" id="gameModePill" title="Hide cameras everywhere — activities only mode">
+      <input class="switch" type="checkbox" id="gameModeToggle">
+      GAME MODE
+    </label>
     <button id="turnOffFanCamBtn" class="btn-ghost" style="font-size:13px;padding:10px 16px;">TURN OFF</button>
     <button id="endSessionBtn" class="btn-danger" style="font-size:13px;padding:10px 16px;">END SESSION</button>
   </div>
@@ -695,6 +703,7 @@ turnOffFanCamBtn.addEventListener("click", async () => {
   await exportSessionZip();
   await Promise.all([
     set(fanCamOnRef, false),
+    set(ref(db,"meta/gameMode"), false), // reset game mode for next session
     set(ref(db,"participants"), null),
     set(ref(db,"selfies"), null),
     set(ref(db,"live"), null),
@@ -719,6 +728,34 @@ onValue(fanCamOnRef, snap => {
     fanCamOffScreen.classList.toggle("show", !snap.val());
   }
 });
+
+/* ─── NO-CAM MODE ───
+ * Hard-disables cameras across the whole product. When ON:
+ *   • Phones don't request getUserMedia / don't stream / don't heartbeat
+ *   • Output hides the cam feed; activity panels claim center stage
+ *   • All "set someone live" side effects (skribbl drawer, skribbl winner,
+ *     wordle winner, drawing reveal, auto-live rotation, manual click-to-live)
+ *     become no-ops since there's no live feed to switch to.
+ *
+ * Defaults to OFF. Auto-resets to OFF on end-session and on fan-cam-off so
+ * the next session always starts in normal cam mode.
+ */
+const gameModeRef = ref(db, "meta/gameMode");
+let gameMode = false;
+
+// Single chokepoint for "set the active live user". Use this instead of
+// update(ref(db,"live"), { activeUser: ... }) anywhere a game-mode side
+// effect would otherwise switch the spotlight. In game mode it no-ops.
+async function setLiveUserIfAllowed(uid) {
+  if (gameMode) return; // suppress — no live feed in game mode
+  return update(ref(db, "live"), { activeUser: uid });
+}
+// Also exposed so other code that has its own 'live/activeUser:null' write
+// path (e.g. clearing live on disconnect) can opt out clean
+async function clearLiveUserIfAllowed() {
+  if (gameMode) return;
+  return update(ref(db, "live"), { activeUser: null });
+}
 
 /* ── ELEMENTS ── */
 const els = {
@@ -839,6 +876,45 @@ const logToggle = document.getElementById("logToggle");
 const logPill   = document.getElementById("logPill");
 logToggle.onchange = () => logPill.classList.toggle("on", logToggle.checked);
 logPill.classList.toggle("on", logToggle.checked);
+
+/* ── NO-CAM MODE TOGGLE WIRING ── */
+const gameModeToggle = document.getElementById("gameModeToggle");
+const gameModePill   = document.getElementById("gameModePill");
+gameModeToggle.onchange = async () => {
+  const v = gameModeToggle.checked;
+  gameModePill.classList.toggle("on", v);
+  // If turning ON, also stop auto-live + clear current spotlight (nothing to spotlight)
+  if (v) {
+    if (state.autoLiveEnabled) {
+      stopAuto();
+      els.autoLiveToggle.checked = false;
+    }
+    await update(ref(db, "live"), { activeUser: null }).catch(() => {});
+  }
+  await set(gameModeRef, v).catch(() => {});
+  logEvent("mode", v ? "No-cam mode enabled" : "No-cam mode disabled");
+};
+// React to Firebase truth (covers refresh-recovery + multi-tab consistency)
+onValue(gameModeRef, snap => {
+  gameMode = snap.val() === true;
+  gameModeToggle.checked = gameMode;
+  gameModePill.classList.toggle("on", gameMode);
+  // When game mode is ON, the auto-live toggle should be visually disabled
+  // since it has no effect anyway (and turning it on while in game-mode would just
+  // confuse the operator).
+  if (els.autoLiveToggle) {
+    els.autoLiveToggle.disabled = gameMode;
+    if (els.autoLivePill) els.autoLivePill.classList.toggle("disabled", gameMode);
+  }
+  if (typeof updateStats === "function") updateStats();
+  // When game mode flips, re-render participant cards so the live indicators
+  // / camera dots respect the new mode
+  if (typeof Object !== "undefined" && state.participants) {
+    Object.keys(state.participants).forEach(k => {
+      if (typeof patchCard === "function") patchCard(k);
+    });
+  }
+});
 
 let sessionLog      = [];
 let sessionStart    = null;
@@ -1260,15 +1336,51 @@ function ensureCard(uid) {
   };
 
   c.goLiveBtn.onclick = async () => {
+    if (gameMode) return; // game mode: suppress manual go-live
     if (!state.participants[uid]?.cameraActive) return;
     await update(ref(db, "live"), { activeUser: uid });
   };
-  c.toggleRevealBtn.onclick = () => {
+  c.toggleRevealBtn.onclick = async () => {
     const revealed = state.reveals[uid]?.show === true;
+    // In game mode + reveal mode, "show answer" on a different user should
+    // auto-hide whoever was previously revealed, so operators can flip
+    // between students with a single click instead of hide-then-show.
+    // Cam mode keeps the original toggle-only behavior (no hijacking of
+    // other reveals — the user might be intentionally showing multiple).
+    //
+    // Use a SINGLE atomic multi-path update so output sees all changes in
+    // one listener fire — never an intermediate state where no key has
+    // show:true. This avoids any "card collapse and reappear" flash on
+    // output during the flip.
+    if (!revealed && gameMode && state.revealModeEnabled) {
+      const updates = {};
+      for (const otherUid of Object.keys(state.reveals || {})) {
+        if (otherUid !== uid && state.reveals[otherUid]?.show === true) {
+          updates[`trivia/reveal/${otherUid}/show`] = false;
+        }
+      }
+      updates[`trivia/reveal/${uid}/show`] = !revealed;
+      await update(ref(db), updates);
+      return;
+    }
     update(ref(db, `trivia/reveal/${uid}`), { show: !revealed });
   };
-  c.toggleDrawBtn.onclick = () => {
+  c.toggleDrawBtn.onclick = async () => {
     const drawRevealed = state.drawReveals[uid]?.show === true;
+    // Same single-click flip behavior for drawings — single atomic write
+    // means output never sees an intermediate "no reveal active" state and
+    // can crossfade smoothly between submissions.
+    if (!drawRevealed && gameMode && state.revealModeEnabled) {
+      const updates = {};
+      for (const otherUid of Object.keys(state.drawReveals || {})) {
+        if (otherUid !== uid && state.drawReveals[otherUid]?.show === true) {
+          updates[`drawing/reveal/${otherUid}/show`] = false;
+        }
+      }
+      updates[`drawing/reveal/${uid}/show`] = !drawRevealed;
+      await update(ref(db), updates);
+      return;
+    }
     set(ref(db, `drawing/reveal/${uid}`), { show: !drawRevealed });
   };
   c.kickBtn.onclick   = async () => {
@@ -1463,6 +1575,7 @@ async function autoTick() {
   // Don't pick a new person while a guesser-spotlight is active.
   // The spotlight system writes its own live.activeUser values and resumes us when done.
   if (state.spotlightActive) return;
+  if (gameMode) return; // game-mode: auto-live is meaningless
 
   const next = pickNextAutoLive();
   if (!next) return; // nobody eligible — wait for next tick
@@ -1474,6 +1587,7 @@ async function autoTick() {
 }
 
 function startAuto() {
+  if (gameMode) return; // game-mode: refuse to start
   stopAuto();
   state.autoLiveEnabled = true;
   state.autoShown = new Set();
@@ -1525,6 +1639,7 @@ els.autoDurationSlider.oninput = applyAutoDuration;
  */
 
 function spotlightGuesser(userKey, name) {
+  if (gameMode) return; // game-mode: no live spotlights
   // Only operate in skribbl mode and only if auto-live is on
   // (manual mode means the operator is in control of the cam — don't override)
   if (!state.skribblMode || !state.autoLiveEnabled) return;
@@ -1592,6 +1707,7 @@ els.endSessionBtn.onclick = async () => {
     set(ref(db,"participants"), null),
     set(ref(db,"selfies"), null),
     set(ref(db,"live"), null),
+    set(ref(db,"meta/gameMode"), false), // reset game mode for next session
     set(ref(db,"trivia"), { mode:false, question:{text:"",show:false}, correct:{text:"",show:false}, answers:null, reveal:null }),
     set(ref(db,"polls"),  { mode:false, question:{text:"",show:false}, options:null, votes:null, totals:null, status:"idle" }),
     set(ref(db,"meta/resetFlag"), Date.now()),
@@ -1732,10 +1848,11 @@ function startDrawCountdown(durationSec, startEpoch) {
   drawCountdownInterval = setInterval(tick, 1000);
 
   // Fail-safe one-shot timer — survives setInterval throttling on backgrounded tabs
+  // 700ms grace period after deadline so phones see the bar reach 0% before times-up fires
   drawEndTimeout = setTimeout(() => {
     drawEndTimeout = null;
     if (!els.timesUpBtn.classList.contains("disabled")) els.timesUpBtn.click();
-  }, Math.max(0, endEpoch - Date.now()));
+  }, Math.max(0, endEpoch - Date.now()) + 700);
 }
 
 function stopDrawCountdown() {
@@ -2124,11 +2241,13 @@ function startSkribblCountdown(durationSec, startEpoch) {
   // Fail-safe: schedule the round-end as a single timeout. If the interval
   // gets throttled while the tab is minimized, this still fires (eventually)
   // when the tab regains focus, ending the round correctly.
+  // 700ms grace period after deadline so phones/output have time to visibly
+  // render the bar reaching 0% before results phase hides it.
   skribblEndTimeout = setTimeout(() => {
     skribblEndTimeout = null;
     // Guard against double-firing if results was already entered some other way
     if (state.skribblPhase !== "results") enterResultsPhase();
-  }, Math.max(0, endEpoch - Date.now()));
+  }, Math.max(0, endEpoch - Date.now()) + 700);
 }
 
 // When control regains focus after being backgrounded, check whether the round
@@ -2200,12 +2319,14 @@ async function enterResultsPhase() {
     set(ref(db,"skribbl/prompt"),     { text:"", show:false }),
     // mode stays TRUE so phones still know they're in skribbl context
   ];
-  // Switch live cam to 1st place if there is one
+  // Switch live cam to 1st place if there is one (skipped in game mode)
   if (winnerKey) {
     ops.push(
-      set(ref(db,"skribbl/winner"), { userKey: winnerKey, name: lb[0].name, text: state.skribblWord || "" }),
-      update(ref(db,"live"),         { activeUser: winnerKey })
+      set(ref(db,"skribbl/winner"), { userKey: winnerKey, name: lb[0].name, text: state.skribblWord || "" })
     );
+    if (!gameMode) {
+      ops.push(update(ref(db,"live"), { activeUser: winnerKey }));
+    }
   }
   await Promise.all(ops);
 
@@ -2678,10 +2799,13 @@ function startWordleTurnTimer(durationSec, startEpoch) {
   }, 1000);
 
   // Fail-safe one-shot timer
+  // Add 700ms after the deadline before passing the turn so phones have time to
+  // visibly render the bar reaching 0% before the new turn replaces it. Without
+  // this grace period the bar appears to stop ~1s short of zero.
   wordleEndTimeout = setTimeout(() => {
     wordleEndTimeout = null;
     handleWordleTurnTimeout();
-  }, Math.max(0, endEpoch - Date.now()));
+  }, Math.max(0, endEpoch - Date.now()) + 700);
 }
 
 function stopWordleTurnTimer() {
@@ -2748,7 +2872,8 @@ async function enterWordleResultsPhase(winnerKey, winnerName, won) {
     // Keep word + guesses + keyboardState so the reveal shows the full board
   ];
   // Switch live cam to the winner so they're spotlit during the reveal
-  if (won && winnerKey) {
+  // (skipped in game mode — no live feed to switch)
+  if (won && winnerKey && !gameMode) {
     ops.push(update(ref(db,"live"), { activeUser: winnerKey }));
   }
   await Promise.all(ops);
