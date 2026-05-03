@@ -413,9 +413,8 @@
         <button id="showDrawBtn" class="seg">SKETCHERS</button>
         <button id="showSkribblBtn" class="seg">WHAT'S MY DOODLE?</button>
       </div>
-      <div class="seg-row" style="grid-template-columns:repeat(2,1fr);margin-top:0;">
+      <div class="seg-row" style="grid-template-columns:1fr;margin-top:0;">
         <button id="showWordleBtn" class="seg">WORDLE</button>
-        <button id="showCrackBtn" class="seg">CRACK THE CODE</button>
       </div>
 
       <p id="toolIntro" class="tool-intro">Nothing active yet, pick an activity!</p>
@@ -613,73 +612,6 @@
         </div>
       </div>
 
-      <!-- ─── CRACK THE CODE SHELL (Phase 1: skeleton — phrase + timer + keep-turn toggle) ─── -->
-      <div id="crackShell" class="feature-shell">
-        <div class="feature-block">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">secret phrase</div>
-          <div class="send-row">
-            <input id="crackPhraseInput" class="input" placeholder="e.g. ICE CREAM SUNDAE…" maxlength="40" autocomplete="off" autocorrect="off" spellcheck="false">
-            <button id="startCrackBtn" class="btn-accent disabled" style="font-size:13px;">START</button>
-          </div>
-          <div id="crackPhraseHint" style="font-size:10px;color:var(--muted);margin-top:-2px;">3–40 characters · max 8 words · max 14 letters per word · letters, spaces &amp; apostrophes</div>
-
-          <!-- Turn timer slider (with OFF option for manual mode) -->
-          <div style="margin-top:6px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">turn timer</div>
-              <div id="crackTimerLabel" style="font-size:13px;font-weight:900;color:var(--accent);">30s</div>
-            </div>
-            <input type="range" id="crackTimerSlider" min="0" max="60" step="5" value="30"
-              style="width:100%;accent-color:var(--accent);cursor:pointer;">
-            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
-              <span>OFF</span><span>30s</span><span>60s</span>
-            </div>
-            <div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.4;">
-              When OFF, you manually pick the next guesser. Otherwise, picks rotate by confidence with a per-turn time limit.
-            </div>
-          </div>
-
-          <!-- Keep turn on correct letter toggle -->
-          <label style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:9px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;cursor:pointer;user-select:none;">
-            <input type="checkbox" id="crackKeepTurnToggle" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex:0 0 auto;">
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;">keep turn on correct letter</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.35;">Wheel-of-Fortune style. When off, turn passes after every guess.</div>
-            </div>
-          </label>
-
-          <!-- Status area: shown only when a round is active (Phase 2) -->
-          <div id="crackStatusArea" style="display:none;margin-top:2px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">current guesser</div>
-              <div id="crackCycleLabel" style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">CYCLE 1</div>
-            </div>
-            <div id="crackCurrentGuesserBox" style="background:rgba(84,209,138,0.12);border:1px solid rgba(84,209,138,0.3);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:900;">
-              <span id="crackCurrentGuesserName" style="flex:1;">— nobody yet —</span>
-              <button id="crackPickFirstBtn" class="btn-accent" style="font-size:11px;padding:6px 10px;">PICK FIRST GUESSER</button>
-            </div>
-
-            <!-- Queue panel: shows the fixed shuffle order with done/undone state.
-                 Click an UNDONE row to manually pick that participant (their turn
-                 still consumes a slot in the cycle). -->
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:10px;">turn queue (click to pick)</div>
-            <div id="crackQueueList" style="display:flex;flex-direction:column;gap:5px;margin-top:6px;min-height:32px;">
-              <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No queue yet — start a round to build one.</div>
-            </div>
-
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:10px;">guesses</div>
-            <div id="crackGuessesLog" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;min-height:24px;font-size:12px;">
-              <div style="color:var(--muted);text-align:center;padding:6px;">Waiting for first guess…</div>
-            </div>
-          </div>
-
-          <div style="display:flex;gap:8px;margin-top:8px;">
-            <button id="endCrackBtn" class="btn-danger disabled" style="font-size:13px;flex:1;">END ROUND</button>
-            <button id="resetCrackBtn" class="btn-accent" style="font-size:13px;flex:1;display:none;">🔄 RESET ROUND</button>
-          </div>
-        </div>
-      </div>
-
     </div>
 
     <!-- RIGHT: PARTICIPANTS -->
@@ -869,24 +801,6 @@ const els = {
   wordleGuessesLog:         document.getElementById("wordleGuessesLog"),
   endWordleBtn:         document.getElementById("endWordleBtn"),
   resetWordleBtn:       document.getElementById("resetWordleBtn"),
-  // ─── CRACK THE CODE ───
-  showCrackBtn:         document.getElementById("showCrackBtn"),
-  crackShell:           document.getElementById("crackShell"),
-  crackPhraseInput:     document.getElementById("crackPhraseInput"),
-  crackPhraseHint:      document.getElementById("crackPhraseHint"),
-  startCrackBtn:        document.getElementById("startCrackBtn"),
-  crackTimerSlider:     document.getElementById("crackTimerSlider"),
-  crackTimerLabel:      document.getElementById("crackTimerLabel"),
-  crackKeepTurnToggle:  document.getElementById("crackKeepTurnToggle"),
-  crackStatusArea:      document.getElementById("crackStatusArea"),
-  crackCycleLabel:      document.getElementById("crackCycleLabel"),
-  crackCurrentGuesserBox:  document.getElementById("crackCurrentGuesserBox"),
-  crackCurrentGuesserName: document.getElementById("crackCurrentGuesserName"),
-  crackPickFirstBtn:       document.getElementById("crackPickFirstBtn"),
-  crackQueueList:          document.getElementById("crackQueueList"),
-  crackGuessesLog:         document.getElementById("crackGuessesLog"),
-  endCrackBtn:          document.getElementById("endCrackBtn"),
-  resetCrackBtn:        document.getElementById("resetCrackBtn"),
   skribblDrawerSelect:document.getElementById("skribblDrawerSelect"),
   skribblWordInput:   document.getElementById("skribblWordInput"),
   startSkribblBtn:    document.getElementById("startSkribblBtn"),
@@ -938,15 +852,6 @@ const state = {
   drawSubmissions: {}, drawReveals: {},
   skribblMode: false, skribblWord: "", skribblPhase: null,
   wordleMode: false, wordleWord: "", wordlePhase: null,
-  crackMode: false, crackPhrase: "", crackPhase: null,
-  crackQueue: [],            // [{ userKey, name, done }]
-  crackCycle: 1,             // increments when queue completes a full pass
-  crackCurrentGuesser: null,
-  crackCurrentGuesserName: null,
-  crackGuessedLetters: {},   // { A: "correct", B: "wrong", ... } — synced from Firebase
-  crackKeepTurnOnCorrect: false,  // synced from Firebase
-  crackGuessesLog: [],       // [{ name, choice, value, result, ts }] — capped at MAX
-  crackWinner: null,         // { userKey, name, solvedByPhrase } | null
   triviaQuestionActive: false, triviaCorrect: "",
   cardRefs: {},
   autoLiveEnabled: false, autoLiveInterval: null,
@@ -1129,13 +1034,11 @@ function setTool(t) {
   els.showDrawBtn.classList.toggle("active",   t === "draw");
   els.showSkribblBtn.classList.toggle("active", t === "skribbl");
   els.showWordleBtn.classList.toggle("active", t === "wordle");
-  els.showCrackBtn.classList.toggle("active",  t === "crack");
   els.triviaShell.classList.toggle("open",  t === "trivia");
   els.pollsShell.classList.toggle("open",   t === "polls");
   els.drawShell.classList.toggle("open",    t === "draw");
   els.skribblShell.classList.toggle("open", t === "skribbl");
   els.wordleShell.classList.toggle("open",  t === "wordle");
-  els.crackShell.classList.toggle("open",   t === "crack");
   els.toolIntro.style.display = t === "none" ? "block" : "none";
 }
 
@@ -1143,8 +1046,6 @@ async function activateNone() {
   // Stop any in-flight skribbl timers FIRST so they don't fire after cleanup
   if (skribblCountdownInterval) { clearInterval(skribblCountdownInterval); skribblCountdownInterval = null; } if (skribblEndTimeout) { clearTimeout(skribblEndTimeout); skribblEndTimeout = null; } skribblEndEpoch = 0;
   clearHintTimers();
-  // Also stop any leftover crack timer
-  if (typeof stopCrackTurnTimer === "function") stopCrackTurnTimer();
   state.skribblWord = "";
   skribblLeaderboardEntries = [];
   skribblGuessTotal = 0;
@@ -1164,8 +1065,6 @@ async function activateNone() {
     }),
     // Wordle: just turn off mode — fullWipeWordle is reserved for switching OUT of wordle
     set(ref(db,"wordle/mode"), false),
-    // Crack the Code: just turn off mode — fullWipeCrack is reserved for switching OUT of crack
-    set(ref(db,"crackthecode/mode"), false),
   ]);
   // Reset control UI
   if (els.skribblStatusArea) els.skribblStatusArea.style.display = "none";
@@ -1242,7 +1141,6 @@ async function activateTrivia() {
     update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
     fullWipeSkribbl(),
     set(ref(db,"wordle/mode"), false),
-    set(ref(db,"crackthecode/mode"), false),
     update(ref(db,"trivia"), { mode: true }),
   ]);
   setTool("trivia");
@@ -1254,7 +1152,6 @@ async function activatePolls() {
     update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
     fullWipeSkribbl(),
     set(ref(db,"wordle/mode"), false),
-    set(ref(db,"crackthecode/mode"), false),
     update(ref(db,"polls"),  { mode: true }),
   ]);
   setTool("polls");
@@ -1267,7 +1164,6 @@ async function activateDraw() {
     update(ref(db,"polls"),  { mode: false, question: { text:"", show:false } }),
     fullWipeSkribbl(),
     set(ref(db,"wordle/mode"), false),
-    set(ref(db,"crackthecode/mode"), false),
     update(ref(db,"drawing"), { mode: true }),
   ]);
   setTool("draw");
@@ -1284,7 +1180,6 @@ async function activateSkribbl() {
     update(ref(db,"polls"),   { mode: false, question: { text:"", show:false } }),
     update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
     set(ref(db,"wordle/mode"), false),
-    set(ref(db,"crackthecode/mode"), false),
     // Reset skribbl runtime data when entering — wipe any stale data from a prior round
     set(ref(db,"skribbl/leaderboard"), null),
     set(ref(db,"skribbl/winner"),      null),
@@ -1307,14 +1202,11 @@ els.showSkribblBtn.onclick = activateSkribbl;
 async function activateWordle() {
   // Stop any leftover wordle timer (e.g., from a previous session)
   if (typeof stopWordleTurnTimer === "function") stopWordleTurnTimer();
-  // Also stop any leftover crack timer
-  if (typeof stopCrackTurnTimer === "function") stopCrackTurnTimer();
   await Promise.all([
     update(ref(db,"trivia"),  { mode: false, question: { text:"", show:false } }),
     update(ref(db,"polls"),   { mode: false, question: { text:"", show:false } }),
     update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
     fullWipeSkribbl(),
-    set(ref(db,"crackthecode/mode"), false),
     // Reset wordle runtime data when entering — wipe any stale data from a prior round
     set(ref(db,"wordle/word"),                null),
     set(ref(db,"wordle/wordLength"),          null),
@@ -1337,821 +1229,6 @@ async function activateWordle() {
 }
 els.showWordleBtn.onclick = activateWordle;
 
-/* ─── CRACK THE CODE — Phase 1: skeleton (validation + slider + toggle wiring) ───
- * This is the configuration UI only — round/turn/guess logic comes in Phases 2-3.
- * Activating the tool wipes any stale crackthecode data and persists the
- * current slider + toggle values as session defaults.
- */
-async function activateCrack() {
-  // Stop any leftover crack timer (e.g., from a previous session)
-  stopCrackTurnTimer();
-  await Promise.all([
-    update(ref(db,"trivia"),  { mode: false, question: { text:"", show:false } }),
-    update(ref(db,"polls"),   { mode: false, question: { text:"", show:false } }),
-    update(ref(db,"drawing"), { mode: false, prompt: { text:"", show:false } }),
-    fullWipeSkribbl(),
-    set(ref(db,"wordle/mode"), false),
-    // Reset crackthecode runtime data when entering — wipe any stale data from a prior round
-    set(ref(db,"crackthecode/phrase"),             null),
-    set(ref(db,"crackthecode/phraseShape"),        null),
-    set(ref(db,"crackthecode/revealedPhrase"),     null),
-    set(ref(db,"crackthecode/phase"),              null),
-    set(ref(db,"crackthecode/queue"),              null),
-    set(ref(db,"crackthecode/cycle"),              null),
-    set(ref(db,"crackthecode/guessedLetters"),     null),
-    set(ref(db,"crackthecode/guessesLog"),         null),
-    set(ref(db,"crackthecode/currentGuesser"),     null),
-    set(ref(db,"crackthecode/currentGuesserName"), null),
-    set(ref(db,"crackthecode/pendingChoice"),      null),
-    set(ref(db,"crackthecode/pendingInput"),       null),
-    set(ref(db,"crackthecode/turnEndEpoch"),       null),
-    set(ref(db,"crackthecode/winner"),             null),
-    // Persist current slider + toggle values as the configured defaults for this session
-    set(ref(db,"crackthecode/turnDurationSec"),  parseInt(els.crackTimerSlider.value, 10)),
-    set(ref(db,"crackthecode/keepTurnOnCorrect"), !!els.crackKeepTurnToggle.checked),
-    set(ref(db,"crackthecode/mode"),             true),
-  ]);
-  // Reset local state
-  state.crackQueue = [];
-  state.crackCycle = 1;
-  state.crackCurrentGuesser = null;
-  state.crackCurrentGuesserName = null;
-  if (els.crackPhraseInput) {
-    els.crackPhraseInput.value = "";
-    els.crackPhraseInput.disabled = false;
-  }
-  if (els.crackStatusArea) els.crackStatusArea.style.display = "none";
-  if (els.endCrackBtn) { els.endCrackBtn.style.display = ""; els.endCrackBtn.classList.add("disabled"); }
-  if (els.resetCrackBtn) els.resetCrackBtn.style.display = "none";
-  updateCrackStart();
-  setTool("crack");
-  updateStats();
-}
-els.showCrackBtn.onclick = activateCrack;
-
-/* ─── CRACK THE CODE — phrase validation ───
- * Caps: 3-40 chars total, max 8 words, max 14 letters per single word.
- * Allowed characters: A-Z, spaces, and apostrophes (pre-revealed, never guessed).
- * Apostrophes don't count toward the per-word letter cap — only A-Z letters do.
- * Returns { ok: true, phrase } on success, or { ok: false, reason } on failure.
- */
-function validateCrackPhrase(raw) {
-  // Normalize: uppercase, convert curly apostrophes to straight, strip anything
-  // not A-Z / space / apostrophe, collapse multiple spaces, trim
-  const cleaned = (raw || "")
-    .toUpperCase()
-    .replace(/[\u2018\u2019\u02BC\u0060]/g, "'")  // curly + backtick variants → straight apostrophe
-    .replace(/[^A-Z ']/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (cleaned.length < 3) return { ok:false, reason:"Phrase too short (min 3 characters)" };
-  if (cleaned.length > 40) return { ok:false, reason:"Phrase too long (max 40 characters)" };
-  // Must contain at least one actual letter — a phrase of all apostrophes/spaces is invalid
-  if (!/[A-Z]/.test(cleaned)) return { ok:false, reason:"Phrase needs at least one letter" };
-  const words = cleaned.split(" ");
-  if (words.length > 8)  return { ok:false, reason:"Too many words (max 8)" };
-  for (const w of words) {
-    // Count letters only (apostrophes don't count toward the 14-letter cap)
-    const letterCount = (w.match(/[A-Z]/g) || []).length;
-    if (letterCount > 14) return { ok:false, reason:`"${w}" is too long (max 14 letters per word)` };
-  }
-  return { ok:true, phrase:cleaned };
-}
-
-function updateCrackStart() {
-  const result = validateCrackPhrase(els.crackPhraseInput.value);
-  els.startCrackBtn.classList.toggle("disabled", !result.ok);
-  if (result.ok) {
-    els.crackPhraseHint.textContent = "Looks good — press START when you're ready.";
-    els.crackPhraseHint.style.color = "var(--accent)";
-  } else if (els.crackPhraseInput.value.trim() === "") {
-    // Empty: show neutral default hint
-    els.crackPhraseHint.textContent = "3–40 characters · max 8 words · max 14 letters per word · letters, spaces & apostrophes";
-    els.crackPhraseHint.style.color = "var(--muted)";
-  } else {
-    els.crackPhraseHint.textContent = result.reason;
-    els.crackPhraseHint.style.color = "#ff6b6b";
-  }
-}
-
-// Live-uppercase the input as the user types and re-validate.
-// Allowed chars: A-Z, space, apostrophe. Curly apostrophes convert to straight.
-els.crackPhraseInput.addEventListener("input", () => {
-  const cursorPos = els.crackPhraseInput.selectionStart;
-  const before = els.crackPhraseInput.value;
-  const after  = before
-    .toUpperCase()
-    .replace(/[\u2018\u2019\u02BC\u0060]/g, "'")
-    .replace(/[^A-Z ']/g, "");
-  if (before !== after) {
-    els.crackPhraseInput.value = after;
-    // Restore cursor position (clamped to new length)
-    const newPos = Math.min(cursorPos, after.length);
-    els.crackPhraseInput.setSelectionRange(newPos, newPos);
-  }
-  updateCrackStart();
-});
-
-// Timer slider live label (matches wordle pattern)
-els.crackTimerSlider.addEventListener("input", () => {
-  const v = parseInt(els.crackTimerSlider.value, 10);
-  els.crackTimerLabel.textContent = v === 0 ? "OFF" : v + "s";
-  // Persist immediately — control is the source of truth for config
-  if (state.crackMode) {
-    set(ref(db,"crackthecode/turnDurationSec"), v).catch(()=>{});
-  }
-});
-
-// Keep-turn toggle persists immediately
-els.crackKeepTurnToggle.addEventListener("change", () => {
-  if (state.crackMode) {
-    set(ref(db,"crackthecode/keepTurnOnCorrect"), !!els.crackKeepTurnToggle.checked).catch(()=>{});
-  }
-});
-
-/* ─── CRACK THE CODE — Phase 2: round lifecycle + queue rotation ───
- *
- * Queue model: a single shuffled list built at round start, never reshuffled.
- * Each entry is { userKey, name, done }. A "cycle" = one full pass through
- * the queue (everyone goes once). When all entries are done, all `done` flags
- * reset, the cycle counter increments (control-only, not broadcast), and the
- * loop continues from queue[0] again.
- *
- * Turn ends in any of these ways (Phase 3 fills in the actual triggers):
- *   • timer expires → handleCrackTurnTimeout()
- *   • player submits a wrong letter → endCrackTurn("wrong-letter")
- *   • player submits a wrong phrase → endCrackTurn("wrong-phrase")
- *   • player submits a correct letter:
- *       - keepTurnOnCorrect = true → turn does NOT end; same player keeps going
- *       - keepTurnOnCorrect = false → endCrackTurn("correct-letter")
- *   • player submits the winning phrase → enterCrackResultsPhase()
- *   • control hits End Round → enterCrackResultsPhase()
- *
- * Phase 2 wires steps 1, 6, and 7. Steps 2-5 (guess processing) are Phase 3.
- */
-
-/* ─── Fisher-Yates shuffle (in place, returns same array) ─── */
-function shuffleArray(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-/* Build the queue from current participants. Each entry starts with done=false.
-   Excludes participants without a name (defensive). */
-function buildCrackQueue() {
-  const entries = Object.entries(state.participants)
-    .filter(([uk, p]) => p && p.name)
-    .map(([uk, p]) => ({ userKey: uk, name: p.name, done: false }));
-  return shuffleArray(entries);
-}
-
-/* Render the queue panel. Undone rows on top in queue order, done rows below
-   (greyed + struck-through). Click an undone row to manually pick that user.
-   In results phase, the winner's row shows a "GOT IT" pill instead of being
-   treated as undone or struck-through. */
-function renderCrackQueue() {
-  const list = els.crackQueueList;
-  if (!list) return;
-  const queue = state.crackQueue || [];
-  if (queue.length === 0) {
-    list.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">No queue yet — start a round to build one.</div>`;
-    return;
-  }
-  const winnerKey = state.crackWinner?.userKey || null;
-  const isResults = state.crackPhase === "results";
-
-  // Sort: in results phase, winner first; then undone (preserve order); then done (preserve order).
-  // In playing phase, just undone-on-top, done-on-bottom.
-  const winner = winnerKey ? queue.find(q => q.userKey === winnerKey) : null;
-  const undone = queue.filter(q => !q.done && q.userKey !== winnerKey);
-  const done   = queue.filter(q => q.done && q.userKey !== winnerKey);
-
-  // Update cycle label
-  if (els.crackCycleLabel) els.crackCycleLabel.textContent = `CYCLE ${state.crackCycle}`;
-
-  list.innerHTML = "";
-
-  // Winner row first (if results phase + has winner)
-  if (winner) {
-    const row = document.createElement("div");
-    row.style.cssText = `
-      display:flex;align-items:center;gap:8px;
-      padding:8px 10px;border-radius:8px;
-      background:rgba(255,193,77,0.18);
-      border:1px solid rgba(255,193,77,0.6);
-      font-size:12px;font-weight:900;
-      transition:background 0.15s, border-color 0.15s;
-    `;
-    row.innerHTML = `
-      <span style="font-size:14px;line-height:1;">🎉</span>
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${winner.name}</span>
-      <span style="font-size:9px;background:rgba(255,193,77,0.3);padding:2px 6px;border-radius:4px;letter-spacing:.05em;">GOT IT</span>
-    `;
-    list.appendChild(row);
-  }
-
-  undone.forEach((q, idx) => {
-    const isCurrent = q.userKey === state.crackCurrentGuesser && !isResults;
-    const row = document.createElement("div");
-    row.style.cssText = `
-      display:flex;align-items:center;gap:8px;
-      padding:7px 10px;border-radius:8px;
-      cursor:${isResults ? "default" : "pointer"};
-      background:${isCurrent ? "rgba(84,209,138,0.18)" : "rgba(255,255,255,0.04)"};
-      border:1px solid ${isCurrent ? "rgba(84,209,138,0.5)" : "rgba(255,255,255,0.08)"};
-      font-size:12px;font-weight:700;
-      ${isResults ? "opacity:0.7;" : ""}
-      transition:background 0.15s, border-color 0.15s;
-    `;
-    row.innerHTML = `
-      <span style="opacity:0.55;font-variant-numeric:tabular-nums;min-width:18px;">${idx + 1}.</span>
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${q.name}</span>
-      ${isCurrent ? '<span style="font-size:9px;background:rgba(84,209,138,0.25);padding:2px 6px;border-radius:4px;letter-spacing:.05em;">UP NOW</span>' : (isResults ? '<span style="font-size:9px;color:var(--muted);">didn\'t go</span>' : '<span style="font-size:10px;color:var(--muted);">tap to pick</span>')}
-    `;
-    if (!isResults) {
-      row.addEventListener("click", () => {
-        if (isCurrent) return; // already their turn
-        pickCrackGuesser(q.userKey, q.name);
-      });
-      row.addEventListener("mouseenter", () => {
-        if (!isCurrent) row.style.background = "rgba(255,255,255,0.08)";
-      });
-      row.addEventListener("mouseleave", () => {
-        if (!isCurrent) row.style.background = "rgba(255,255,255,0.04)";
-      });
-    }
-    list.appendChild(row);
-  });
-  done.forEach((q, idx) => {
-    const row = document.createElement("div");
-    row.style.cssText = `
-      display:flex;align-items:center;gap:8px;
-      padding:6px 10px;border-radius:8px;
-      background:rgba(255,255,255,0.02);
-      border:1px solid rgba(255,255,255,0.05);
-      font-size:11px;font-weight:600;
-      color:rgba(255,255,255,0.35);
-      text-decoration:line-through;
-      cursor:not-allowed;
-    `;
-    row.innerHTML = `
-      <span style="opacity:0.5;font-variant-numeric:tabular-nums;min-width:18px;">✓</span>
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${q.name}</span>
-      <span style="font-size:9px;color:var(--muted);">${isResults ? "took their turn" : "done this cycle"}</span>
-    `;
-    list.appendChild(row);
-  });
-}
-
-/* Persist current queue + cycle to Firebase. Always call this after mutating
-   state.crackQueue or state.crackCycle. */
-async function persistCrackQueue() {
-  await Promise.all([
-    set(ref(db,"crackthecode/queue"), state.crackQueue),
-    set(ref(db,"crackthecode/cycle"), state.crackCycle),
-  ]);
-}
-
-/* Pick a specific guesser. Used by both the manual-click flow and the auto
-   rotation. Sets currentGuesser, clears any pending input from the previous
-   guesser, starts the turn timer. Does NOT mark the user as done — that
-   happens when their turn ENDS, not when it starts. */
-async function pickCrackGuesser(userKey, name) {
-  if (!userKey) return;
-  if (state.crackPhase !== "playing") return;
-  state.crackCurrentGuesser     = userKey;
-  state.crackCurrentGuesserName = name || userKey;
-
-  const turnDurationSec = parseInt(els.crackTimerSlider.value, 10) || 0;
-  const writes = [
-    set(ref(db,"crackthecode/currentGuesser"),     userKey),
-    set(ref(db,"crackthecode/currentGuesserName"), name || userKey),
-    // Clear any leftover pending input from prior guesser
-    set(ref(db,"crackthecode/pendingChoice"),      null),
-    set(ref(db,"crackthecode/pendingInput"),       null),
-  ];
-  if (turnDurationSec > 0) {
-    const turnEndEpoch = Date.now() + turnDurationSec * 1000;
-    writes.push(set(ref(db,"crackthecode/turnEndEpoch"), turnEndEpoch));
-    startCrackTurnTimer(turnDurationSec, Date.now());
-  } else {
-    writes.push(set(ref(db,"crackthecode/turnEndEpoch"), null));
-    stopCrackTurnTimer();
-  }
-  await Promise.all(writes);
-  if (els.crackCurrentGuesserName) els.crackCurrentGuesserName.textContent = name || userKey;
-  if (els.crackPickFirstBtn) els.crackPickFirstBtn.style.display = "none";
-  renderCrackQueue();
-  logEvent("crack", `${name || userKey} is now the guesser`);
-}
-
-/* End the current turn. Marks the current guesser as done, advances to the
-   next undone in queue. If everyone's done, resets the cycle and continues.
-   `reason` is just for logging. */
-async function endCrackTurn(reason) {
-  if (state.crackPhase !== "playing") return;
-  const prevUserKey = state.crackCurrentGuesser;
-  if (!prevUserKey) {
-    // No current guesser — nothing to mark done. Just try to pick next.
-    await advanceCrackQueue();
-    return;
-  }
-  // Mark previous guesser as done
-  const idx = state.crackQueue.findIndex(q => q.userKey === prevUserKey);
-  if (idx >= 0) state.crackQueue[idx].done = true;
-
-  await persistCrackQueue();
-  await advanceCrackQueue();
-}
-
-/* Find next undone in queue. If none, reset cycle (everyone's done → start over).
-   Auto-picks the first undone after reset (no pause between cycles). */
-async function advanceCrackQueue() {
-  if (state.crackPhase !== "playing") return;
-  // Prune disconnected participants from queue (safety net for ghost entries)
-  state.crackQueue = state.crackQueue.filter(q => state.participants[q.userKey]);
-  if (state.crackQueue.length === 0) {
-    // No participants left — pause, no current guesser
-    state.crackCurrentGuesser = null;
-    state.crackCurrentGuesserName = null;
-    stopCrackTurnTimer();
-    await Promise.all([
-      set(ref(db,"crackthecode/currentGuesser"),     null),
-      set(ref(db,"crackthecode/currentGuesserName"), null),
-      set(ref(db,"crackthecode/turnEndEpoch"),       null),
-    ]);
-    if (els.crackCurrentGuesserName) els.crackCurrentGuesserName.textContent = "— nobody yet —";
-    if (els.crackPickFirstBtn) els.crackPickFirstBtn.style.display = "";
-    renderCrackQueue();
-    return;
-  }
-  let next = state.crackQueue.find(q => !q.done);
-  if (!next) {
-    // Everyone done — new cycle
-    state.crackQueue.forEach(q => { q.done = false; });
-    state.crackCycle++;
-    await persistCrackQueue();
-    next = state.crackQueue[0];
-    logEvent("crack", `Queue cycle complete — starting cycle ${state.crackCycle}`);
-  }
-  await pickCrackGuesser(next.userKey, next.name);
-}
-
-/* Turn timer — same throttle-resistant pattern as wordle. setInterval is for
-   visual updates (currently a no-op on control), setTimeout is the real
-   auto-pass trigger. The 700ms grace period lets phones render the bar
-   reaching 0 before the new turn replaces it. */
-let crackTickInterval = null;
-let crackEndTimeout   = null;
-let crackEndEpoch     = 0;
-
-function startCrackTurnTimer(durationSec, startEpoch) {
-  if (crackTickInterval) clearInterval(crackTickInterval);
-  if (crackEndTimeout)   { clearTimeout(crackEndTimeout); crackEndTimeout = null; }
-  const endEpoch = startEpoch + durationSec * 1000;
-  crackEndEpoch = endEpoch;
-
-  crackTickInterval = setInterval(() => {
-    const remaining = Math.max(0, Math.ceil((endEpoch - Date.now()) / 1000));
-    if (remaining <= 0) {
-      clearInterval(crackTickInterval);
-      crackTickInterval = null;
-    }
-  }, 1000);
-
-  crackEndTimeout = setTimeout(() => {
-    crackEndTimeout = null;
-    handleCrackTurnTimeout();
-  }, Math.max(0, endEpoch - Date.now()) + 700);
-}
-
-function stopCrackTurnTimer() {
-  if (crackTickInterval) { clearInterval(crackTickInterval); crackTickInterval = null; }
-  if (crackEndTimeout)   { clearTimeout(crackEndTimeout);   crackEndTimeout = null; }
-  crackEndEpoch = 0;
-}
-
-async function handleCrackTurnTimeout() {
-  if (state.crackPhase !== "playing") return;
-  logEvent("crack", `${state.crackCurrentGuesserName || "?"} ran out of time — turn passes`);
-  await endCrackTurn("timeout");
-}
-
-/* ─── Round start / end / reset ─── */
-
-els.startCrackBtn.addEventListener("click", async () => {
-  if (els.startCrackBtn.classList.contains("disabled")) return;
-  const result = validateCrackPhrase(els.crackPhraseInput.value);
-  if (!result.ok) return;
-
-  // Stop any leftover timer from a prior round before starting fresh
-  stopCrackTurnTimer();
-
-  // Build the queue from current participants
-  const queue = buildCrackQueue();
-  state.crackQueue = queue;
-  state.crackCycle = 1;
-  state.crackCurrentGuesser = null;
-  state.crackCurrentGuesserName = null;
-
-  const turnDurationSec = parseInt(els.crackTimerSlider.value, 10);
-
-  // Build phrase shape: same string but with letters replaced by underscores.
-  // Phones read this (NOT /phrase) so they can render the board without
-  // ever knowing the answer. Spaces and apostrophes pass through literally.
-  const phraseShape = result.phrase.replace(/[A-Z]/g, "_");
-
-  await Promise.all([
-    set(ref(db,"crackthecode/phrase"),               result.phrase),
-    set(ref(db,"crackthecode/phraseShape"),          phraseShape),
-    set(ref(db,"crackthecode/revealedPhrase"),       phraseShape),
-    set(ref(db,"crackthecode/turnDurationSec"),      turnDurationSec),
-    set(ref(db,"crackthecode/keepTurnOnCorrect"),    !!els.crackKeepTurnToggle.checked),
-    set(ref(db,"crackthecode/phase"),                "playing"),
-    set(ref(db,"crackthecode/queue"),                queue),
-    set(ref(db,"crackthecode/cycle"),                1),
-    // Clear any stale runtime data from prior rounds
-    set(ref(db,"crackthecode/guessedLetters"),       null),
-    set(ref(db,"crackthecode/guessesLog"),           null),
-    set(ref(db,"crackthecode/currentGuesser"),       null),
-    set(ref(db,"crackthecode/currentGuesserName"),   null),
-    set(ref(db,"crackthecode/pendingChoice"),        null),
-    set(ref(db,"crackthecode/pendingInput"),         null),
-    set(ref(db,"crackthecode/turnEndEpoch"),         null),
-    set(ref(db,"crackthecode/winner"),               null),
-  ]);
-
-  // Reset local state too
-  state.crackGuessedLetters = {};
-  state.crackGuessesLog = [];
-  state.crackWinner = null;
-
-  flashSent(els.startCrackBtn);
-  els.endCrackBtn.classList.remove("disabled");
-  els.endCrackBtn.style.display = "";
-  els.resetCrackBtn.style.display = "none";
-  if (els.crackStatusArea) els.crackStatusArea.style.display = "";
-  if (els.crackCurrentGuesserName) els.crackCurrentGuesserName.textContent = "— nobody yet —";
-  if (els.crackPickFirstBtn) els.crackPickFirstBtn.style.display = "";
-  if (els.crackPhraseInput) els.crackPhraseInput.disabled = true;
-  renderCrackQueue();
-  renderCrackGuessesLog();
-  logEvent("crack", `Round started — phrase "${result.phrase}" (${queue.length} in queue, ${turnDurationSec === 0 ? "manual mode" : turnDurationSec + "s timer"})`);
-});
-
-/* PICK FIRST GUESSER — picks queue[0] (first undone). Same idempotency check
-   as wordle's button so multiple clicks don't re-trigger. */
-if (els.crackPickFirstBtn) {
-  els.crackPickFirstBtn.addEventListener("click", async () => {
-    if (els.crackPickFirstBtn.classList.contains("disabled")) return;
-    if (state.crackPhase !== "playing") return;
-    if (state.crackCurrentGuesser) return; // already picked
-    const next = state.crackQueue.find(q => !q.done);
-    if (!next) return;
-    await pickCrackGuesser(next.userKey, next.name);
-  });
-}
-
-/* END ROUND — manual end, no winner. Reveals the phrase via results phase. */
-els.endCrackBtn.addEventListener("click", async () => {
-  if (els.endCrackBtn.classList.contains("disabled")) return;
-  await enterCrackResultsPhase(null, null, false);
-});
-
-/* RESET ROUND — wipes round state, returns to pre-round configuration view. */
-els.resetCrackBtn.addEventListener("click", async () => {
-  stopCrackTurnTimer();
-  state.crackQueue = [];
-  state.crackCycle = 1;
-  state.crackCurrentGuesser = null;
-  state.crackCurrentGuesserName = null;
-  state.crackGuessedLetters = {};
-  state.crackGuessesLog = [];
-  state.crackWinner = null;
-  await Promise.all([
-    set(ref(db,"crackthecode/phrase"),             null),
-    set(ref(db,"crackthecode/phraseShape"),        null),
-    set(ref(db,"crackthecode/revealedPhrase"),     null),
-    set(ref(db,"crackthecode/phase"),              null),
-    set(ref(db,"crackthecode/queue"),              null),
-    set(ref(db,"crackthecode/cycle"),              null),
-    set(ref(db,"crackthecode/guessedLetters"),     null),
-    set(ref(db,"crackthecode/guessesLog"),         null),
-    set(ref(db,"crackthecode/currentGuesser"),     null),
-    set(ref(db,"crackthecode/currentGuesserName"), null),
-    set(ref(db,"crackthecode/pendingChoice"),      null),
-    set(ref(db,"crackthecode/pendingInput"),       null),
-    set(ref(db,"crackthecode/turnEndEpoch"),       null),
-    set(ref(db,"crackthecode/winner"),             null),
-    // Mode stays TRUE so phones still see the panel in idle/waiting state
-  ]);
-  els.crackPhraseInput.value = "";
-  els.crackPhraseInput.disabled = false;
-  if (els.crackStatusArea) els.crackStatusArea.style.display = "none";
-  if (els.endCrackBtn) { els.endCrackBtn.style.display = ""; els.endCrackBtn.classList.add("disabled"); }
-  if (els.resetCrackBtn) els.resetCrackBtn.style.display = "none";
-  renderCrackGuessesLog();
-  updateCrackStart();
-  logEvent("crack", "Round reset");
-});
-
-/* Enter results phase. winnerUserKey/Name are null for manual end (no-winner).
-   solvedByPhrase tracks how the win happened (Phase 3 will pass true/false). */
-async function enterCrackResultsPhase(winnerUserKey, winnerName, solvedByPhrase) {
-  stopCrackTurnTimer();
-  const winnerObj = winnerUserKey
-    ? { userKey: winnerUserKey, name: winnerName, solvedByPhrase: !!solvedByPhrase }
-    : null;
-  // Update local state immediately so renderCrackQueue picks up the winner
-  state.crackWinner = winnerObj;
-  state.crackPhase  = "results";
-  await Promise.all([
-    set(ref(db,"crackthecode/phase"),          "results"),
-    // Reveal the full phrase to phones for the results display. Until now
-    // phones only saw the masked /phraseShape; on win/end we replace it
-    // with the actual phrase so they can render the reveal.
-    set(ref(db,"crackthecode/phraseShape"),    state.crackPhrase || ""),
-    set(ref(db,"crackthecode/revealedPhrase"), state.crackPhrase || ""),
-    set(ref(db,"crackthecode/turnEndEpoch"),   null),
-    set(ref(db,"crackthecode/winner"),         winnerObj),
-    // Clear any stale pendingInput so a late-arriving phone write can't
-    // re-trigger processing after the round ended
-    set(ref(db,"crackthecode/pendingInput"),   null),
-  ]);
-  if (els.endCrackBtn) els.endCrackBtn.style.display = "none";
-  if (els.resetCrackBtn) {
-    els.resetCrackBtn.style.display = "";
-    els.resetCrackBtn.classList.remove("disabled");
-  }
-  renderCrackQueue();
-  if (winnerUserKey) {
-    logEvent("crack", `Round won by ${winnerName} (${solvedByPhrase ? "solved phrase" : "last letter"})`);
-  } else {
-    logEvent("crack", "Round ended manually — no winner");
-  }
-}
-
-/* ─── CRACK THE CODE — Phase 3: guess processing ───
- *
- * Phones write to crackthecode/pendingInput as:
- *   { userKey, name, choice: "letter"|"phrase", value: "X"|"ICE CREAM SUNDAE", ts }
- *
- * Control's listener fires, validates the write, processes it, mutates
- * guessedLetters / guessesLog / winner as appropriate, clears pendingInput,
- * and decides whether to end the turn, keep the turn, or end the round.
- *
- * Control is the only thing that knows the phrase. Phones never see it
- * (they only see guessedLetters and infer reveals from that).
- */
-
-const CRACK_GUESS_LOG_MAX = 20; // cap log size to avoid unbounded Firebase writes
-
-/* Returns true iff every alphabetic letter in `phrase` is present in
-   `guessedLetters` with status "correct". Spaces and apostrophes are
-   pre-revealed and don't count. */
-function isPhraseFullyRevealed(phrase, guessedLetters) {
-  const letters = (phrase || "").toUpperCase();
-  const gl = guessedLetters || {};
-  for (const ch of letters) {
-    if (ch === " " || ch === "'") continue;
-    if (gl[ch] !== "correct") return false;
-  }
-  return true;
-}
-
-/* Append a single entry to the guesses log (capped). Persists to Firebase
-   and re-renders the log panel. */
-async function appendCrackGuessLog(entry) {
-  state.crackGuessesLog = state.crackGuessesLog || [];
-  state.crackGuessesLog.push(entry);
-  // Cap from the front so newest are always present
-  if (state.crackGuessesLog.length > CRACK_GUESS_LOG_MAX) {
-    state.crackGuessesLog = state.crackGuessesLog.slice(-CRACK_GUESS_LOG_MAX);
-  }
-  await set(ref(db,"crackthecode/guessesLog"), state.crackGuessesLog).catch(()=>{});
-  renderCrackGuessesLog();
-}
-
-/* Render the guesses log panel — newest at the top. */
-function renderCrackGuessesLog() {
-  const log = els.crackGuessesLog;
-  if (!log) return;
-  const entries = state.crackGuessesLog || [];
-  if (entries.length === 0) {
-    log.innerHTML = `<div style="color:var(--muted);text-align:center;padding:6px;">Waiting for first guess…</div>`;
-    return;
-  }
-  log.innerHTML = "";
-  // Show newest first
-  const recent = entries.slice().reverse().slice(0, 10);
-  recent.forEach(e => {
-    const row = document.createElement("div");
-    let icon, color, valueDisplay;
-    if (e.result === "win") { icon = "🎉"; color = "rgba(255,193,77,0.9)"; }
-    else if (e.result === "correct") { icon = "✓"; color = "rgba(84,209,138,0.9)"; }
-    else { icon = "✕"; color = "rgba(255,107,107,0.85)"; }
-    if (e.choice === "letter") {
-      valueDisplay = `<span style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:0.03em;">${e.value}</span>`;
-    } else {
-      // Phrase guesses can be long — clip with ellipsis
-      const v = (e.value || "").length > 28 ? e.value.slice(0, 27) + "…" : e.value;
-      valueDisplay = `<span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:0.02em;">"${v}"</span>`;
-    }
-    row.style.cssText = `
-      display:flex;align-items:center;gap:8px;
-      padding:5px 9px;border-radius:6px;
-      background:rgba(255,255,255,0.03);
-      border:1px solid rgba(255,255,255,0.06);
-      font-size:11px;
-    `;
-    row.innerHTML = `
-      <span style="color:${color};font-weight:900;font-size:12px;line-height:1;flex:0 0 auto;width:14px;text-align:center;">${icon}</span>
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;">${e.name}</span>
-      ${valueDisplay}
-    `;
-    log.appendChild(row);
-  });
-}
-
-/* Restart the turn timer for the current guesser without changing who's up.
-   Used when keepTurnOnCorrect is ON and they got a correct letter. */
-async function restartCrackTurnTimer() {
-  if (state.crackPhase !== "playing") return;
-  if (!state.crackCurrentGuesser) return;
-  const turnDurationSec = parseInt(els.crackTimerSlider.value, 10) || 0;
-  if (turnDurationSec > 0) {
-    const turnEndEpoch = Date.now() + turnDurationSec * 1000;
-    await set(ref(db,"crackthecode/turnEndEpoch"), turnEndEpoch);
-    startCrackTurnTimer(turnDurationSec, Date.now());
-  } else {
-    // Manual mode — no timer to restart
-    await set(ref(db,"crackthecode/turnEndEpoch"), null);
-    stopCrackTurnTimer();
-  }
-}
-
-/* Process a letter guess. Returns true if the round was won by this guess. */
-/* Compute what phones should see for the phrase board: the actual phrase
-   but with un-revealed letters replaced by `_`. Spaces and apostrophes
-   pass through. This keeps unrevealed letters secret while showing structure
-   AND positional reveals. */
-function computeRevealedPhrase(phrase, guessedLetters) {
-  const p  = phrase || "";
-  const gl = guessedLetters || {};
-  let out = "";
-  for (const ch of p) {
-    if (ch === " " || ch === "'") { out += ch; continue; }
-    if (/[A-Z]/.test(ch) && gl[ch] === "correct") out += ch;
-    else out += "_";
-  }
-  return out;
-}
-
-async function processCrackLetterGuess(letter, name, userKey) {
-  const L = (letter || "").toUpperCase().slice(0, 1);
-  if (!/[A-Z]/.test(L)) return false; // invalid input — ignore silently
-  const gl = { ...(state.crackGuessedLetters || {}) };
-  if (gl[L]) {
-    // Already guessed — phone shouldn't allow this. Clear pending and ignore.
-    logEvent("crack", `${name} tried "${L}" but it was already guessed — ignored`);
-    return false;
-  }
-  const phrase = state.crackPhrase || "";
-  const isInPhrase = phrase.includes(L);
-  gl[L] = isInPhrase ? "correct" : "wrong";
-  state.crackGuessedLetters = gl;
-  // Update both guessedLetters AND the revealed phrase phones see
-  const revealed = computeRevealedPhrase(phrase, gl);
-  await Promise.all([
-    set(ref(db,"crackthecode/guessedLetters"), gl),
-    set(ref(db,"crackthecode/revealedPhrase"), revealed),
-  ]);
-
-  if (isInPhrase) {
-    // Check for win (all letters revealed)
-    if (isPhraseFullyRevealed(phrase, gl)) {
-      await appendCrackGuessLog({ name, choice: "letter", value: L, result: "win", ts: Date.now() });
-      await enterCrackResultsPhase(userKey, name, false);
-      return true;
-    }
-    // Correct but not winning
-    await appendCrackGuessLog({ name, choice: "letter", value: L, result: "correct", ts: Date.now() });
-    return false;
-  } else {
-    // Wrong letter
-    await appendCrackGuessLog({ name, choice: "letter", value: L, result: "wrong", ts: Date.now() });
-    return false;
-  }
-}
-
-/* Process a phrase guess. Returns true if the round was won by this guess. */
-async function processCrackPhraseGuess(value, name, userKey) {
-  // Normalize the same way the phrase is normalized at start (uppercase,
-  // collapse whitespace, allow apostrophes, strip everything else)
-  const cleaned = (value || "")
-    .toUpperCase()
-    .replace(/[\u2018\u2019\u02BC\u0060]/g, "'")
-    .replace(/[^A-Z ']/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  const target = (state.crackPhrase || "").trim();
-  if (cleaned === target && cleaned.length > 0) {
-    await appendCrackGuessLog({ name, choice: "phrase", value: cleaned, result: "win", ts: Date.now() });
-    await enterCrackResultsPhase(userKey, name, true);
-    return true;
-  } else {
-    await appendCrackGuessLog({ name, choice: "phrase", value: cleaned, result: "wrong", ts: Date.now() });
-    return false;
-  }
-}
-
-/* Top-level dispatcher — called from the pendingInput listener.
-   Validates the write, dispatches to letter or phrase processor, then
-   decides what happens to the turn. */
-async function processCrackGuess(input) {
-  if (!input || typeof input !== "object") return;
-  if (state.crackPhase !== "playing") return;
-
-  const { userKey, name, choice, value } = input;
-  if (!userKey || !choice || value === undefined || value === null) return;
-
-  // Defensive: only the current guesser may submit. Stale writes from a
-  // previous turn (or a phone trying to cheat) are ignored.
-  if (userKey !== state.crackCurrentGuesser) {
-    logEvent("crack", `Ignored stale guess from ${name || userKey} (not current guesser)`);
-    await set(ref(db,"crackthecode/pendingInput"), null).catch(()=>{});
-    return;
-  }
-
-  // Process based on choice. Each processor returns true if the round was won.
-  let wonRound = false;
-  let wasCorrectLetter = false;
-  if (choice === "letter") {
-    const before = state.crackGuessedLetters || {};
-    wonRound = await processCrackLetterGuess(value, name, userKey);
-    // Detect correct letter (for keep-turn logic) — letter was added as "correct"
-    const after = state.crackGuessedLetters || {};
-    const L = (value || "").toUpperCase().slice(0,1);
-    wasCorrectLetter = !before[L] && after[L] === "correct";
-  } else if (choice === "phrase") {
-    wonRound = await processCrackPhraseGuess(value, name, userKey);
-  } else {
-    logEvent("crack", `Unknown guess choice "${choice}" from ${name} — ignored`);
-  }
-
-  // Clear pendingInput so the same write doesn't re-trigger
-  await set(ref(db,"crackthecode/pendingInput"), null).catch(()=>{});
-
-  if (wonRound) return; // results phase already entered
-
-  // Decide turn fate based on outcome + toggle
-  if (wasCorrectLetter && state.crackKeepTurnOnCorrect) {
-    // Keep the turn — restart timer for same guesser
-    await restartCrackTurnTimer();
-  } else {
-    // End the turn — advance queue
-    await endCrackTurn(choice === "phrase" ? "wrong-phrase" : (wasCorrectLetter ? "correct-letter" : "wrong-letter"));
-  }
-}
-
-/* Listen for phones writing pendingInput, dispatch to the processor.
-   We use onValue (not onChildAdded) because pendingInput is a single
-   slot — it's written, processed, then cleared back to null. */
-let crackPendingInputFirstSnap = true;
-onValue(ref(db,"crackthecode/pendingInput"), snap => {
-  const input = snap.val();
-  if (crackPendingInputFirstSnap) {
-    crackPendingInputFirstSnap = false;
-    // On initial subscribe, if there's a pending input from before page
-    // reload, process it as if it just arrived. Otherwise no-op.
-    if (input) processCrackGuess(input);
-    return;
-  }
-  if (!input) return; // null → we just cleared it, ignore
-  processCrackGuess(input);
-});
-
-/* Listener for guessedLetters keeps state synced (phones read the same
-   path to render their keyboard + letter strip). */
-onValue(ref(db,"crackthecode/guessedLetters"), snap => {
-  state.crackGuessedLetters = snap.val() || {};
-});
-
-/* Listener for guessesLog — restores log on page reload */
-onValue(ref(db,"crackthecode/guessesLog"), snap => {
-  state.crackGuessesLog = snap.val() || [];
-  renderCrackGuessesLog();
-});
-
-/* Listener for winner — restores winner pill on page reload */
-onValue(ref(db,"crackthecode/winner"), snap => {
-  state.crackWinner = snap.val() || null;
-  renderCrackQueue();
-});
-
 /* ── STATS ── */
 function updateStats() {
   const users = Object.values(state.participants);
@@ -2164,7 +1241,6 @@ function updateStats() {
   else if (state.drawMode) mode = "SKETCHERS";
   else if (state.skribblMode) mode = "WHAT'S MY DOODLE?";
   else if (state.wordleMode) mode = "WORDLE";
-  else if (state.crackMode) mode = "CRACK THE CODE";
 
   els.statMembers.textContent = users.length;
   els.statReady.textContent   = ready;
@@ -2980,18 +2056,6 @@ onChildAdded(ref(db,"participants"),   snap => {
   // added to the active pool and will be picked when not in the shown-set)
   updateStats();
   rebuildDrawerSelect();
-  // Crack the Code: if a round is active, append the late joiner to the back
-  // of the queue so they get a turn this cycle. Skip if they're already in
-  // the queue (defensive — onChildAdded fires once on initial subscribe).
-  if (state.crackPhase === "playing" && state.crackQueue && state.crackQueue.length > 0) {
-    const already = state.crackQueue.some(q => q.userKey === snap.key);
-    if (!already) {
-      state.crackQueue.push({ userKey: snap.key, name: p.name || snap.key, done: false });
-      persistCrackQueue().catch(()=>{});
-      renderCrackQueue();
-      logEvent("crack", `${p.name || snap.key} joined mid-round — added to queue`);
-    }
-  }
 });
 onChildChanged(ref(db,"participants"), snap => {
   state.participants[snap.key] = snap.val() || {};
@@ -3009,26 +2073,6 @@ onChildRemoved(ref(db,"participants"), snap => {
   removeCard(snap.key);
   updateStats();
   if (!Object.keys(state.participants).length) els.grid.innerHTML = `<div class="empty">No participants yet.</div>`;
-  // Crack the Code: prune from queue. If they were the current guesser,
-  // auto-advance to the next in queue.
-  if (state.crackPhase === "playing" && state.crackQueue && state.crackQueue.length > 0) {
-    const wasIn = state.crackQueue.some(q => q.userKey === snap.key);
-    if (wasIn) {
-      state.crackQueue = state.crackQueue.filter(q => q.userKey !== snap.key);
-      persistCrackQueue().catch(()=>{});
-      if (state.crackCurrentGuesser === snap.key) {
-        logEvent("crack", `${name} disconnected during their turn — passing`);
-        // Don't call endCrackTurn — they're already gone from the queue, so
-        // we just need to advance. Mark "no current" first so advance picks
-        // the next undone.
-        state.crackCurrentGuesser = null;
-        state.crackCurrentGuesserName = null;
-        advanceCrackQueue().catch(()=>{});
-      } else {
-        renderCrackQueue();
-      }
-    }
-  }
 });
 
 onChildAdded(ref(db,"selfies"),   snap => { state.selfies[snap.key] = snap.val(); if (state.participants[snap.key]) patchCard(snap.key); });
@@ -3967,7 +3011,7 @@ onValue(ref(db,"skribbl/mode"), snap => {
   state.skribblMode = snap.val() === true;
   if (state.skribblMode) logEvent("mode", "What's My Doodle? mode activated");
   if (state.skribblMode) setTool("skribbl");
-  else if (!state.triviaMode && !state.pollsMode && !state.drawMode && !state.wordleMode && !state.crackMode) setTool("none");
+  else if (!state.triviaMode && !state.pollsMode && !state.drawMode && !state.wordleMode) setTool("none");
   updateStats();
 });
 
@@ -3975,7 +3019,7 @@ onValue(ref(db,"wordle/mode"), snap => {
   state.wordleMode = snap.val() === true;
   if (state.wordleMode) logEvent("mode", "Wordle mode activated");
   if (state.wordleMode) setTool("wordle");
-  else if (!state.triviaMode && !state.pollsMode && !state.drawMode && !state.skribblMode && !state.crackMode) setTool("none");
+  else if (!state.triviaMode && !state.pollsMode && !state.drawMode && !state.skribblMode) setTool("none");
   updateStats();
 });
 onValue(ref(db,"wordle/word"),  snap => { state.wordleWord  = snap.val() || ""; });
@@ -3999,105 +3043,6 @@ onValue(ref(db,"wordle/phase"), snap => {
   } else {
     // null phase — pre-round state
     if (els.wordleStatusArea) els.wordleStatusArea.style.display = "none";
-  }
-});
-
-/* ─── CRACK THE CODE — mode + config listeners (Phase 1) ───
- * Mode listener mirrors wordle's pattern. Config listeners restore slider +
- * toggle values on page reload so refreshing control doesn't reset them.
- */
-onValue(ref(db,"crackthecode/mode"), snap => {
-  state.crackMode = snap.val() === true;
-  if (state.crackMode) logEvent("mode", "Crack the Code mode activated");
-  if (state.crackMode) setTool("crack");
-  else if (!state.triviaMode && !state.pollsMode && !state.drawMode && !state.skribblMode && !state.wordleMode) setTool("none");
-  updateStats();
-});
-
-onValue(ref(db,"crackthecode/turnDurationSec"), snap => {
-  const v = snap.val();
-  if (v === null || v === undefined) return;
-  els.crackTimerSlider.value = v;
-  els.crackTimerLabel.textContent = v === 0 ? "OFF" : v + "s";
-});
-
-onValue(ref(db,"crackthecode/keepTurnOnCorrect"), snap => {
-  state.crackKeepTurnOnCorrect = snap.val() === true;
-  els.crackKeepTurnToggle.checked = state.crackKeepTurnOnCorrect;
-});
-
-onValue(ref(db,"crackthecode/phrase"), snap => {
-  state.crackPhrase = snap.val() || "";
-});
-
-onValue(ref(db,"crackthecode/phase"), snap => {
-  state.crackPhase = snap.val();
-  if (state.crackPhase === "playing") {
-    if (els.crackStatusArea) els.crackStatusArea.style.display = "";
-    if (els.endCrackBtn) {
-      els.endCrackBtn.style.display = "";
-      els.endCrackBtn.classList.remove("disabled");
-    }
-    if (els.resetCrackBtn) els.resetCrackBtn.style.display = "none";
-    if (els.crackPhraseInput) els.crackPhraseInput.disabled = true;
-  } else if (state.crackPhase === "results") {
-    if (els.crackStatusArea) els.crackStatusArea.style.display = "";
-    if (els.endCrackBtn) els.endCrackBtn.style.display = "none";
-    if (els.resetCrackBtn) {
-      els.resetCrackBtn.style.display = "";
-      els.resetCrackBtn.classList.remove("disabled");
-    }
-    if (els.crackPhraseInput) els.crackPhraseInput.disabled = true;
-  } else {
-    // null phase — pre-round state
-    if (els.crackStatusArea) els.crackStatusArea.style.display = "none";
-    if (els.crackPhraseInput) els.crackPhraseInput.disabled = false;
-  }
-});
-
-onValue(ref(db,"crackthecode/queue"), snap => {
-  state.crackQueue = snap.val() || [];
-  renderCrackQueue();
-});
-
-onValue(ref(db,"crackthecode/cycle"), snap => {
-  state.crackCycle = snap.val() || 1;
-  if (els.crackCycleLabel) els.crackCycleLabel.textContent = `CYCLE ${state.crackCycle}`;
-});
-
-onValue(ref(db,"crackthecode/currentGuesser"), snap => {
-  state.crackCurrentGuesser = snap.val();
-  // PICK FIRST button: visible only when no current guesser AND we're playing
-  if (els.crackPickFirstBtn) {
-    els.crackPickFirstBtn.style.display =
-      (state.crackPhase === "playing" && !state.crackCurrentGuesser) ? "" : "none";
-  }
-  renderCrackQueue();
-});
-
-onValue(ref(db,"crackthecode/currentGuesserName"), snap => {
-  state.crackCurrentGuesserName = snap.val();
-  if (els.crackCurrentGuesserName) {
-    els.crackCurrentGuesserName.textContent = state.crackCurrentGuesserName || "— nobody yet —";
-  }
-});
-
-/* Refresh recovery — if turnEndEpoch is in the future and we're playing,
-   resume the local timer. Same firstSnap guard as wordle. */
-let crackTurnEndFirstSnap = true;
-onValue(ref(db,"crackthecode/turnEndEpoch"), snap => {
-  const epoch = snap.val();
-  if (crackTurnEndFirstSnap) {
-    crackTurnEndFirstSnap = false;
-    if (epoch && epoch > Date.now() && state.crackPhase === "playing") {
-      const durationSec = Math.ceil((epoch - Date.now()) / 1000);
-      startCrackTurnTimer(durationSec, Date.now());
-    }
-    return;
-  }
-  // Subsequent updates: if epoch is cleared, stop the timer
-  if (!epoch) {
-    stopCrackTurnTimer();
   }
 });
 
