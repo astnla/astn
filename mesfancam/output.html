@@ -176,6 +176,20 @@ html, body {
       min-width: clamp(360px, 42vw, 600px);
       max-width: clamp(360px, 42vw, 600px);
     }
+    /* Wordle: use a JS-driven width that scales with word length, instead of
+       width:auto. Without this, the container's auto-width was shrinkwrapping
+       to the longest trivia/polls question's max-content width (since hidden
+       cards' intrinsic sizes still propagated up to the auto-sized parent),
+       producing a "high water mark" that grew monotonically across the
+       session. The JS variable --gm-wordle-container-width is recomputed on
+       every word change as: cols × cellSize + gaps + ~130px padding budget.
+       The min-width fallback (520px) covers the keyboard's natural width
+       so very short words still fit it comfortably. */
+    body.activity-game-wordle #gamesActivityContainer {
+      width: max(520px, var(--gm-wordle-container-width, 520px));
+      min-width: max(520px, var(--gm-wordle-container-width, 520px));
+      max-width: max(520px, var(--gm-wordle-container-width, 520px));
+    }
     #gamesActivityInner {
       padding: clamp(22px, 3.4vh, 40px);
       display: flex;
@@ -3295,6 +3309,19 @@ function sizeWordleCellsFor(target) {
     const maxHorizCell = (window.innerWidth  - reservedH - (cols - 1) * gap) / cols;
     const maxVertCell  = (window.innerHeight - reservedV - (rows - 1) * gap) / rows;
     cellSize = Math.max(20, Math.min(targetCell, maxHorizCell, maxVertCell));
+
+    // Also publish the resulting container width as a CSS variable on the
+    // body. This lets CSS give wordle's container an EXPLICIT width clamp
+    // that scales with word length — instead of `width: auto`, which was
+    // resolving to the longest trivia/polls question's max-content width as
+    // a "high water mark" that grew across the session. Now wordle's width
+    // is purely a function of cellSize × cols + gaps + padding budget,
+    // which is independent of any other game's content. Padding budget
+    // covers grid padding (clamp(12px, 1.8vh, 22px) × 2) + container
+    // inner padding (clamp(22px, 3.4vh, 40px) × 2) + container border (2px)
+    // — ~130px is comfortable.
+    const containerWidth = Math.ceil(cellSize * cols + (cols - 1) * gap + 130);
+    document.body.style.setProperty("--gm-wordle-container-width", containerWidth + "px");
   } else {
     // Cam mode: original algorithm — fit to side panel container's measured
     // dimensions, capped at 60px.
